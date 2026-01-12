@@ -163,7 +163,7 @@ impl RedisRateLimiter {
 
     /// Check if a request is allowed and increment counter
     pub async fn check(&self, key: &str) -> Result<bool> {
-        use redis::AsyncCommands;
+        use deadpool_redis::redis::AsyncCommands;
 
         let full_key = format!("{}:{}", self.prefix, key);
         let mut conn = self
@@ -172,29 +172,20 @@ impl RedisRateLimiter {
             .await
             .map_err(|e| Error::Internal(format!("Redis connection error: {}", e)))?;
 
-        // Increment and set expiry atomically using Lua script
-        let script = redis::Script::new(
-            r#"
-            local current = redis.call('INCR', KEYS[1])
-            if current == 1 then
-                redis.call('EXPIRE', KEYS[1], ARGV[1])
-            end
-            return current
-            "#,
-        );
+        // Increment counter
+        let count: u64 = conn.incr(&full_key, 1u64).await?;
 
-        let count: u64 = script
-            .key(&full_key)
-            .arg(self.window_seconds)
-            .invoke_async(&mut *conn)
-            .await?;
+        // Set expiry on first increment
+        if count == 1 {
+            let _: () = conn.expire(&full_key, self.window_seconds as i64).await?;
+        }
 
         Ok(count <= self.max_requests)
     }
 
     /// Get the current count for a key
     pub async fn get_count(&self, key: &str) -> Result<u64> {
-        use redis::AsyncCommands;
+        use deadpool_redis::redis::AsyncCommands;
 
         let full_key = format!("{}:{}", self.prefix, key);
         let mut conn = self
@@ -209,7 +200,7 @@ impl RedisRateLimiter {
 
     /// Reset the counter for a key
     pub async fn reset(&self, key: &str) -> Result<()> {
-        use redis::AsyncCommands;
+        use deadpool_redis::redis::AsyncCommands;
 
         let full_key = format!("{}:{}", self.prefix, key);
         let mut conn = self
@@ -218,7 +209,7 @@ impl RedisRateLimiter {
             .await
             .map_err(|e| Error::Internal(format!("Redis connection error: {}", e)))?;
 
-        conn.del(&full_key).await?;
+        let _: () = conn.del(&full_key).await?;
         Ok(())
     }
 }

@@ -12,14 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardFiltersRouteImport } from './routes/dashboard/filters'
 import { Route as DashboardBillingRouteImport } from './routes/dashboard/billing'
 import { Route as DashboardBackendsRouteImport } from './routes/dashboard/backends'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard/analytics'
-import { Route as AuthRegisterRouteImport } from './routes/auth/register'
-import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
+import { Route as AdminOverviewRouteImport } from './routes/admin/overview'
+import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
+import { Route as AdminBlacklistsRouteImport } from './routes/admin/blacklists'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -35,6 +37,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
@@ -61,59 +68,70 @@ const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => DashboardRoute,
 } as any)
-const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: '/auth/register',
-  path: '/auth/register',
+const AuthAuthViewRoute = AuthAuthViewRouteImport.update({
+  id: '/auth/$authView',
+  path: '/auth/$authView',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
+const AdminOverviewRoute = AdminOverviewRouteImport.update({
+  id: '/admin/overview',
+  path: '/admin/overview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/auth/forgot-password',
-  path: '/auth/forgot-password',
+const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
+  id: '/admin/organizations',
+  path: '/admin/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminBlacklistsRoute = AdminBlacklistsRouteImport.update({
+  id: '/admin/blacklists',
+  path: '/admin/blacklists',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/register': typeof AuthRegisterRoute
+  '/admin/blacklists': typeof AdminBlacklistsRoute
+  '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/overview': typeof AdminOverviewRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/admin': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/register': typeof AuthRegisterRoute
+  '/admin/blacklists': typeof AdminBlacklistsRoute
+  '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/overview': typeof AdminOverviewRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/register': typeof AuthRegisterRoute
+  '/admin/blacklists': typeof AdminBlacklistsRoute
+  '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/overview': typeof AdminOverviewRoute
+  '/auth/$authView': typeof AuthAuthViewRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
@@ -121,48 +139,56 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/auth/forgot-password'
-    | '/auth/login'
-    | '/auth/register'
+    | '/admin/blacklists'
+    | '/admin/organizations'
+    | '/admin/overview'
+    | '/auth/$authView'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/admin'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth/forgot-password'
-    | '/auth/login'
-    | '/auth/register'
+    | '/admin/blacklists'
+    | '/admin/organizations'
+    | '/admin/overview'
+    | '/auth/$authView'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/admin'
     | '/dashboard'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/auth/forgot-password'
-    | '/auth/login'
-    | '/auth/register'
+    | '/admin/blacklists'
+    | '/admin/organizations'
+    | '/admin/overview'
+    | '/auth/$authView'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/admin/'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthRegisterRoute: typeof AuthRegisterRoute
+  AdminBlacklistsRoute: typeof AdminBlacklistsRoute
+  AdminOrganizationsRoute: typeof AdminOrganizationsRoute
+  AdminOverviewRoute: typeof AdminOverviewRoute
+  AuthAuthViewRoute: typeof AuthAuthViewRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/settings': {
       id: '/dashboard/settings'
@@ -223,25 +256,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAnalyticsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/auth/register': {
-      id: '/auth/register'
-      path: '/auth/register'
-      fullPath: '/auth/register'
-      preLoaderRoute: typeof AuthRegisterRouteImport
+    '/auth/$authView': {
+      id: '/auth/$authView'
+      path: '/auth/$authView'
+      fullPath: '/auth/$authView'
+      preLoaderRoute: typeof AuthAuthViewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
+    '/admin/overview': {
+      id: '/admin/overview'
+      path: '/admin/overview'
+      fullPath: '/admin/overview'
+      preLoaderRoute: typeof AdminOverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/forgot-password': {
-      id: '/auth/forgot-password'
-      path: '/auth/forgot-password'
-      fullPath: '/auth/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+    '/admin/organizations': {
+      id: '/admin/organizations'
+      path: '/admin/organizations'
+      fullPath: '/admin/organizations'
+      preLoaderRoute: typeof AdminOrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/blacklists': {
+      id: '/admin/blacklists'
+      path: '/admin/blacklists'
+      fullPath: '/admin/blacklists'
+      preLoaderRoute: typeof AdminBlacklistsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -272,9 +312,11 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
-  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
-  AuthLoginRoute: AuthLoginRoute,
-  AuthRegisterRoute: AuthRegisterRoute,
+  AdminBlacklistsRoute: AdminBlacklistsRoute,
+  AdminOrganizationsRoute: AdminOrganizationsRoute,
+  AdminOverviewRoute: AdminOverviewRoute,
+  AuthAuthViewRoute: AuthAuthViewRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

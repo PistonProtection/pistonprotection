@@ -21,7 +21,7 @@ pub enum Error {
     Database(#[from] sqlx::Error),
 
     #[error("Redis error: {0}")]
-    Redis(#[from] redis::RedisError),
+    Redis(#[from] deadpool_redis::redis::RedisError),
 
     #[error("gRPC error: {0}")]
     Grpc(#[from] tonic::Status),

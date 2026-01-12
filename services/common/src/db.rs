@@ -31,7 +31,10 @@ pub async fn create_pool(config: &DatabaseConfig) -> Result<PgPool> {
 /// Run database migrations
 pub async fn run_migrations(pool: &PgPool) -> Result<()> {
     info!("Running database migrations");
-    sqlx::migrate!("./migrations").run(pool).await?;
+    sqlx::migrate!("./migrations")
+        .run(pool)
+        .await
+        .map_err(|e| crate::error::Error::Internal(format!("Migration error: {}", e)))?;
     info!("Database migrations completed");
     Ok(())
 }

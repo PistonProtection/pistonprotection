@@ -2,8 +2,7 @@
 
 use crate::config::RedisConfig;
 use crate::error::{Error, Result};
-use deadpool_redis::{Config as DeadpoolConfig, Pool, Runtime};
-use redis::AsyncCommands;
+use deadpool_redis::{redis, redis::AsyncCommands, Config as DeadpoolConfig, Pool, Runtime};
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 use tracing::info;
@@ -87,7 +86,7 @@ impl CacheService {
         let json = serde_json::to_string(value)
             .map_err(|e| Error::Internal(format!("Cache serialization error: {}", e)))?;
 
-        conn.set_ex(self.key(key), json, ttl.as_secs()).await?;
+        let _: () = conn.set_ex(self.key(key), json, ttl.as_secs()).await?;
         Ok(())
     }
 
@@ -99,7 +98,7 @@ impl CacheService {
             .await
             .map_err(|e| Error::Internal(format!("Redis connection error: {}", e)))?;
 
-        conn.del(self.key(key)).await?;
+        let _: () = conn.del(self.key(key)).await?;
         Ok(())
     }
 
@@ -204,7 +203,7 @@ impl CacheService {
             .await
             .map_err(|e| Error::Internal(format!("Redis connection error: {}", e)))?;
 
-        conn.publish(channel, message).await?;
+        let _: () = conn.publish(channel, message).await?;
         Ok(())
     }
 }

@@ -12,7 +12,7 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::sync::Arc;
-use stripe::{
+use stripe_rust::{
     CheckoutSession, Customer, Event, EventObject, EventType, Invoice as StripeInvoice,
     PaymentIntent, Subscription as StripeSubscription,
 };

@@ -5,7 +5,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use stripe::{
+use stripe_rust::{
     BillingPortalSession, CheckoutSession, CheckoutSessionMode, Client, CreateBillingPortalSession,
     CreateCheckoutSession, CreateCheckoutSessionLineItems, CreateCustomer, CreateSubscription,
     CreateSubscriptionItems, CreateUsageRecord, Currency, Customer, CustomerId,

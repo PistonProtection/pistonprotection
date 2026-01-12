@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
-import { useSession } from "@daveyplate/better-auth-ui";
+import { authClient } from "@/lib/auth-client";
 import {
   Shield,
   Users,
@@ -71,7 +71,7 @@ const adminNavItems = [
 ];
 
 function AdminLayout() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = authClient.useSession();
   const location = useLocation();
 
   // Check if user is admin

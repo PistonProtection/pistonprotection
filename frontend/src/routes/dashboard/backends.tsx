@@ -62,7 +62,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
-import { useSession } from "@daveyplate/better-auth-ui";
+import { authClient } from "@/lib/auth-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/dashboard/backends")({

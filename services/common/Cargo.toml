@@ -20,14 +20,10 @@ serde_json = { workspace = true }
 # Database
 sqlx = { workspace = true }
 deadpool-redis = { workspace = true }
-redis = { workspace = true }
 
 # Tracing
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tracing-opentelemetry = { workspace = true }
-opentelemetry = { workspace = true }
-opentelemetry-otlp = { workspace = true }
 
 # Metrics
 prometheus = { workspace = true }
@@ -51,6 +47,7 @@ rand = { workspace = true }
 parking_lot = { workspace = true }
 dashmap = { workspace = true }
 lru = { workspace = true }
+lazy_static = "1.4"
 
 # Validation
 validator = { workspace = true }
