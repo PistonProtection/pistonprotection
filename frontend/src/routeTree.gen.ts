@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
+import { Route as DashboardIpLookupRouteImport } from './routes/dashboard/ip-lookup'
 import { Route as DashboardFiltersRouteImport } from './routes/dashboard/filters'
 import { Route as DashboardBillingRouteImport } from './routes/dashboard/billing'
 import { Route as DashboardBackendsRouteImport } from './routes/dashboard/backends'
@@ -58,6 +59,11 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardIpLookupRoute = DashboardIpLookupRouteImport.update({
+  id: '/ip-lookup',
+  path: '/ip-lookup',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardFiltersRoute = DashboardFiltersRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
+  '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
+  '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
+  '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin/': typeof AdminIndexRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
+    | '/dashboard/ip-lookup'
     | '/dashboard/settings'
     | '/docs/$'
     | '/admin'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
+    | '/dashboard/ip-lookup'
     | '/dashboard/settings'
     | '/docs/$'
     | '/admin'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/dashboard/backends'
     | '/dashboard/billing'
     | '/dashboard/filters'
+    | '/dashboard/ip-lookup'
     | '/dashboard/settings'
     | '/docs/$'
     | '/admin/'
@@ -268,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/ip-lookup': {
+      id: '/dashboard/ip-lookup'
+      path: '/ip-lookup'
+      fullPath: '/dashboard/ip-lookup'
+      preLoaderRoute: typeof DashboardIpLookupRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/filters': {
       id: '/dashboard/filters'
       path: '/filters'
@@ -332,6 +351,7 @@ interface DashboardRouteChildren {
   DashboardBackendsRoute: typeof DashboardBackendsRoute
   DashboardBillingRoute: typeof DashboardBillingRoute
   DashboardFiltersRoute: typeof DashboardFiltersRoute
+  DashboardIpLookupRoute: typeof DashboardIpLookupRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
@@ -341,6 +361,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardBackendsRoute: DashboardBackendsRoute,
   DashboardBillingRoute: DashboardBillingRoute,
   DashboardFiltersRoute: DashboardFiltersRoute,
+  DashboardIpLookupRoute: DashboardIpLookupRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
