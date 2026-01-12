@@ -666,6 +666,7 @@ const RAKNET_MAX_MTU: u16 = 1500;
 const RAKNET_MAX_AMPLIFICATION_RATIO: u32 = 10;  // Max 10x amplification allowed
 const RAKNET_PING_FLOOD_THRESHOLD: u32 = 50;     // Max pings per second per IP
 const RAKNET_CONN_REQ_FLOOD_THRESHOLD: u32 = 20; // Max connection requests per second per IP
+const RAKNET_MAX_ACK_RECORDS: u16 = 500;         // Max ACK/NACK records per packet (DoS protection)
 
 /// RakNet connection state for Bedrock
 #[repr(C)]
@@ -933,17 +934,44 @@ fn process_minecraft_bedrock(
         0x80..=0x8f => {
             // Data packets (Frame Set Packet / encapsulated)
             // These are valid connected session packets
-            // Basic validation: must have at least 4 bytes (id + 3 byte sequence number)
+            // Format: [1 byte packet ID] [3 byte sequence number (LE)] [encapsulated frames...]
             if payload_len < 4 {
                 return Ok(xdp_action::XDP_DROP);
             }
+
+            // Extract sequence number (little-endian 24-bit)
+            let _seq_num = (payload[1] as u32)
+                | ((payload[2] as u32) << 8)
+                | ((payload[3] as u32) << 16);
 
             // STATE VALIDATION: Should only come after connection is established
             if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
                 if state.state < 3 {
                     // Not in connected state - suspicious
-                    // Allow anyway as state might have expired
+                    // In strict mode this would be dropped
                 }
+
+                // Validate encapsulated frame structure if we have data after sequence number
+                if payload_len > 4 {
+                    // First frame header byte contains reliability type and flags
+                    let frame_header = payload[4];
+                    let reliability = (frame_header >> 5) & 0x07;
+
+                    // Reliability types 0-7 are valid, but 0-4 are most common
+                    if reliability > 7 {
+                        return Ok(xdp_action::XDP_DROP);
+                    }
+
+                    // Check for split packet flag (bit 4)
+                    let is_split = (frame_header & 0x10) != 0;
+
+                    // Split packets need additional validation
+                    if is_split && payload_len < 14 {
+                        // Split packets need: frame header + length + reliable seq + split info
+                        return Ok(xdp_action::XDP_DROP);
+                    }
+                }
+
                 // Update state
                 update_bedrock_connection_state(&connection_key, payload_len, now);
             }
@@ -951,25 +979,97 @@ fn process_minecraft_bedrock(
 
         0xa0 => {
             // NACK - Negative acknowledgment
+            // Format: [0xa0] [2 bytes record count (LE)] [records...]
+            // Each record: [1 byte flag] [3 bytes sequence number] [optional 3 bytes end sequence]
             if payload_len < 3 {
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            // Extract record count (little-endian)
+            let record_count = (payload[1] as u16) | ((payload[2] as u16) << 8);
+
+            // Validate record count - excessive records could be DoS
+            // A legitimate NACK shouldn't have more than a few hundred records
+            if record_count > RAKNET_MAX_ACK_RECORDS {
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            // Validate minimum size for claimed record count
+            // Each record is at least 4 bytes (1 flag + 3 seq num)
+            let min_records_size = (record_count as usize) * 4;
+            if payload_len < 3 + min_records_size {
+                // Insufficient data for claimed records
                 return Ok(xdp_action::XDP_DROP);
             }
         }
 
         0xc0 => {
             // ACK - Acknowledgment
+            // Format same as NACK
             if payload_len < 3 {
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            // Extract record count (little-endian)
+            let record_count = (payload[1] as u16) | ((payload[2] as u16) << 8);
+
+            // Validate record count
+            if record_count > RAKNET_MAX_ACK_RECORDS {
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            // Validate minimum size for claimed record count
+            let min_records_size = (record_count as usize) * 4;
+            if payload_len < 3 + min_records_size {
                 return Ok(xdp_action::XDP_DROP);
             }
         }
 
         0x09 => {
             // Connection Request (after open connection handshake)
-            if payload_len < 17 {
+            // Format: [0x09] [8 bytes client_guid] [8 bytes time] [1 byte use_security]
+            // Optional: [additional security data if use_security=1]
+            if payload_len < 18 { // 1 + 8 + 8 + 1
                 return Ok(xdp_action::XDP_DROP);
             }
+
+            // Extract client GUID (big-endian)
+            let client_guid = u64::from_be_bytes([
+                payload[1], payload[2], payload[3], payload[4],
+                payload[5], payload[6], payload[7], payload[8],
+            ]);
+
+            // STATE VALIDATION: Should only come after Open Connection Request 2
+            if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
+                // State should be 3 (after req2) for connection request
+                if state.state < 3 {
+                    return Ok(xdp_action::XDP_DROP);
+                }
+
+                // GUID validation: must match previously seen GUID
+                if state.client_guid != 0 && client_guid != 0 && state.client_guid != client_guid {
+                    return Ok(xdp_action::XDP_DROP);
+                }
+            } else {
+                // No state - connection request without handshake is suspicious
+                // In strict mode we would drop, but allow for expired state
+            }
+
+            // Check use_security flag
+            let use_security = payload[17];
+            if use_security > 1 {
+                // Invalid flag value
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            // If security is enabled, need more data for certificate
+            if use_security == 1 && payload_len < 100 {
+                // Security mode requires certificate data
+                return Ok(xdp_action::XDP_DROP);
+            }
+
             // Update to connected state
-            track_bedrock_connection(connection_key, 4, 0, 0, payload_len as u64, now);
+            track_bedrock_connection(connection_key, 4, 0, client_guid, payload_len as u64, now);
         }
 
         0x10 => {
@@ -978,10 +1078,24 @@ fn process_minecraft_bedrock(
         }
 
         0x13 => {
-            // New Incoming Connection
+            // New Incoming Connection (client -> server, after connection accepted)
+            // Format: [0x13] [7 bytes server address] [10x 7 bytes internal addresses]
+            //         [8 bytes ping time] [8 bytes pong time]
+            // Minimum: 1 + 7 + 70 + 8 + 8 = 94 bytes (but RakNet lib varies)
             if payload_len < 30 {
                 return Ok(xdp_action::XDP_DROP);
             }
+
+            // STATE VALIDATION: Should only come after we sent Connection Request Accepted
+            // In our case (as server), this should come after Connection Request (0x09)
+            if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
+                if state.state < 4 {
+                    // Not in proper state for this packet
+                    return Ok(xdp_action::XDP_DROP);
+                }
+            }
+            // Mark connection as fully established
+            track_bedrock_connection(connection_key, 5, 0, 0, payload_len as u64, now);
         }
 
         0x15 => {

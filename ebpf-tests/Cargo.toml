@@ -1,0 +1,16 @@
+[package]
+name = "pistonprotection-ebpf-tests"
+version = "0.1.0"
+edition = "2021"
+description = "Userspace tests for PistonProtection eBPF/XDP packet filters"
+
+[dependencies]
+
+[dev-dependencies]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "packet_filter_tests"
+path = "tests/mod.rs"

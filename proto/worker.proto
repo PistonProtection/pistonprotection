@@ -141,8 +141,8 @@ message ProtectionConfig {
   RateLimitConfig per_ip_rate = 4;
 
   // GeoIP blocking
-  repeated uint16 blocked_country_ids = 5;  // GeoIP database country IDs
-  repeated uint16 allowed_country_ids = 6;
+  repeated uint32 blocked_country_ids = 5;  // GeoIP database country IDs
+  repeated uint32 allowed_country_ids = 6;
 
   // Challenge settings
   bool challenge_enabled = 7;

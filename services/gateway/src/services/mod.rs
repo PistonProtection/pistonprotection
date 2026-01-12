@@ -1,7 +1,7 @@
 //! Service layer for the gateway
 
 use deadpool_redis::Pool as RedisPool;
-use pistonprotection_common::{config::Config, redis::CacheService};
+use pistonprotection_common::{config::Config, redis::CacheService, scoring::{ScoringConfig, ScoringEngine}};
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -11,6 +11,7 @@ pub mod connection_pool;
 pub mod filter;
 pub mod load_balancer;
 pub mod metrics;
+pub mod scoring;
 
 use circuit_breaker::{CircuitBreakerConfig, CircuitBreakerManager};
 use connection_pool::{ConnectionPoolConfig, ConnectionPoolManager};
@@ -25,6 +26,7 @@ pub struct AppState {
     pub circuit_breakers: Arc<CircuitBreakerManager>,
     pub load_balancers: Arc<LoadBalancerManager>,
     pub connection_pools: Arc<ConnectionPoolManager>,
+    pub scoring_engine: Arc<ScoringEngine>,
 }
 
 impl AppState {
@@ -49,6 +51,9 @@ impl AppState {
             Arc::clone(&circuit_breakers),
         );
 
+        // Initialize scoring engine with default config
+        let scoring_engine = Arc::new(ScoringEngine::new(ScoringConfig::default()));
+
         Self {
             db,
             cache,
@@ -56,6 +61,7 @@ impl AppState {
             circuit_breakers,
             load_balancers,
             connection_pools,
+            scoring_engine,
         }
     }
 
@@ -82,6 +88,9 @@ impl AppState {
             Arc::clone(&circuit_breakers),
         );
 
+        // Initialize scoring engine with default config
+        let scoring_engine = Arc::new(ScoringEngine::new(ScoringConfig::default()));
+
         Self {
             db,
             cache,
@@ -89,6 +98,7 @@ impl AppState {
             circuit_breakers,
             load_balancers,
             connection_pools,
+            scoring_engine,
         }
     }
 
@@ -129,5 +139,10 @@ impl AppState {
     /// Get connection pool manager
     pub fn connection_pools(&self) -> &ConnectionPoolManager {
         &self.connection_pools
+    }
+
+    /// Get scoring engine
+    pub fn scoring_engine(&self) -> &ScoringEngine {
+        &self.scoring_engine
     }
 }

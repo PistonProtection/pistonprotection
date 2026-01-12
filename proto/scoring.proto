@@ -1,0 +1,263 @@
+syntax = "proto3";
+
+package pistonprotection.scoring;
+
+import "common.proto";
+
+option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/scoring";
+
+// IP Scoring Service provides threat assessment and IP reputation management
+service ScoringService {
+  // Get the threat score and details for a single IP
+  rpc GetIPScore(GetIPScoreRequest) returns (GetIPScoreResponse);
+
+  // Get threat scores for multiple IPs
+  rpc GetIPScoreBatch(GetIPScoreBatchRequest) returns (GetIPScoreBatchResponse);
+
+  // Record an action taken on an IP (affects scoring)
+  rpc RecordAction(RecordActionRequest) returns (RecordActionResponse);
+
+  // Block an IP manually
+  rpc BlockIP(BlockIPRequest) returns (BlockIPResponse);
+
+  // Unblock an IP
+  rpc UnblockIP(UnblockIPRequest) returns (UnblockIPResponse);
+
+  // Get list of currently blocked IPs
+  rpc ListBlockedIPs(ListBlockedIPsRequest) returns (ListBlockedIPsResponse);
+
+  // Get top threat IPs
+  rpc ListTopThreats(ListTopThreatsRequest) returns (ListTopThreatsResponse);
+
+  // Get scoring statistics
+  rpc GetScoringStats(GetScoringStatsRequest) returns (GetScoringStatsResponse);
+
+  // Search IPs by various criteria
+  rpc SearchIPs(SearchIPsRequest) returns (SearchIPsResponse);
+
+  // Update threat intelligence feed
+  rpc UpdateThreatIntel(UpdateThreatIntelRequest) returns (UpdateThreatIntelResponse);
+
+  // Check if an IP is in the threat intel feed
+  rpc CheckThreatIntel(CheckThreatIntelRequest) returns (CheckThreatIntelResponse);
+}
+
+// Behavior categories that affect scoring
+enum BehaviorCategory {
+  BEHAVIOR_CATEGORY_UNSPECIFIED = 0;
+  BEHAVIOR_CATEGORY_NORMAL = 1;
+  BEHAVIOR_CATEGORY_HIGH_RATE = 2;
+  BEHAVIOR_CATEGORY_CONNECTION_FLOOD = 3;
+  BEHAVIOR_CATEGORY_PROTOCOL_VIOLATION = 4;
+  BEHAVIOR_CATEGORY_SUSPICIOUS = 5;
+  BEHAVIOR_CATEGORY_ATTACK = 6;
+  BEHAVIOR_CATEGORY_BOT = 7;
+  BEHAVIOR_CATEGORY_TOR_EXIT_NODE = 8;
+  BEHAVIOR_CATEGORY_VPN_PROXY = 9;
+  BEHAVIOR_CATEGORY_RESIDENTIAL_PROXY = 10;
+  BEHAVIOR_CATEGORY_DATACENTER = 11;
+}
+
+// Action types for recording
+enum ActionType {
+  ACTION_TYPE_UNSPECIFIED = 0;
+  ACTION_TYPE_ALLOWED = 1;
+  ACTION_TYPE_BLOCKED = 2;
+  ACTION_TYPE_RATE_LIMITED = 3;
+  ACTION_TYPE_CHALLENGED = 4;
+  ACTION_TYPE_CHALLENGE_PASSED = 5;
+  ACTION_TYPE_CHALLENGE_FAILED = 6;
+}
+
+// An event in IP history
+message IPEvent {
+  common.Timestamp timestamp = 1;
+  ActionType action = 2;
+  string backend_id = 3;
+  string protocol = 4;
+  BehaviorCategory category = 5;
+  int32 score_delta = 6;
+}
+
+// Complete IP record
+message IPRecord {
+  common.IPAddress ip = 1;
+  uint32 threat_score = 2;  // 0-100, higher = more suspicious
+  uint64 total_requests = 3;
+  uint64 blocked_requests = 4;
+  uint64 rate_limited_requests = 5;
+  uint64 challenged_requests = 6;
+  uint64 challenges_passed = 7;
+  uint64 challenges_failed = 8;
+  common.Timestamp first_seen = 9;
+  common.Timestamp last_seen = 10;
+  string country_code = 11;
+  uint32 asn = 12;
+  string asn_org = 13;
+  bool is_tor_exit = 14;
+  bool is_vpn_proxy = 15;
+  bool is_datacenter = 16;
+  repeated IPEvent recent_events = 17;
+  repeated BehaviorCategory active_categories = 18;
+  bool is_blocked = 19;
+  common.Timestamp block_expires = 20;
+  string block_reason = 21;
+}
+
+// Threat intelligence entry
+message ThreatIntelEntry {
+  common.IPAddress ip = 1;
+  string threat_type = 2;
+  uint32 confidence = 3;  // 0-100
+  string source = 4;
+  common.Timestamp first_seen = 5;
+  common.Timestamp last_seen = 6;
+}
+
+// Get IP Score Request
+message GetIPScoreRequest {
+  common.IPAddress ip = 1;
+  bool include_history = 2;  // Include recent events in response
+}
+
+// Get IP Score Response
+message GetIPScoreResponse {
+  IPRecord record = 1;
+  bool found = 2;
+}
+
+// Get IP Score Batch Request
+message GetIPScoreBatchRequest {
+  repeated common.IPAddress ips = 1;
+}
+
+// Get IP Score Batch Response
+message GetIPScoreBatchResponse {
+  map<string, IPRecord> records = 1;  // Key is IP string
+}
+
+// Record Action Request
+message RecordActionRequest {
+  common.IPAddress ip = 1;
+  ActionType action = 2;
+  BehaviorCategory category = 3;
+  string backend_id = 4;
+  string protocol = 5;
+}
+
+// Record Action Response
+message RecordActionResponse {
+  uint32 new_threat_score = 1;
+  bool auto_blocked = 2;
+}
+
+// Block IP Request
+message BlockIPRequest {
+  common.IPAddress ip = 1;
+  uint64 duration_seconds = 2;  // 0 = permanent
+  string reason = 3;
+}
+
+// Block IP Response
+message BlockIPResponse {
+  bool success = 1;
+  common.Timestamp block_expires = 2;
+}
+
+// Unblock IP Request
+message UnblockIPRequest {
+  common.IPAddress ip = 1;
+}
+
+// Unblock IP Response
+message UnblockIPResponse {
+  bool success = 1;
+  bool was_blocked = 2;
+}
+
+// List Blocked IPs Request
+message ListBlockedIPsRequest {
+  common.Pagination pagination = 1;
+  string country_code_filter = 2;  // Optional country filter
+  uint32 min_threat_score = 3;
+}
+
+// List Blocked IPs Response
+message ListBlockedIPsResponse {
+  repeated IPRecord records = 1;
+  common.PaginationInfo pagination = 2;
+}
+
+// List Top Threats Request
+message ListTopThreatsRequest {
+  uint32 limit = 1;  // Default 10, max 100
+  uint32 min_threat_score = 2;
+  bool include_blocked = 3;
+}
+
+// List Top Threats Response
+message ListTopThreatsResponse {
+  repeated IPRecord records = 1;
+}
+
+// Get Scoring Stats Request
+message GetScoringStatsRequest {
+  // Empty for now, may add filters later
+}
+
+// Get Scoring Stats Response
+message GetScoringStatsResponse {
+  uint64 total_ips = 1;
+  uint64 blocked_ips = 2;
+  uint64 high_threat_count = 3;
+  uint64 medium_threat_count = 4;
+  uint64 low_threat_count = 5;
+  uint64 total_requests = 6;
+  uint64 blocked_requests = 7;
+  double avg_threat_score = 8;
+}
+
+// Search IPs Request
+message SearchIPsRequest {
+  common.Pagination pagination = 1;
+  uint32 min_threat_score = 2;
+  uint32 max_threat_score = 3;
+  string country_code = 4;
+  uint32 asn = 5;
+  bool is_blocked = 6;
+  bool only_blocked = 7;
+  repeated BehaviorCategory categories = 8;
+  string backend_id = 9;
+  common.Timestamp first_seen_after = 10;
+  common.Timestamp last_seen_after = 11;
+}
+
+// Search IPs Response
+message SearchIPsResponse {
+  repeated IPRecord records = 1;
+  common.PaginationInfo pagination = 2;
+}
+
+// Update Threat Intel Request
+message UpdateThreatIntelRequest {
+  repeated ThreatIntelEntry entries = 1;
+  bool clear_existing = 2;  // Clear existing entries before adding
+}
+
+// Update Threat Intel Response
+message UpdateThreatIntelResponse {
+  uint64 entries_added = 1;
+  uint64 entries_updated = 2;
+  uint64 total_entries = 3;
+}
+
+// Check Threat Intel Request
+message CheckThreatIntelRequest {
+  common.IPAddress ip = 1;
+}
+
+// Check Threat Intel Response
+message CheckThreatIntelResponse {
+  bool is_known_bad = 1;
+  ThreatIntelEntry entry = 2;
+}
