@@ -1,6 +1,6 @@
 //! API key management tests
 
-use super::test_utils::{constants, generate_test_id, TestOrganization, TestUser};
+use super::test_utils::{TestOrganization, TestUser, constants, generate_test_id};
 use crate::services::api_key::{ApiKey, ApiKeyConfig, ApiKeyPermission, ApiKeyService};
 use std::time::Duration;
 
@@ -119,23 +119,43 @@ mod creation_tests {
 
         // Create max keys
         service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Key 1", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Key 1",
+                vec![],
+                None,
+            )
             .await
             .unwrap();
         service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Key 2", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Key 2",
+                vec![],
+                None,
+            )
             .await
             .unwrap();
 
         // Third key should fail
         let result = service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Key 3", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Key 3",
+                vec![],
+                None,
+            )
             .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().to_lowercase().contains("limit")
-            || err.to_string().to_lowercase().contains("maximum"));
+        assert!(
+            err.to_string().to_lowercase().contains("limit")
+                || err.to_string().to_lowercase().contains("maximum")
+        );
     }
 
     /// Test creating key with all permissions
@@ -376,11 +396,23 @@ mod management_tests {
         let service = create_test_api_key_service();
 
         service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Key 1", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Key 1",
+                vec![],
+                None,
+            )
             .await
             .unwrap();
         service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Key 2", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Key 2",
+                vec![],
+                None,
+            )
             .await
             .unwrap();
 
@@ -397,7 +429,13 @@ mod management_tests {
         let service = create_test_api_key_service();
 
         let (created, _) = service
-            .create_key(constants::TEST_ORG_ID, constants::TEST_USER_ID, "Get Key", vec![], None)
+            .create_key(
+                constants::TEST_ORG_ID,
+                constants::TEST_USER_ID,
+                "Get Key",
+                vec![],
+                None,
+            )
             .await
             .unwrap();
 
@@ -475,7 +513,9 @@ mod management_tests {
             .await
             .unwrap();
 
-        let result = service.update_key(&key.id, Some("Updated Name"), None).await;
+        let result = service
+            .update_key(&key.id, Some("Updated Name"), None)
+            .await;
 
         assert!(result.is_ok());
         let updated = result.unwrap();

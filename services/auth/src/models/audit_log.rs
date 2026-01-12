@@ -180,7 +180,9 @@ impl AuditLogBuilder {
     }
 
     pub fn metadata(mut self, key: &str, value: &str) -> Self {
-        self.entry.metadata.insert(key.to_string(), value.to_string());
+        self.entry
+            .metadata
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -198,8 +200,8 @@ impl AuditLogBuilder {
 /// Convert to proto AuditLogEntry
 impl AuditLogEntry {
     pub fn to_proto(&self) -> pistonprotection_proto::auth::AuditLogEntry {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::AuditLogEntry {
             id: self.id.clone(),

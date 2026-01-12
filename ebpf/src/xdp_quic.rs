@@ -159,8 +159,8 @@ pub struct QuicStats {
 // ============================================================================
 
 // QUIC header flags
-const QUIC_HEADER_FORM_LONG: u8 = 0x80;    // Long header
-const QUIC_FIXED_BIT: u8 = 0x40;           // Fixed bit (must be 1)
+const QUIC_HEADER_FORM_LONG: u8 = 0x80; // Long header
+const QUIC_FIXED_BIT: u8 = 0x40; // Fixed bit (must be 1)
 const QUIC_LONG_PACKET_TYPE_MASK: u8 = 0x30;
 
 // QUIC long packet types (in bits 4-5)
@@ -170,8 +170,8 @@ const QUIC_PACKET_TYPE_HANDSHAKE: u8 = 0x20;
 const QUIC_PACKET_TYPE_RETRY: u8 = 0x30;
 
 // QUIC versions (in network byte order)
-const QUIC_VERSION_1: u32 = 0x00000001;        // RFC 9000
-const QUIC_VERSION_2: u32 = 0x6b3343cf;        // RFC 9369
+const QUIC_VERSION_1: u32 = 0x00000001; // RFC 9000
+const QUIC_VERSION_2: u32 = 0x6b3343cf; // RFC 9369
 const QUIC_VERSION_NEGOTIATION: u32 = 0x00000000;
 
 // Draft versions (commonly seen)
@@ -191,8 +191,8 @@ const FLAG_SUSPICIOUS: u32 = 0x0008;
 // Limits
 const MAX_DCID_LENGTH: u8 = 20;
 const MAX_SCID_LENGTH: u8 = 20;
-const MIN_INITIAL_PACKET_SIZE: usize = 1200;  // RFC 9000 requirement
-const MAX_AMPLIFICATION_FACTOR: u32 = 3;      // RFC 9000: 3x amplification limit
+const MIN_INITIAL_PACKET_SIZE: usize = 1200; // RFC 9000 requirement
+const MAX_AMPLIFICATION_FACTOR: u32 = 3; // RFC 9000: 3x amplification limit
 
 // Default configuration
 const DEFAULT_QUIC_PORT: u16 = 443;
@@ -224,13 +224,11 @@ static QUIC_RATE_LIMITS_V6: LruHashMap<[u8; 16], QuicRateLimit> =
 
 /// Known valid connection IDs (for short header validation)
 #[map]
-static QUIC_VALID_CIDS: LruHashMap<u64, u64> =
-    LruHashMap::with_max_entries(500_000, 0);
+static QUIC_VALID_CIDS: LruHashMap<u64, u64> = LruHashMap::with_max_entries(500_000, 0);
 
 /// Whitelisted IPs
 #[map]
-static QUIC_WHITELIST: HashMap<u32, u32> =
-    HashMap::with_max_entries(10_000, 0);
+static QUIC_WHITELIST: HashMap<u32, u32> = HashMap::with_max_entries(10_000, 0);
 
 /// Configuration
 #[map]
@@ -386,8 +384,16 @@ fn process_udp_quic(
     let udp_len = u16::from_be(udp.len) as usize;
 
     // Check if this is QUIC traffic (by port)
-    let quic_port = if config.quic_port != 0 { config.quic_port } else { DEFAULT_QUIC_PORT };
-    let alt_quic_port = if config.alt_quic_port != 0 { config.alt_quic_port } else { DEFAULT_ALT_QUIC_PORT };
+    let quic_port = if config.quic_port != 0 {
+        config.quic_port
+    } else {
+        DEFAULT_QUIC_PORT
+    };
+    let alt_quic_port = if config.alt_quic_port != 0 {
+        config.alt_quic_port
+    } else {
+        DEFAULT_ALT_QUIC_PORT
+    };
 
     if dst_port != quic_port && dst_port != alt_quic_port {
         return Ok(xdp_action::XDP_PASS);
@@ -420,7 +426,7 @@ fn process_udp_quic(
         if is_long_header(first_byte) {
             // Check if it's version negotiation
             if quic_data + 5 <= data_end {
-                let version = unsafe { u32::from_be(*(((quic_data + 1) as *const u32))) };
+                let version = unsafe { u32::from_be(*((quic_data + 1) as *const u32)) };
                 if version == QUIC_VERSION_NEGOTIATION {
                     update_stats_passed();
                     return Ok(xdp_action::XDP_PASS);
@@ -679,9 +685,10 @@ fn is_valid_quic_version(version: u32) -> bool {
     }
 
     // Common draft versions (for compatibility)
-    if version == QUIC_VERSION_DRAFT_29 ||
-       version == QUIC_VERSION_DRAFT_32 ||
-       version == QUIC_VERSION_DRAFT_34 {
+    if version == QUIC_VERSION_DRAFT_29
+        || version == QUIC_VERSION_DRAFT_32
+        || version == QUIC_VERSION_DRAFT_34
+    {
         return true;
     }
 
@@ -701,7 +708,13 @@ fn is_valid_quic_version(version: u32) -> bool {
 }
 
 #[inline(always)]
-fn make_connection_key(src_ip: u32, src_port: u16, dcid_len: u8, _data: usize, dcid_start: usize) -> u64 {
+fn make_connection_key(
+    src_ip: u32,
+    src_port: u16,
+    dcid_len: u8,
+    _data: usize,
+    dcid_start: usize,
+) -> u64 {
     // Create a connection key from IP, port, and DCID hash
     let mut key: u64 = (src_ip as u64) << 32;
     key |= (src_port as u64) << 16;
@@ -808,7 +821,12 @@ fn is_ip_blocked_v6(src_ip: &[u8; 16]) -> bool {
 #[inline(always)]
 fn block_ip_v4(src_ip: u32, duration_ns: u64) {
     let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
-    let block_until = now + if duration_ns != 0 { duration_ns } else { DEFAULT_BLOCK_DURATION_NS };
+    let block_until = now
+        + if duration_ns != 0 {
+            duration_ns
+        } else {
+            DEFAULT_BLOCK_DURATION_NS
+        };
 
     if let Some(rate) = unsafe { QUIC_RATE_LIMITS_V4.get_ptr_mut(&src_ip) } {
         let rate = unsafe { &mut *rate };
@@ -856,70 +874,90 @@ fn get_config() -> QuicConfig {
 #[inline(always)]
 fn update_stats_total() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).total_packets += 1; }
+        unsafe {
+            (*stats).total_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_passed() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).passed_packets += 1; }
+        unsafe {
+            (*stats).passed_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_header() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_header += 1; }
+        unsafe {
+            (*stats).dropped_invalid_header += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_version() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_version += 1; }
+        unsafe {
+            (*stats).dropped_invalid_version += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_amplification() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_amplification += 1; }
+        unsafe {
+            (*stats).dropped_amplification += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_rate_limited() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_rate_limited += 1; }
+        unsafe {
+            (*stats).dropped_rate_limited += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_blocked() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_blocked_ip += 1; }
+        unsafe {
+            (*stats).dropped_blocked_ip += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_initial() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).initial_packets += 1; }
+        unsafe {
+            (*stats).initial_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_handshake() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).handshake_packets += 1; }
+        unsafe {
+            (*stats).handshake_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_short_header() {
     if let Some(stats) = unsafe { QUIC_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).short_header_packets += 1; }
+        unsafe {
+            (*stats).short_header_packets += 1;
+        }
     }
 }
 

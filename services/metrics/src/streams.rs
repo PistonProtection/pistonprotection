@@ -12,7 +12,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::broadcast;
-use tokio::time::{interval, Interval};
+use tokio::time::{Interval, interval};
 use tokio_stream::wrappers::BroadcastStream;
 use tonic::Status;
 use tracing::{debug, info, warn};
@@ -70,12 +70,7 @@ impl MetricsStreamer {
         let rx = self.aggregator.subscribe_traffic();
 
         // Create filtered stream
-        let stream = TrafficMetricsStream::new(
-            backend_id,
-            rx,
-            self.aggregator.clone(),
-            interval,
-        );
+        let stream = TrafficMetricsStream::new(backend_id, rx, self.aggregator.clone(), interval);
 
         Ok(stream)
     }
@@ -98,12 +93,7 @@ impl MetricsStreamer {
         let rx = self.aggregator.subscribe_attack();
 
         // Create filtered stream
-        let stream = AttackMetricsStream::new(
-            backend_id,
-            rx,
-            self.aggregator.clone(),
-            interval,
-        );
+        let stream = AttackMetricsStream::new(backend_id, rx, self.aggregator.clone(), interval);
 
         Ok(stream)
     }
@@ -193,9 +183,7 @@ impl Stream for TrafficMetricsStream {
 
                 // Since we can't easily await here, we use a workaround:
                 // Create a future and poll it
-                let fut = async move {
-                    aggregator.get_traffic_metrics(&backend_id).await
-                };
+                let fut = async move { aggregator.get_traffic_metrics(&backend_id).await };
 
                 // For a proper implementation, we'd use a pinned future
                 // For now, we'll rely on the broadcast updates which is the primary mechanism
@@ -512,9 +500,9 @@ pub fn create_attack_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::aggregator::AggregatorConfig;
     use crate::storage::{RetentionConfig, TimeSeriesStorage};
     use pistonprotection_common::geoip::GeoIpService;
-    use crate::aggregator::AggregatorConfig;
 
     fn create_test_aggregator() -> Arc<MetricsAggregator> {
         let storage = Arc::new(TimeSeriesStorage::new(

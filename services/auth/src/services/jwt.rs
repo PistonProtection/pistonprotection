@@ -1,7 +1,7 @@
 //! JWT service for token generation and validation
 
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -87,14 +87,7 @@ impl JwtService {
         orgs: Vec<String>,
         session_id: Option<&str>,
     ) -> Result<String, JwtError> {
-        self.generate_token(
-            user_id,
-            email,
-            role,
-            orgs,
-            session_id,
-            TokenType::Access,
-        )
+        self.generate_token(user_id, email, role, orgs, session_id, TokenType::Access)
     }
 
     /// Generate a refresh token
@@ -106,14 +99,7 @@ impl JwtService {
         orgs: Vec<String>,
         session_id: Option<&str>,
     ) -> Result<String, JwtError> {
-        self.generate_token(
-            user_id,
-            email,
-            role,
-            orgs,
-            session_id,
-            TokenType::Refresh,
-        )
+        self.generate_token(user_id, email, role, orgs, session_id, TokenType::Refresh)
     }
 
     /// Generate a token with specified type
@@ -165,9 +151,8 @@ impl JwtService {
         validation.validate_exp = true;
         validation.validate_nbf = true;
 
-        let token_data: TokenData<Claims> =
-            decode(token, &self.decoding_key, &validation)
-                .map_err(|e| JwtError::ValidationError(e.to_string()))?;
+        let token_data: TokenData<Claims> = decode(token, &self.decoding_key, &validation)
+            .map_err(|e| JwtError::ValidationError(e.to_string()))?;
 
         Ok(token_data.claims)
     }
@@ -177,7 +162,9 @@ impl JwtService {
         let claims = self.validate_token(token)?;
 
         if claims.typ != "access" {
-            return Err(JwtError::InvalidTokenType("Expected access token".to_string()));
+            return Err(JwtError::InvalidTokenType(
+                "Expected access token".to_string(),
+            ));
         }
 
         Ok(claims)
@@ -188,7 +175,9 @@ impl JwtService {
         let claims = self.validate_token(token)?;
 
         if claims.typ != "refresh" {
-            return Err(JwtError::InvalidTokenType("Expected refresh token".to_string()));
+            return Err(JwtError::InvalidTokenType(
+                "Expected refresh token".to_string(),
+            ));
         }
 
         Ok(claims)
@@ -212,9 +201,8 @@ impl JwtService {
         validation.validate_nbf = false;
         validation.insecure_disable_signature_validation();
 
-        let token_data: TokenData<Claims> =
-            decode(token, &self.decoding_key, &validation)
-                .map_err(|e| JwtError::ValidationError(e.to_string()))?;
+        let token_data: TokenData<Claims> = decode(token, &self.decoding_key, &validation)
+            .map_err(|e| JwtError::ValidationError(e.to_string()))?;
 
         Ok(token_data.claims.sub)
     }
@@ -282,7 +270,13 @@ mod tests {
         let service = JwtService::new(&test_config());
 
         let token = service
-            .generate_refresh_token("user123", "test@example.com", UserRole::Admin, vec!["org1".to_string()], Some("session123"))
+            .generate_refresh_token(
+                "user123",
+                "test@example.com",
+                UserRole::Admin,
+                vec!["org1".to_string()],
+                Some("session123"),
+            )
             .unwrap();
 
         let claims = service.validate_refresh_token(&token).unwrap();

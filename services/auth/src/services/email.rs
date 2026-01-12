@@ -379,12 +379,7 @@ impl EmailService {
     }
 
     /// Send email via SMTP
-    async fn send_via_smtp(
-        &self,
-        to: &str,
-        subject: &str,
-        body: &str,
-    ) -> Result<EmailResult> {
+    async fn send_via_smtp(&self, to: &str, subject: &str, body: &str) -> Result<EmailResult> {
         // In a real implementation, use lettre or similar SMTP library
         // For now, log the email and return success
         info!(
@@ -470,7 +465,10 @@ impl EmailService {
             .with_variable("amount", amount)
             .with_variable("invoice_id", invoice_id)
             .with_variable("plan_name", plan_name)
-            .with_variable("payment_date", chrono::Utc::now().format("%B %d, %Y").to_string());
+            .with_variable(
+                "payment_date",
+                chrono::Utc::now().format("%B %d, %Y").to_string(),
+            );
         self.send(message).await
     }
 
@@ -534,7 +532,10 @@ mod tests {
             .with_variable("invoice_id", "INV-123");
 
         assert_eq!(message.variables.get("amount"), Some(&"$99.00".to_string()));
-        assert_eq!(message.variables.get("invoice_id"), Some(&"INV-123".to_string()));
+        assert_eq!(
+            message.variables.get("invoice_id"),
+            Some(&"INV-123".to_string())
+        );
     }
 
     #[tokio::test]
@@ -550,10 +551,7 @@ mod tests {
             name: None,
         };
 
-        let result = service
-            .send_welcome_email(recipient, "Pro")
-            .await
-            .unwrap();
+        let result = service.send_welcome_email(recipient, "Pro").await.unwrap();
 
         assert!(result.success);
     }

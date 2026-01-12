@@ -1,13 +1,7 @@
 //! HTTP handlers for health checks and metrics
 
 use crate::services::AppState;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use serde::Serialize;
 use tower_http::{
     compression::CompressionLayer,
@@ -75,7 +69,11 @@ async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
     }
 
     let response = HealthResponse {
-        status: if overall_healthy { "healthy" } else { "unhealthy" },
+        status: if overall_healthy {
+            "healthy"
+        } else {
+            "unhealthy"
+        },
         service: "gateway",
         version: env!("CARGO_PKG_VERSION"),
         database: db_status,

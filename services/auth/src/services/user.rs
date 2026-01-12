@@ -25,17 +25,23 @@ impl UserService {
     /// Create a new user
     pub async fn create_user(&self, request: CreateUserRequest) -> Result<UserResponse, UserError> {
         // Validate request
-        request.validate().map_err(|e| UserError::ValidationError(e.to_string()))?;
+        request
+            .validate()
+            .map_err(|e| UserError::ValidationError(e.to_string()))?;
 
         // Check if email already exists
-        if let Some(_) = db::get_user_by_email(&self.db, &request.email).await
-            .map_err(|e| UserError::DatabaseError(e.to_string()))? {
+        if let Some(_) = db::get_user_by_email(&self.db, &request.email)
+            .await
+            .map_err(|e| UserError::DatabaseError(e.to_string()))?
+        {
             return Err(UserError::EmailExists);
         }
 
         // Check if username already exists
-        if let Some(_) = db::get_user_by_username(&self.db, &request.username).await
-            .map_err(|e| UserError::DatabaseError(e.to_string()))? {
+        if let Some(_) = db::get_user_by_username(&self.db, &request.username)
+            .await
+            .map_err(|e| UserError::DatabaseError(e.to_string()))?
+        {
             return Err(UserError::UsernameExists);
         }
 
@@ -72,7 +78,8 @@ impl UserService {
 
     /// Get user by ID
     pub async fn get_user(&self, user_id: &str) -> Result<Option<UserResponse>, UserError> {
-        let user = db::get_user_by_id(&self.db, user_id).await
+        let user = db::get_user_by_id(&self.db, user_id)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
         Ok(user.map(UserResponse::from))
@@ -80,7 +87,8 @@ impl UserService {
 
     /// Get user by email
     pub async fn get_user_by_email(&self, email: &str) -> Result<Option<UserResponse>, UserError> {
-        let user = db::get_user_by_email(&self.db, email).await
+        let user = db::get_user_by_email(&self.db, email)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
         Ok(user.map(UserResponse::from))
@@ -88,25 +96,35 @@ impl UserService {
 
     /// Get full user (internal use, includes password hash)
     pub async fn get_user_internal(&self, user_id: &str) -> Result<Option<User>, UserError> {
-        db::get_user_by_id(&self.db, user_id).await
+        db::get_user_by_id(&self.db, user_id)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))
     }
 
     /// Update user
-    pub async fn update_user(&self, user_id: &str, request: UpdateUserRequest) -> Result<UserResponse, UserError> {
+    pub async fn update_user(
+        &self,
+        user_id: &str,
+        request: UpdateUserRequest,
+    ) -> Result<UserResponse, UserError> {
         // Validate request
-        request.validate().map_err(|e| UserError::ValidationError(e.to_string()))?;
+        request
+            .validate()
+            .map_err(|e| UserError::ValidationError(e.to_string()))?;
 
         // Check if user exists
-        let existing = db::get_user_by_id(&self.db, user_id).await
+        let existing = db::get_user_by_id(&self.db, user_id)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?
             .ok_or_else(|| UserError::NotFound)?;
 
         // Check email uniqueness if changing
         if let Some(ref email) = request.email {
             if email != &existing.email {
-                if let Some(_) = db::get_user_by_email(&self.db, email).await
-                    .map_err(|e| UserError::DatabaseError(e.to_string()))? {
+                if let Some(_) = db::get_user_by_email(&self.db, email)
+                    .await
+                    .map_err(|e| UserError::DatabaseError(e.to_string()))?
+                {
                     return Err(UserError::EmailExists);
                 }
             }
@@ -115,8 +133,10 @@ impl UserService {
         // Check username uniqueness if changing
         if let Some(ref username) = request.username {
             if username != &existing.username {
-                if let Some(_) = db::get_user_by_username(&self.db, username).await
-                    .map_err(|e| UserError::DatabaseError(e.to_string()))? {
+                if let Some(_) = db::get_user_by_username(&self.db, username)
+                    .await
+                    .map_err(|e| UserError::DatabaseError(e.to_string()))?
+                {
                     return Err(UserError::UsernameExists);
                 }
             }
@@ -142,7 +162,8 @@ impl UserService {
 
     /// Delete user
     pub async fn delete_user(&self, user_id: &str) -> Result<bool, UserError> {
-        let deleted = db::delete_user(&self.db, user_id).await
+        let deleted = db::delete_user(&self.db, user_id)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
         if deleted {
@@ -153,19 +174,22 @@ impl UserService {
     }
 
     /// List users with pagination
-    pub async fn list_users(&self, page: u32, page_size: u32) -> Result<(Vec<UserResponse>, u32), UserError> {
-        let (users, total) = db::list_users(&self.db, page, page_size).await
+    pub async fn list_users(
+        &self,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<UserResponse>, u32), UserError> {
+        let (users, total) = db::list_users(&self.db, page, page_size)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
-        Ok((
-            users.into_iter().map(UserResponse::from).collect(),
-            total,
-        ))
+        Ok((users.into_iter().map(UserResponse::from).collect(), total))
     }
 
     /// Verify user email
     pub async fn verify_email(&self, user_id: &str) -> Result<(), UserError> {
-        db::verify_user_email(&self.db, user_id).await
+        db::verify_user_email(&self.db, user_id)
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
         info!("Email verified for user: {}", user_id);
@@ -174,8 +198,13 @@ impl UserService {
     }
 
     /// Update user role (admin only)
-    pub async fn update_role(&self, user_id: &str, role: UserRole) -> Result<UserResponse, UserError> {
-        let user = db::update_user(&self.db, user_id, None, None, None, None, Some(role)).await
+    pub async fn update_role(
+        &self,
+        user_id: &str,
+        role: UserRole,
+    ) -> Result<UserResponse, UserError> {
+        let user = db::update_user(&self.db, user_id, None, None, None, None, Some(role))
+            .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
         info!("User role updated: {} -> {:?}", user_id, role);
@@ -243,8 +272,8 @@ impl TempAuthService {
 
     fn hash_password(&self, password: &str) -> Result<String, UserError> {
         use argon2::{
-            password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
             Argon2,
+            password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
         };
 
         let salt = SaltString::generate(&mut OsRng);
@@ -314,7 +343,9 @@ impl From<crate::services::auth::AuthError> for UserError {
     fn from(err: crate::services::auth::AuthError) -> Self {
         match err {
             crate::services::auth::AuthError::WeakPassword(msg) => UserError::WeakPassword(msg),
-            crate::services::auth::AuthError::PasswordHashError(msg) => UserError::PasswordError(msg),
+            crate::services::auth::AuthError::PasswordHashError(msg) => {
+                UserError::PasswordError(msg)
+            }
             _ => UserError::PasswordError(err.to_string()),
         }
     }

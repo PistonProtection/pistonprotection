@@ -111,7 +111,10 @@ impl SessionService {
     }
 
     /// Get a cached session by ID
-    pub async fn get_cached_session(&self, session_id: &str) -> Result<Option<CachedSession>, SessionError> {
+    pub async fn get_cached_session(
+        &self,
+        session_id: &str,
+    ) -> Result<Option<CachedSession>, SessionError> {
         let key = format!("session:{}", session_id);
 
         self.cache
@@ -121,7 +124,10 @@ impl SessionService {
     }
 
     /// Get a cached session by token hash
-    pub async fn get_session_by_token(&self, token_hash: &str) -> Result<Option<CachedSession>, SessionError> {
+    pub async fn get_session_by_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<CachedSession>, SessionError> {
         // First, look up session ID by token hash
         let token_key = format!("token:{}", token_hash);
         let session_id: Option<String> = self
@@ -137,7 +143,11 @@ impl SessionService {
     }
 
     /// Map token hash to session ID
-    pub async fn map_token_to_session(&self, token_hash: &str, session_id: &str) -> Result<(), SessionError> {
+    pub async fn map_token_to_session(
+        &self,
+        token_hash: &str,
+        session_id: &str,
+    ) -> Result<(), SessionError> {
         let key = format!("token:{}", token_hash);
 
         self.cache
@@ -176,7 +186,11 @@ impl SessionService {
     }
 
     /// Invalidate a session
-    pub async fn invalidate_session(&self, session_id: &str, user_id: &str) -> Result<(), SessionError> {
+    pub async fn invalidate_session(
+        &self,
+        session_id: &str,
+        user_id: &str,
+    ) -> Result<(), SessionError> {
         let session_key = format!("session:{}", session_id);
         let user_key = format!("user:{}:sessions", user_id);
 
@@ -263,7 +277,9 @@ impl From<SessionError> for tonic::Status {
             SessionError::MaxSessionsExceeded => {
                 tonic::Status::resource_exhausted("Maximum sessions exceeded")
             }
-            SessionError::CacheError(msg) => tonic::Status::internal(format!("Cache error: {}", msg)),
+            SessionError::CacheError(msg) => {
+                tonic::Status::internal(format!("Cache error: {}", msg))
+            }
         }
     }
 }

@@ -232,8 +232,7 @@ const HTTP_METHOD_TRACE: u8 = 9;
 
 // HTTP/2 connection preface magic ("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
 const HTTP2_PREFACE: [u8; 24] = [
-    0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
-    0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
+    0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
     0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a,
 ];
 
@@ -284,8 +283,7 @@ static HTTP2_CONNECTIONS: LruHashMap<u64, Http2ConnectionState> =
 
 /// Per-IP rate limiting
 #[map]
-static HTTP_RATE_LIMITS: LruHashMap<u32, HttpRateLimit> =
-    LruHashMap::with_max_entries(500_000, 0);
+static HTTP_RATE_LIMITS: LruHashMap<u32, HttpRateLimit> = LruHashMap::with_max_entries(500_000, 0);
 
 /// Per-IP rate limiting for IPv6
 #[map]
@@ -294,18 +292,15 @@ static HTTP_RATE_LIMITS_V6: LruHashMap<[u8; 16], HttpRateLimit> =
 
 /// Blocked paths (by hash)
 #[map]
-static BLOCKED_PATHS: HashMap<u32, BlockedPath> =
-    HashMap::with_max_entries(10_000, 0);
+static BLOCKED_PATHS: HashMap<u32, BlockedPath> = HashMap::with_max_entries(10_000, 0);
 
 /// Blocked User-Agent hashes
 #[map]
-static BLOCKED_USER_AGENTS: HashMap<u32, u32> =
-    HashMap::with_max_entries(10_000, 0);
+static BLOCKED_USER_AGENTS: HashMap<u32, u32> = HashMap::with_max_entries(10_000, 0);
 
 /// Whitelisted IPs (bypass filtering)
 #[map]
-static HTTP_WHITELIST: HashMap<u32, u32> =
-    HashMap::with_max_entries(10_000, 0);
+static HTTP_WHITELIST: HashMap<u32, u32> = HashMap::with_max_entries(10_000, 0);
 
 /// Configuration
 #[map]
@@ -479,8 +474,16 @@ fn process_tcp_http(
     let src_port = u16::from_be(tcp.source);
 
     // Check if this is HTTP/HTTPS traffic
-    let http_port = if config.http_port != 0 { config.http_port } else { DEFAULT_HTTP_PORT };
-    let https_port = if config.https_port != 0 { config.https_port } else { DEFAULT_HTTPS_PORT };
+    let http_port = if config.http_port != 0 {
+        config.http_port
+    } else {
+        DEFAULT_HTTP_PORT
+    };
+    let https_port = if config.https_port != 0 {
+        config.https_port
+    } else {
+        DEFAULT_HTTPS_PORT
+    };
 
     if dst_port != http_port && dst_port != https_port {
         return Ok(xdp_action::XDP_PASS);
@@ -517,7 +520,9 @@ fn process_tcp_http(
     let _conn_state = get_or_create_connection(conn_key, now);
 
     // Validate HTTP request payload
-    let payload = unsafe { core::slice::from_raw_parts(payload_start as *const u8, core::cmp::min(payload_len, 512)) };
+    let payload = unsafe {
+        core::slice::from_raw_parts(payload_start as *const u8, core::cmp::min(payload_len, 512))
+    };
 
     // Check for HTTP/2 preface or existing HTTP/2 connection
     if payload_len >= 24 && is_http2_preface(payload) {
@@ -849,7 +854,10 @@ fn process_http2_frames(
                 h2_state.window_update_count += 1;
                 h2_state.control_frame_count += 1;
             }
-            HTTP2_FRAME_PRIORITY | HTTP2_FRAME_PUSH_PROMISE | HTTP2_FRAME_GOAWAY | HTTP2_FRAME_CONTINUATION => {
+            HTTP2_FRAME_PRIORITY
+            | HTTP2_FRAME_PUSH_PROMISE
+            | HTTP2_FRAME_GOAWAY
+            | HTTP2_FRAME_CONTINUATION => {
                 h2_state.control_frame_count += 1;
             }
             _ => {
@@ -889,7 +897,8 @@ fn check_headers_complete(payload: &[u8]) -> bool {
         if payload[i] == b'\r'
             && payload.get(i + 1) == Some(&b'\n')
             && payload.get(i + 2) == Some(&b'\r')
-            && payload.get(i + 3) == Some(&b'\n') {
+            && payload.get(i + 3) == Some(&b'\n')
+        {
             return true;
         }
     }
@@ -1125,7 +1134,11 @@ fn check_header_name_ci(payload: &[u8], pos: usize, name: &[u8]) -> bool {
 
         // Case-insensitive comparison
         let c_lower = if c >= b'A' && c <= b'Z' { c + 32 } else { c };
-        let expected_lower = if expected >= b'A' && expected <= b'Z' { expected + 32 } else { expected };
+        let expected_lower = if expected >= b'A' && expected <= b'Z' {
+            expected + 32
+        } else {
+            expected
+        };
 
         if c_lower != expected_lower {
             return false;
@@ -1167,11 +1180,7 @@ fn parse_header_value_u64(payload: &[u8], start: usize, limit: usize) -> Option<
         }
     }
 
-    if found_digit {
-        Some(value)
-    } else {
-        None
-    }
+    if found_digit { Some(value) } else { None }
 }
 
 /// Check if Transfer-Encoding value contains "chunked"
@@ -1364,12 +1373,13 @@ fn validate_http_request(payload: &[u8], config: &HttpConfig) -> HttpValidation 
     // Scan for "HTTP/" (limit scan to prevent DoS)
     let scan_limit = core::cmp::min(payload.len(), 256);
     for i in (method_len + 2)..scan_limit.saturating_sub(5) {
-        if payload[i] == b'H' &&
-           i + 5 <= scan_limit &&
-           payload[i + 1] == b'T' &&
-           payload[i + 2] == b'T' &&
-           payload[i + 3] == b'P' &&
-           payload[i + 4] == b'/' {
+        if payload[i] == b'H'
+            && i + 5 <= scan_limit
+            && payload[i + 1] == b'T'
+            && payload[i + 2] == b'T'
+            && payload[i + 3] == b'P'
+            && payload[i + 4] == b'/'
+        {
             found_http = true;
             version_pos = i + 5;
             break;
@@ -1385,7 +1395,11 @@ fn validate_http_request(payload: &[u8], config: &HttpConfig) -> HttpValidation 
         return HttpValidation::InvalidRequest;
     }
 
-    let version_valid = match (payload[version_pos], payload.get(version_pos + 1), payload.get(version_pos + 2)) {
+    let version_valid = match (
+        payload[version_pos],
+        payload.get(version_pos + 1),
+        payload.get(version_pos + 2),
+    ) {
         (b'1', Some(b'.'), Some(b'0' | b'1')) => true,
         (b'2', Some(b'.'), Some(b'0')) => true,
         (b'2', _, _) => true, // HTTP/2
@@ -1441,38 +1455,64 @@ fn parse_http_method(payload: &[u8]) -> Option<u8> {
                 if payload[1] == b'U' && payload[2] == b'T' {
                     return Some(HTTP_METHOD_PUT);
                 }
-                if payload.len() >= 5 && payload[1] == b'A' && payload[2] == b'T' &&
-                   payload[3] == b'C' && payload[4] == b'H' {
+                if payload.len() >= 5
+                    && payload[1] == b'A'
+                    && payload[2] == b'T'
+                    && payload[3] == b'C'
+                    && payload[4] == b'H'
+                {
                     return Some(HTTP_METHOD_PATCH);
                 }
             }
         }
         b'D' => {
-            if payload.len() >= 6 && payload[1] == b'E' && payload[2] == b'L' &&
-               payload[3] == b'E' && payload[4] == b'T' && payload[5] == b'E' {
+            if payload.len() >= 6
+                && payload[1] == b'E'
+                && payload[2] == b'L'
+                && payload[3] == b'E'
+                && payload[4] == b'T'
+                && payload[5] == b'E'
+            {
                 return Some(HTTP_METHOD_DELETE);
             }
         }
         b'H' => {
-            if payload.len() >= 4 && payload[1] == b'E' && payload[2] == b'A' && payload[3] == b'D' {
+            if payload.len() >= 4 && payload[1] == b'E' && payload[2] == b'A' && payload[3] == b'D'
+            {
                 return Some(HTTP_METHOD_HEAD);
             }
         }
         b'O' => {
-            if payload.len() >= 7 && payload[1] == b'P' && payload[2] == b'T' &&
-               payload[3] == b'I' && payload[4] == b'O' && payload[5] == b'N' && payload[6] == b'S' {
+            if payload.len() >= 7
+                && payload[1] == b'P'
+                && payload[2] == b'T'
+                && payload[3] == b'I'
+                && payload[4] == b'O'
+                && payload[5] == b'N'
+                && payload[6] == b'S'
+            {
                 return Some(HTTP_METHOD_OPTIONS);
             }
         }
         b'C' => {
-            if payload.len() >= 7 && payload[1] == b'O' && payload[2] == b'N' &&
-               payload[3] == b'N' && payload[4] == b'E' && payload[5] == b'C' && payload[6] == b'T' {
+            if payload.len() >= 7
+                && payload[1] == b'O'
+                && payload[2] == b'N'
+                && payload[3] == b'N'
+                && payload[4] == b'E'
+                && payload[5] == b'C'
+                && payload[6] == b'T'
+            {
                 return Some(HTTP_METHOD_CONNECT);
             }
         }
         b'T' => {
-            if payload.len() >= 5 && payload[1] == b'R' && payload[2] == b'A' &&
-               payload[3] == b'C' && payload[4] == b'E' {
+            if payload.len() >= 5
+                && payload[1] == b'R'
+                && payload[2] == b'A'
+                && payload[3] == b'C'
+                && payload[4] == b'E'
+            {
                 return Some(HTTP_METHOD_TRACE);
             }
         }
@@ -1622,7 +1662,12 @@ fn is_ip_blocked_v6(src_ip: &[u8; 16]) -> bool {
 #[inline(always)]
 fn block_ip_v4(src_ip: u32, duration_ns: u64) {
     let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
-    let block_until = now + if duration_ns != 0 { duration_ns } else { DEFAULT_BLOCK_DURATION_NS };
+    let block_until = now
+        + if duration_ns != 0 {
+            duration_ns
+        } else {
+            DEFAULT_BLOCK_DURATION_NS
+        };
 
     if let Some(rate) = unsafe { HTTP_RATE_LIMITS.get_ptr_mut(&src_ip) } {
         let rate = unsafe { &mut *rate };
@@ -1710,112 +1755,144 @@ fn get_config() -> HttpConfig {
 #[inline(always)]
 fn update_stats_total() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).total_requests += 1; }
+        unsafe {
+            (*stats).total_requests += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_passed() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).passed_requests += 1; }
+        unsafe {
+            (*stats).passed_requests += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_method() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_method += 1; }
+        unsafe {
+            (*stats).dropped_invalid_method += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_rate_limited() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_rate_limited += 1; }
+        unsafe {
+            (*stats).dropped_rate_limited += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_slow_loris() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_slow_loris += 1; }
+        unsafe {
+            (*stats).dropped_slow_loris += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_request += 1; }
+        unsafe {
+            (*stats).dropped_invalid_request += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_blocked() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_blocked_ip += 1; }
+        unsafe {
+            (*stats).dropped_blocked_ip += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).http2_requests += 1; }
+        unsafe {
+            (*stats).http2_requests += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_slow_post() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_slow_post += 1; }
+        unsafe {
+            (*stats).dropped_slow_post += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2_rapid_reset() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_http2_rapid_reset += 1; }
+        unsafe {
+            (*stats).dropped_http2_rapid_reset += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2_control_flood() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_http2_control_flood += 1; }
+        unsafe {
+            (*stats).dropped_http2_control_flood += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2_rst_stream() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).http2_rst_stream_frames += 1; }
+        unsafe {
+            (*stats).http2_rst_stream_frames += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2_headers() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).http2_headers_frames += 1; }
+        unsafe {
+            (*stats).http2_headers_frames += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_http2_data() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).http2_data_frames += 1; }
+        unsafe {
+            (*stats).http2_data_frames += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_request_smuggling() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_request_smuggling += 1; }
+        unsafe {
+            (*stats).dropped_request_smuggling += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_header_injection() {
     if let Some(stats) = unsafe { HTTP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_header_injection += 1; }
+        unsafe {
+            (*stats).dropped_header_injection += 1;
+        }
     }
 }
 

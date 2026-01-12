@@ -3,6 +3,7 @@
 use crate::services::AppState;
 use futures::StreamExt;
 use pistonprotection_proto::{
+    FILE_DESCRIPTOR_SET,
     backend::{
         backend_service_server::{BackendService as BackendServiceTrait, BackendServiceServer},
         *,
@@ -15,11 +16,10 @@ use pistonprotection_proto::{
         metrics_service_server::{MetricsService as MetricsServiceTrait, MetricsServiceServer},
         *,
     },
-    FILE_DESCRIPTOR_SET,
 };
 use std::pin::Pin;
 use tokio_stream::Stream;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status, transport::Server};
 use tonic_health::server::health_reporter;
 use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::{info, instrument};
@@ -45,7 +45,9 @@ impl BackendServiceTrait for BackendGrpcService {
         request: Request<CreateBackendRequest>,
     ) -> Result<Response<CreateBackendResponse>, Status> {
         let req = request.into_inner();
-        let backend = req.backend.ok_or_else(|| Status::invalid_argument("Backend is required"))?;
+        let backend = req
+            .backend
+            .ok_or_else(|| Status::invalid_argument("Backend is required"))?;
 
         let created = self
             .service
@@ -82,7 +84,9 @@ impl BackendServiceTrait for BackendGrpcService {
         request: Request<UpdateBackendRequest>,
     ) -> Result<Response<UpdateBackendResponse>, Status> {
         let req = request.into_inner();
-        let backend = req.backend.ok_or_else(|| Status::invalid_argument("Backend is required"))?;
+        let backend = req
+            .backend
+            .ok_or_else(|| Status::invalid_argument("Backend is required"))?;
 
         let updated = self
             .service
@@ -366,7 +370,9 @@ impl FilterServiceTrait for FilterGrpcService {
         request: Request<CreateRuleRequest>,
     ) -> Result<Response<CreateRuleResponse>, Status> {
         let req = request.into_inner();
-        let rule = req.rule.ok_or_else(|| Status::invalid_argument("Rule is required"))?;
+        let rule = req
+            .rule
+            .ok_or_else(|| Status::invalid_argument("Rule is required"))?;
 
         let created = self
             .service
@@ -374,7 +380,9 @@ impl FilterServiceTrait for FilterGrpcService {
             .await
             .map_err(|e| Status::from(e))?;
 
-        Ok(Response::new(CreateRuleResponse { rule: Some(created) }))
+        Ok(Response::new(CreateRuleResponse {
+            rule: Some(created),
+        }))
     }
 
     #[instrument(skip(self, request))]
@@ -399,7 +407,9 @@ impl FilterServiceTrait for FilterGrpcService {
         request: Request<UpdateRuleRequest>,
     ) -> Result<Response<UpdateRuleResponse>, Status> {
         let req = request.into_inner();
-        let rule = req.rule.ok_or_else(|| Status::invalid_argument("Rule is required"))?;
+        let rule = req
+            .rule
+            .ok_or_else(|| Status::invalid_argument("Rule is required"))?;
 
         let updated = self
             .service
@@ -407,7 +417,9 @@ impl FilterServiceTrait for FilterGrpcService {
             .await
             .map_err(|e| Status::from(e))?;
 
-        Ok(Response::new(UpdateRuleResponse { rule: Some(updated) }))
+        Ok(Response::new(UpdateRuleResponse {
+            rule: Some(updated),
+        }))
     }
 
     #[instrument(skip(self, request))]

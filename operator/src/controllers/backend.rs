@@ -7,9 +7,7 @@
 //! - Status updates
 
 use crate::client::GatewayClient;
-use crate::crd::{
-    Backend, BackendStatus, Condition, EndpointStatus, HealthState, FINALIZER,
-};
+use crate::crd::{Backend, BackendStatus, Condition, EndpointStatus, HealthState, FINALIZER};
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
@@ -72,9 +70,7 @@ pub async fn reconcile(
 
     info!(
         "Reconciling Backend {}/{} (generation: {:?})",
-        namespace,
-        name,
-        backend.metadata.generation
+        namespace, name, backend.metadata.generation
     );
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "Backend", &namespace);
@@ -148,10 +144,7 @@ async fn reconcile_apply(
         .publish(Event {
             type_: EventType::Normal,
             reason: "Reconciling".to_string(),
-            note: Some(format!(
-                "Processing backend: {}",
-                backend.spec.display_name
-            )),
+            note: Some(format!("Processing backend: {}", backend.spec.display_name)),
             action: "Reconcile".to_string(),
             secondary: None,
         })
@@ -263,10 +256,7 @@ async fn reconcile_cleanup(
 fn validate_backend(backend: &Backend) -> Result<()> {
     // Validate display name
     if backend.spec.display_name.is_empty() {
-        return Err(Error::validation(
-            "displayName",
-            "display name is required",
-        ));
+        return Err(Error::validation("displayName", "display name is required"));
     }
 
     // Validate endpoints
@@ -407,12 +397,7 @@ async fn perform_health_check(
 
     let timeout = Duration::from_secs(5);
 
-    match tokio::time::timeout(
-        timeout,
-        tokio::net::TcpStream::connect(&addr_str),
-    )
-    .await
-    {
+    match tokio::time::timeout(timeout, tokio::net::TcpStream::connect(&addr_str)).await {
         Ok(Ok(_)) => Ok(()),
         Ok(Err(e)) => Err(format!("Connection failed: {}", e)),
         Err(_) => Err("Connection timeout".to_string()),
@@ -420,16 +405,10 @@ async fn perform_health_check(
 }
 
 /// Sync backend to gateway
-async fn sync_backend_to_gateway(
-    _gateway_client: &GatewayClient,
-    backend: &Backend,
-) -> bool {
+async fn sync_backend_to_gateway(_gateway_client: &GatewayClient, backend: &Backend) -> bool {
     // In production, this would call the actual gateway gRPC service
     // For now, we simulate a successful sync
-    debug!(
-        "Syncing backend {} to gateway",
-        backend.spec.display_name
-    );
+    debug!("Syncing backend {} to gateway", backend.spec.display_name);
 
     true
 }
@@ -514,22 +493,14 @@ fn build_status(
         endpoint_count: total_endpoints,
         observed_generation: backend.metadata.generation,
         gateway_synced,
-        last_synced: if gateway_synced {
-            Some(now)
-        } else {
-            None
-        },
+        last_synced: if gateway_synced { Some(now) } else { None },
         endpoints: endpoint_statuses,
         conditions,
     }
 }
 
 /// Error policy for the controller
-pub fn error_policy(
-    backend: Arc<Backend>,
-    error: &Error,
-    _ctx: Arc<Context>,
-) -> Action {
+pub fn error_policy(backend: Arc<Backend>, error: &Error, _ctx: Arc<Context>) -> Action {
     let name = backend.name_any();
     let namespace = backend.namespace().unwrap_or_default();
 

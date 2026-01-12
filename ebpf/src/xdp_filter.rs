@@ -112,8 +112,7 @@ pub struct FilterConfig {
 
 /// Blocked IPs (IPv4)
 #[map]
-static BLOCKED_IPS_V4: LruHashMap<u32, BlockedIpEntry> =
-    LruHashMap::with_max_entries(1_000_000, 0);
+static BLOCKED_IPS_V4: LruHashMap<u32, BlockedIpEntry> = LruHashMap::with_max_entries(1_000_000, 0);
 
 /// Blocked IPs (IPv6)
 #[map]
@@ -122,8 +121,7 @@ static BLOCKED_IPS_V6: LruHashMap<[u8; 16], BlockedIpEntry> =
 
 /// Per-IP rate limits (IPv4)
 #[map]
-static RATE_LIMITS_V4: LruHashMap<u32, RateLimitEntry> =
-    LruHashMap::with_max_entries(1_000_000, 0);
+static RATE_LIMITS_V4: LruHashMap<u32, RateLimitEntry> = LruHashMap::with_max_entries(1_000_000, 0);
 
 /// Per-IP rate limits (IPv6)
 #[map]
@@ -259,12 +257,7 @@ fn process_ipv6(ctx: &XdpContext, data: usize, data_end: usize) -> Result<u32, (
 }
 
 #[inline(always)]
-fn process_tcp(
-    ctx: &XdpContext,
-    data: usize,
-    data_end: usize,
-    src_ip: u32,
-) -> Result<u32, ()> {
+fn process_tcp(ctx: &XdpContext, data: usize, data_end: usize, src_ip: u32) -> Result<u32, ()> {
     if data + mem::size_of::<TcpHdr>() > data_end {
         return Ok(xdp_action::XDP_PASS);
     }
@@ -294,12 +287,7 @@ fn process_tcp(
 }
 
 #[inline(always)]
-fn process_udp(
-    ctx: &XdpContext,
-    data: usize,
-    data_end: usize,
-    src_ip: u32,
-) -> Result<u32, ()> {
+fn process_udp(ctx: &XdpContext, data: usize, data_end: usize, src_ip: u32) -> Result<u32, ()> {
     if data + mem::size_of::<UdpHdr>() > data_end {
         return Ok(xdp_action::XDP_PASS);
     }
@@ -327,12 +315,7 @@ fn process_udp(
 }
 
 #[inline(always)]
-fn process_icmp(
-    ctx: &XdpContext,
-    data: usize,
-    data_end: usize,
-    src_ip: u32,
-) -> Result<u32, ()> {
+fn process_icmp(ctx: &XdpContext, data: usize, data_end: usize, src_ip: u32) -> Result<u32, ()> {
     // Basic ICMP pass-through with rate limiting applied above
     update_stats_passed();
     Ok(xdp_action::XDP_PASS)

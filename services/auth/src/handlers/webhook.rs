@@ -1,12 +1,12 @@
 //! Stripe webhook handler for processing billing events
 
 use axum::{
+    Json, Router,
     body::Bytes,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::post,
-    Json, Router,
 };
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
@@ -183,7 +183,10 @@ fn verify_webhook_signature(payload: &[u8], signature: &str, secret: &str) -> Re
     let expected = hex::encode(mac.finalize().into_bytes());
 
     // Check if any signature matches
-    if signatures.iter().any(|sig| constant_time_compare(sig, &expected)) {
+    if signatures
+        .iter()
+        .any(|sig| constant_time_compare(sig, &expected))
+    {
         Ok(())
     } else {
         Err("Signature verification failed".to_string())
@@ -351,7 +354,10 @@ async fn process_webhook_event(state: &WebhookState, event: &Event) -> Result<()
 
 // ========== Customer Event Handlers ==========
 
-async fn handle_customer_created(state: &WebhookState, customer: &Customer) -> Result<(), anyhow::Error> {
+async fn handle_customer_created(
+    state: &WebhookState,
+    customer: &Customer,
+) -> Result<(), anyhow::Error> {
     info!(
         customer_id = %customer.id,
         email = ?customer.email,
@@ -361,7 +367,10 @@ async fn handle_customer_created(state: &WebhookState, customer: &Customer) -> R
     Ok(())
 }
 
-async fn handle_customer_updated(state: &WebhookState, customer: &Customer) -> Result<(), anyhow::Error> {
+async fn handle_customer_updated(
+    state: &WebhookState,
+    customer: &Customer,
+) -> Result<(), anyhow::Error> {
     info!(
         customer_id = %customer.id,
         "Customer updated in Stripe"
@@ -370,7 +379,10 @@ async fn handle_customer_updated(state: &WebhookState, customer: &Customer) -> R
     Ok(())
 }
 
-async fn handle_customer_deleted(state: &WebhookState, customer: &Customer) -> Result<(), anyhow::Error> {
+async fn handle_customer_deleted(
+    state: &WebhookState,
+    customer: &Customer,
+) -> Result<(), anyhow::Error> {
     warn!(
         customer_id = %customer.id,
         "Customer deleted in Stripe"
@@ -500,7 +512,10 @@ async fn handle_invoice_created(
         "Invoice created"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     Ok(())
 }
@@ -515,7 +530,10 @@ async fn handle_invoice_finalized(
         "Invoice finalized"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     Ok(())
 }
@@ -530,7 +548,10 @@ async fn handle_invoice_paid(
         "Invoice paid"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     // Update subscription status to active if it was past_due
     if let Some(subscription) = &invoice.subscription {
@@ -539,7 +560,11 @@ async fn handle_invoice_paid(
             stripe_rust::Expandable::Object(sub) => sub.id.to_string(),
         };
 
-        if let Ok(Some(local_sub)) = state.stripe_service.get_subscription_by_stripe_id(&sub_id).await {
+        if let Ok(Some(local_sub)) = state
+            .stripe_service
+            .get_subscription_by_stripe_id(&sub_id)
+            .await
+        {
             if local_sub.status == SubscriptionStatus::PastDue {
                 state
                     .stripe_service
@@ -564,7 +589,10 @@ async fn handle_invoice_payment_failed(
         "Invoice payment failed"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     // Update subscription status to past_due
     if let Some(subscription) = &invoice.subscription {
@@ -594,7 +622,10 @@ async fn handle_invoice_payment_action_required(
         "Invoice payment requires action (3D Secure, etc.)"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     // TODO: Send email prompting user to complete payment action
 
@@ -626,7 +657,10 @@ async fn handle_invoice_uncollectible(
         "Invoice marked as uncollectible"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     // Update subscription status
     if let Some(subscription) = &invoice.subscription {
@@ -655,7 +689,10 @@ async fn handle_invoice_voided(
         "Invoice voided"
     );
 
-    state.stripe_service.sync_invoice_from_stripe(invoice).await?;
+    state
+        .stripe_service
+        .sync_invoice_from_stripe(invoice)
+        .await?;
 
     Ok(())
 }

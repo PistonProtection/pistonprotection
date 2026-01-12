@@ -1,7 +1,7 @@
 //! Authentication middleware for gRPC
 
 use std::task::{Context, Poll};
-use tonic::{body::BoxBody, Status};
+use tonic::{Status, body::BoxBody};
 use tower::{Layer, Service};
 use tracing::warn;
 

@@ -45,8 +45,13 @@ impl ApiKeyPermission {
     pub fn implies(&self, other: &ApiKeyPermission) -> bool {
         match self {
             ApiKeyPermission::Admin => true, // Admin implies all
-            ApiKeyPermission::Delete => matches!(other, ApiKeyPermission::Read | ApiKeyPermission::Write | ApiKeyPermission::Delete),
-            ApiKeyPermission::Write => matches!(other, ApiKeyPermission::Read | ApiKeyPermission::Write),
+            ApiKeyPermission::Delete => matches!(
+                other,
+                ApiKeyPermission::Read | ApiKeyPermission::Write | ApiKeyPermission::Delete
+            ),
+            ApiKeyPermission::Write => {
+                matches!(other, ApiKeyPermission::Read | ApiKeyPermission::Write)
+            }
             ApiKeyPermission::Read => matches!(other, ApiKeyPermission::Read),
         }
     }
@@ -170,8 +175,8 @@ impl ApiKeyValidation {
 /// Convert to proto ApiKey
 impl ApiKey {
     pub fn to_proto(&self) -> pistonprotection_proto::auth::ApiKey {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::ApiKey {
             id: self.id.clone(),

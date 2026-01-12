@@ -6,7 +6,7 @@
 pub mod http;
 
 use crate::config_sync::ConfigSyncManager;
-use crate::control_plane::{ControlPlaneClient, ConnectionState};
+use crate::control_plane::{ConnectionState, ControlPlaneClient};
 use crate::ebpf::{interface::NetworkInterface, loader::EbpfLoader};
 use deadpool_redis::Pool as RedisPool;
 use parking_lot::RwLock;
@@ -148,7 +148,12 @@ impl WorkerState {
     }
 
     /// Block an IP address locally
-    pub fn block_ip(&self, ip: std::net::IpAddr, reason: &str, duration_secs: Option<u32>) -> Result<()> {
+    pub fn block_ip(
+        &self,
+        ip: std::net::IpAddr,
+        reason: &str,
+        duration_secs: Option<u32>,
+    ) -> Result<()> {
         let loader = self.loader.read();
         let maps = loader.maps();
         let mut map_manager = maps.write();
@@ -176,7 +181,11 @@ impl WorkerState {
         let loader = self.loader.read();
         let maps = loader.maps();
         let map_manager = maps.read();
-        map_manager.list_blocked_ips().into_iter().cloned().collect()
+        map_manager
+            .list_blocked_ips()
+            .into_iter()
+            .cloned()
+            .collect()
     }
 }
 

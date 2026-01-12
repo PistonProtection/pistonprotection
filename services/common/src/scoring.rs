@@ -256,7 +256,13 @@ impl IPRecord {
     }
 
     /// Record an action on this IP
-    pub fn record_action(&mut self, action: ActionType, category: BehaviorCategory, backend_id: Option<&str>, protocol: Option<&str>) {
+    pub fn record_action(
+        &mut self,
+        action: ActionType,
+        category: BehaviorCategory,
+        backend_id: Option<&str>,
+        protocol: Option<&str>,
+    ) {
         let now = Utc::now();
         self.last_seen = now;
         self.total_requests += 1;
@@ -439,10 +445,7 @@ impl ScoringEngine {
 
     /// Get the threat score for an IP
     pub fn get_threat_score(&self, ip: &IpAddr) -> ThreatScore {
-        self.records
-            .get(ip)
-            .map(|r| r.threat_score)
-            .unwrap_or(0)
+        self.records.get(ip).map(|r| r.threat_score).unwrap_or(0)
     }
 
     /// Record an action for an IP
@@ -503,7 +506,13 @@ impl ScoringEngine {
     }
 
     /// Update GeoIP information for an IP
-    pub fn update_geoip(&self, ip: &IpAddr, country_code: Option<&str>, asn: Option<u32>, asn_org: Option<&str>) {
+    pub fn update_geoip(
+        &self,
+        ip: &IpAddr,
+        country_code: Option<&str>,
+        asn: Option<u32>,
+        asn_org: Option<&str>,
+    ) {
         if let Some(mut record) = self.records.get_mut(ip) {
             record.country_code = country_code.map(String::from);
             record.asn = asn;
@@ -709,7 +718,13 @@ mod tests {
 
         // Record many blocked requests
         for _ in 0..20 {
-            engine.record_action(ip, ActionType::Blocked, BehaviorCategory::Attack, None, None);
+            engine.record_action(
+                ip,
+                ActionType::Blocked,
+                BehaviorCategory::Attack,
+                None,
+                None,
+            );
         }
 
         assert!(engine.is_blocked(&ip));
@@ -741,12 +756,22 @@ mod tests {
         let mut record = IPRecord::new(test_ip());
 
         // Passing challenges should reduce score
-        record.record_action(ActionType::ChallengePassed, BehaviorCategory::Normal, None, None);
+        record.record_action(
+            ActionType::ChallengePassed,
+            BehaviorCategory::Normal,
+            None,
+            None,
+        );
         let score_after_pass = record.threat_score;
 
         // Failing challenges should increase score
         let mut record2 = IPRecord::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2)));
-        record2.record_action(ActionType::ChallengeFailed, BehaviorCategory::Normal, None, None);
+        record2.record_action(
+            ActionType::ChallengeFailed,
+            BehaviorCategory::Normal,
+            None,
+            None,
+        );
         let score_after_fail = record2.threat_score;
 
         assert!(score_after_fail > score_after_pass);
@@ -758,8 +783,20 @@ mod tests {
         let ip1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let ip2 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2));
 
-        engine.record_action(ip1, ActionType::Allowed, BehaviorCategory::Normal, None, None);
-        engine.record_action(ip2, ActionType::Blocked, BehaviorCategory::Attack, None, None);
+        engine.record_action(
+            ip1,
+            ActionType::Allowed,
+            BehaviorCategory::Normal,
+            None,
+            None,
+        );
+        engine.record_action(
+            ip2,
+            ActionType::Blocked,
+            BehaviorCategory::Attack,
+            None,
+            None,
+        );
 
         let stats = engine.stats();
         assert_eq!(stats.total_ips, 2);

@@ -230,7 +230,10 @@ impl WorkerManager {
 
         let list_params = ListParams::default().labels(&self.worker_selector);
 
-        let pods = pods_api.list(&list_params).await.map_err(Error::KubeError)?;
+        let pods = pods_api
+            .list(&list_params)
+            .await
+            .map_err(Error::KubeError)?;
 
         let mut workers = Vec::new();
 
@@ -347,18 +350,20 @@ impl WorkerManager {
             let id = format!("{}/{}", namespace, name);
 
             for backend_spec in &protection.spec.backends {
-                let rate_limit = protection.spec.rate_limit.as_ref().map(|rl| WorkerRateLimit {
-                    tokens_per_second: rl.pps_per_ip as u64,
-                    bucket_size: rl.burst as u64,
-                });
+                let rate_limit = protection
+                    .spec
+                    .rate_limit
+                    .as_ref()
+                    .map(|rl| WorkerRateLimit {
+                        tokens_per_second: rl.pps_per_ip as u64,
+                        bucket_size: rl.burst as u64,
+                    });
 
                 let blocked_countries = protection
                     .spec
                     .geo_filter
                     .as_ref()
-                    .filter(|g| {
-                        g.mode == crate::crd::GeoFilterMode::Deny
-                    })
+                    .filter(|g| g.mode == crate::crd::GeoFilterMode::Deny)
                     .map(|g| {
                         g.countries
                             .iter()
@@ -613,7 +618,9 @@ impl WorkerManager {
 
         for worker in workers {
             let start = std::time::Instant::now();
-            let result = self.block_ip_on_worker(&worker, ip, reason, duration_seconds).await;
+            let result = self
+                .block_ip_on_worker(&worker, ip, reason, duration_seconds)
+                .await;
             let duration_ms = start.elapsed().as_millis() as u64;
 
             let (success, error) = match result {

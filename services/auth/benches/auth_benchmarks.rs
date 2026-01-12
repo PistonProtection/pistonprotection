@@ -1,2 +1,4 @@
 //! auth benchmarks placeholder
-fn main() { println!("Run with: cargo bench"); }
+fn main() {
+    println!("Run with: cargo bench");
+}

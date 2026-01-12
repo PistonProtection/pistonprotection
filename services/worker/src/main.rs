@@ -159,10 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load control plane configuration from environment
     let control_plane_config = ControlPlaneConfig::from_env();
 
-    info!(
-        "Control plane address: {}",
-        control_plane_config.address
-    );
+    info!("Control plane address: {}", control_plane_config.address);
     info!(
         "Heartbeat interval: {:?}",
         control_plane_config.heartbeat_interval
@@ -188,7 +185,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(pool)
             }
             Err(e) => {
-                warn!("Failed to connect to Redis: {}. Continuing without Redis.", e);
+                warn!(
+                    "Failed to connect to Redis: {}. Continuing without Redis.",
+                    e
+                );
                 None
             }
         }

@@ -61,7 +61,7 @@ struct UdpHdr {
 /// Minecraft connection state
 #[repr(C)]
 pub struct McConnectionState {
-    pub state: u8,           // 0=none, 1=status, 2=login, 3=play
+    pub state: u8, // 0=none, 1=status, 2=login, 3=play
     pub protocol_version: u32,
     pub packets: u64,
     pub bytes: u64,
@@ -71,8 +71,7 @@ pub struct McConnectionState {
 
 /// RakNet magic bytes for Bedrock
 const RAKNET_MAGIC: [u8; 16] = [
-    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe,
-    0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
+    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
 ];
 
 /// Minecraft configuration
@@ -98,10 +97,10 @@ const MC_STATE_PLAY: u8 = 3;
 const MC_STATE_CONFIGURATION: u8 = 4; // 1.20.2+ configuration state
 
 // Connection state flags
-const MC_FLAG_ENCRYPTION_PENDING: u32 = 0x0001;  // Encryption will be enabled after next packet
-const MC_FLAG_ENCRYPTION_ENABLED: u32 = 0x0002;  // Encryption is active (can't inspect)
+const MC_FLAG_ENCRYPTION_PENDING: u32 = 0x0001; // Encryption will be enabled after next packet
+const MC_FLAG_ENCRYPTION_ENABLED: u32 = 0x0002; // Encryption is active (can't inspect)
 const MC_FLAG_COMPRESSION_ENABLED: u32 = 0x0004; // Compression is active
-const MC_FLAG_VALIDATED: u32 = 0x0008;           // Connection has been validated
+const MC_FLAG_VALIDATED: u32 = 0x0008; // Connection has been validated
 
 // Maximum VarInt bytes (5 for 32-bit values)
 const MAX_VARINT_BYTES: usize = 5;
@@ -166,8 +165,7 @@ static MC_IP_COUNTS: LruHashMap<u32, IpConnectionCount> =
 
 /// Status request rate limiting
 #[map]
-static MC_STATUS_RATE: LruHashMap<u32, u64> =
-    LruHashMap::with_max_entries(100_000, 0);
+static MC_STATUS_RATE: LruHashMap<u32, u64> = LruHashMap::with_max_entries(100_000, 0);
 
 /// Configuration
 #[map]
@@ -245,21 +243,44 @@ fn process_minecraft_java(
 
     // Get config
     let config_ptr = unsafe { MC_CONFIG.get_ptr(0) };
-    let (java_port, max_packet_size, min_proto, max_proto, max_hostname) = if let Some(ptr) = config_ptr {
-        let config = unsafe { &*ptr };
-        if config.enabled == 0 {
-            return Ok(xdp_action::XDP_PASS);
-        }
-        (
-            config.java_port,
-            if config.max_packet_size == 0 { DEFAULT_MAX_PACKET_SIZE } else { config.max_packet_size as i32 },
-            if config.min_protocol_version == 0 { MIN_VALID_PROTOCOL } else { config.min_protocol_version },
-            if config.max_protocol_version == 0 { MAX_VALID_PROTOCOL } else { config.max_protocol_version },
-            if config.max_hostname_len == 0 { DEFAULT_MAX_HOSTNAME_LEN } else { config.max_hostname_len as usize },
-        )
-    } else {
-        (MC_JAVA_PORT, DEFAULT_MAX_PACKET_SIZE, MIN_VALID_PROTOCOL, MAX_VALID_PROTOCOL, DEFAULT_MAX_HOSTNAME_LEN)
-    };
+    let (java_port, max_packet_size, min_proto, max_proto, max_hostname) =
+        if let Some(ptr) = config_ptr {
+            let config = unsafe { &*ptr };
+            if config.enabled == 0 {
+                return Ok(xdp_action::XDP_PASS);
+            }
+            (
+                config.java_port,
+                if config.max_packet_size == 0 {
+                    DEFAULT_MAX_PACKET_SIZE
+                } else {
+                    config.max_packet_size as i32
+                },
+                if config.min_protocol_version == 0 {
+                    MIN_VALID_PROTOCOL
+                } else {
+                    config.min_protocol_version
+                },
+                if config.max_protocol_version == 0 {
+                    MAX_VALID_PROTOCOL
+                } else {
+                    config.max_protocol_version
+                },
+                if config.max_hostname_len == 0 {
+                    DEFAULT_MAX_HOSTNAME_LEN
+                } else {
+                    config.max_hostname_len as usize
+                },
+            )
+        } else {
+            (
+                MC_JAVA_PORT,
+                DEFAULT_MAX_PACKET_SIZE,
+                MIN_VALID_PROTOCOL,
+                MAX_VALID_PROTOCOL,
+                DEFAULT_MAX_HOSTNAME_LEN,
+            )
+        };
 
     // Not Minecraft traffic
     if dst_port != java_port {
@@ -650,9 +671,9 @@ const RAKNET_UNCONNECTED_PONG: u8 = 0x1c;
 const RAKNET_INCOMPATIBLE_PROTOCOL: u8 = 0x19;
 
 /// Minimum packet sizes for RakNet packets
-const RAKNET_UNCONNECTED_PING_MIN_SIZE: usize = 33;  // 1 + 8 + 16 + 8 (id + time + magic + client_guid)
-const RAKNET_OPEN_CONN_REQ1_MIN_SIZE: usize = 18;    // 1 + 16 + 1 (id + magic + protocol)
-const RAKNET_UNCONNECTED_PONG_MIN_SIZE: usize = 35;  // 1 + 8 + 8 + 16 + 2 (id + time + server_guid + magic + motd_len)
+const RAKNET_UNCONNECTED_PING_MIN_SIZE: usize = 33; // 1 + 8 + 16 + 8 (id + time + magic + client_guid)
+const RAKNET_OPEN_CONN_REQ1_MIN_SIZE: usize = 18; // 1 + 16 + 1 (id + magic + protocol)
+const RAKNET_UNCONNECTED_PONG_MIN_SIZE: usize = 35; // 1 + 8 + 8 + 16 + 2 (id + time + server_guid + magic + motd_len)
 
 /// MTU size limits for RakNet
 /// Minimum MTU is 400 bytes (RakNet minimum)
@@ -663,10 +684,10 @@ const RAKNET_MAX_MTU: u16 = 1500;
 /// RakNet amplification protection constants
 /// The pong response can be much larger than the ping request due to MOTD
 /// We track the ratio of response bytes to request bytes
-const RAKNET_MAX_AMPLIFICATION_RATIO: u32 = 10;  // Max 10x amplification allowed
-const RAKNET_PING_FLOOD_THRESHOLD: u32 = 50;     // Max pings per second per IP
+const RAKNET_MAX_AMPLIFICATION_RATIO: u32 = 10; // Max 10x amplification allowed
+const RAKNET_PING_FLOOD_THRESHOLD: u32 = 50; // Max pings per second per IP
 const RAKNET_CONN_REQ_FLOOD_THRESHOLD: u32 = 20; // Max connection requests per second per IP
-const RAKNET_MAX_ACK_RECORDS: u16 = 500;         // Max ACK/NACK records per packet (DoS protection)
+const RAKNET_MAX_ACK_RECORDS: u16 = 500; // Max ACK/NACK records per packet (DoS protection)
 
 /// RakNet connection state for Bedrock
 #[repr(C)]
@@ -809,8 +830,14 @@ fn process_minecraft_bedrock(
             let client_guid = if payload_len >= 33 {
                 let guid_bytes = &payload[25..33];
                 u64::from_be_bytes([
-                    guid_bytes[0], guid_bytes[1], guid_bytes[2], guid_bytes[3],
-                    guid_bytes[4], guid_bytes[5], guid_bytes[6], guid_bytes[7],
+                    guid_bytes[0],
+                    guid_bytes[1],
+                    guid_bytes[2],
+                    guid_bytes[3],
+                    guid_bytes[4],
+                    guid_bytes[5],
+                    guid_bytes[6],
+                    guid_bytes[7],
                 ])
             } else {
                 0
@@ -893,8 +920,14 @@ fn process_minecraft_bedrock(
             let client_guid = if payload_len >= guid_offset + 8 {
                 let guid_bytes = &payload[guid_offset..guid_offset + 8];
                 u64::from_be_bytes([
-                    guid_bytes[0], guid_bytes[1], guid_bytes[2], guid_bytes[3],
-                    guid_bytes[4], guid_bytes[5], guid_bytes[6], guid_bytes[7],
+                    guid_bytes[0],
+                    guid_bytes[1],
+                    guid_bytes[2],
+                    guid_bytes[3],
+                    guid_bytes[4],
+                    guid_bytes[5],
+                    guid_bytes[6],
+                    guid_bytes[7],
                 ])
             } else {
                 0
@@ -918,7 +951,9 @@ fn process_minecraft_bedrock(
         }
 
         // Server-to-client packets (we're receiving these, which is suspicious)
-        RAKNET_OPEN_CONNECTION_REPLY_1 | RAKNET_OPEN_CONNECTION_REPLY_2 | RAKNET_UNCONNECTED_PONG => {
+        RAKNET_OPEN_CONNECTION_REPLY_1
+        | RAKNET_OPEN_CONNECTION_REPLY_2
+        | RAKNET_UNCONNECTED_PONG => {
             // These are server responses - we shouldn't receive them as a server
             // This could indicate reflection attack attempt
             // In strict mode, drop these
@@ -940,9 +975,8 @@ fn process_minecraft_bedrock(
             }
 
             // Extract sequence number (little-endian 24-bit)
-            let _seq_num = (payload[1] as u32)
-                | ((payload[2] as u32) << 8)
-                | ((payload[3] as u32) << 16);
+            let _seq_num =
+                (payload[1] as u32) | ((payload[2] as u32) << 8) | ((payload[3] as u32) << 16);
 
             // STATE VALIDATION: Should only come after connection is established
             if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
@@ -1029,14 +1063,15 @@ fn process_minecraft_bedrock(
             // Connection Request (after open connection handshake)
             // Format: [0x09] [8 bytes client_guid] [8 bytes time] [1 byte use_security]
             // Optional: [additional security data if use_security=1]
-            if payload_len < 18 { // 1 + 8 + 8 + 1
+            if payload_len < 18 {
+                // 1 + 8 + 8 + 1
                 return Ok(xdp_action::XDP_DROP);
             }
 
             // Extract client GUID (big-endian)
             let client_guid = u64::from_be_bytes([
-                payload[1], payload[2], payload[3], payload[4],
-                payload[5], payload[6], payload[7], payload[8],
+                payload[1], payload[2], payload[3], payload[4], payload[5], payload[6], payload[7],
+                payload[8],
             ]);
 
             // STATE VALIDATION: Should only come after Open Connection Request 2
@@ -1212,7 +1247,14 @@ fn check_bedrock_rate_limit(src_ip: u32, packet_len: usize, is_ping: bool, now: 
 
 /// Track Bedrock connection state progression
 #[inline(always)]
-fn track_bedrock_connection(connection_key: u64, new_state: u8, mtu: u16, client_guid: u64, bytes: u64, now: u64) {
+fn track_bedrock_connection(
+    connection_key: u64,
+    new_state: u8,
+    mtu: u16,
+    client_guid: u64,
+    bytes: u64,
+    now: u64,
+) {
     if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get_ptr_mut(&connection_key) } {
         let state = unsafe { &mut *state };
 

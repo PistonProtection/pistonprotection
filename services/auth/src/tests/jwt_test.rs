@@ -1,6 +1,6 @@
 //! JWT validation tests
 
-use super::test_utils::{constants, current_timestamp, future_timestamp, past_timestamp, TestUser};
+use super::test_utils::{TestUser, constants, current_timestamp, future_timestamp, past_timestamp};
 use crate::services::jwt::{Claims, JwtConfig, JwtService};
 use std::time::Duration;
 
@@ -10,7 +10,7 @@ fn create_test_jwt_service() -> JwtService {
         secret: constants::TEST_JWT_SECRET.to_string(),
         issuer: constants::TEST_JWT_ISSUER.to_string(),
         audience: constants::TEST_JWT_AUDIENCE.to_string(),
-        access_token_expiry: Duration::from_secs(3600),    // 1 hour
+        access_token_expiry: Duration::from_secs(3600), // 1 hour
         refresh_token_expiry: Duration::from_secs(604800), // 7 days
     };
     JwtService::new(config)

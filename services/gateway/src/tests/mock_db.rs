@@ -55,7 +55,10 @@ impl MockDatabase {
     // Backend operations
     pub fn insert_backend(&self, backend: Backend) -> Result<(), MockDbError> {
         self.check_failure()?;
-        self.backends.write().unwrap().insert(backend.id.clone(), backend);
+        self.backends
+            .write()
+            .unwrap()
+            .insert(backend.id.clone(), backend);
         Ok(())
     }
 
@@ -95,7 +98,10 @@ impl MockDatabase {
     // Filter rule operations
     pub fn insert_filter_rule(&self, rule: FilterRule) -> Result<(), MockDbError> {
         self.check_failure()?;
-        self.filter_rules.write().unwrap().insert(rule.id.clone(), rule);
+        self.filter_rules
+            .write()
+            .unwrap()
+            .insert(rule.id.clone(), rule);
         Ok(())
     }
 
@@ -164,7 +170,10 @@ impl MockCache {
 
     pub fn set(&self, key: &str, value: &[u8]) -> Result<(), MockDbError> {
         self.check_failure()?;
-        self.data.write().unwrap().insert(key.to_string(), value.to_vec());
+        self.data
+            .write()
+            .unwrap()
+            .insert(key.to_string(), value.to_vec());
         Ok(())
     }
 

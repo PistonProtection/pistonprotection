@@ -1,6 +1,6 @@
 //! Stripe integration service for subscription management and billing
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, TimeZone, Utc};
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -19,13 +19,13 @@ use uuid::Uuid;
 
 use crate::config::StripeConfig;
 use crate::models::{
+    Organization, OrganizationLimits, Subscription, SubscriptionStatus,
     subscription::{
         BillingPeriod, CancelSubscriptionRequest, CreateBillingPortalSessionRequest,
         CreateCheckoutSessionRequest, Invoice, InvoiceStatus, PaymentMethod, Plan, PlanType,
         ProrationBehavior, SubscriptionDetails, UpdateSubscriptionRequest, UsageMetricType,
         UsageRecord, UsageSummary,
     },
-    Organization, OrganizationLimits, Subscription, SubscriptionStatus,
 };
 
 /// Stripe service for handling all Stripe-related operations
@@ -240,10 +240,7 @@ impl StripeService {
     }
 
     /// Resume a canceled subscription (if cancel_at_period_end was set)
-    pub async fn resume_subscription(
-        &self,
-        subscription_id: &str,
-    ) -> Result<StripeSubscription> {
+    pub async fn resume_subscription(&self, subscription_id: &str) -> Result<StripeSubscription> {
         let subscription_id_parsed = SubscriptionId::from(subscription_id.to_string());
 
         let mut update = UpdateSubscription::new();
@@ -262,7 +259,9 @@ impl StripeService {
         request: &CreateCheckoutSessionRequest,
     ) -> Result<CheckoutSession> {
         // Get the organization
-        let org = self.get_organization_by_id(&request.organization_id).await?;
+        let org = self
+            .get_organization_by_id(&request.organization_id)
+            .await?;
 
         // Get the plan
         let plan = self.get_plan_by_id(&request.plan_id).await?;
@@ -280,7 +279,9 @@ impl StripeService {
         };
 
         // Check if organization already has a Stripe customer
-        let subscription = self.get_subscription_by_org_id(&request.organization_id).await?;
+        let subscription = self
+            .get_subscription_by_org_id(&request.organization_id)
+            .await?;
 
         let mut create_session = CreateCheckoutSession::new();
         create_session.mode = Some(CheckoutSessionMode::Subscription);
@@ -303,7 +304,10 @@ impl StripeService {
         create_session.allow_promotion_codes = Some(request.allow_promotion_codes);
 
         create_session.metadata = Some(HashMap::from([
-            ("organization_id".to_string(), request.organization_id.clone()),
+            (
+                "organization_id".to_string(),
+                request.organization_id.clone(),
+            ),
             ("plan_id".to_string(), request.plan_id.clone()),
             (
                 "billing_period".to_string(),
@@ -438,11 +442,7 @@ impl StripeService {
     }
 
     /// Report bandwidth usage
-    pub async fn report_bandwidth_usage(
-        &self,
-        organization_id: &str,
-        bytes: i64,
-    ) -> Result<()> {
+    pub async fn report_bandwidth_usage(&self, organization_id: &str, bytes: i64) -> Result<()> {
         let subscription = self
             .get_subscription_by_org_id(organization_id)
             .await?
@@ -677,8 +677,18 @@ impl StripeService {
             .bind(product.id.to_string())
             .bind(monthly_price.as_ref().map(|p| p.id.to_string()))
             .bind(yearly_price.as_ref().map(|p| p.id.to_string()))
-            .bind(monthly_price.as_ref().and_then(|p| p.unit_amount).unwrap_or(0))
-            .bind(yearly_price.as_ref().and_then(|p| p.unit_amount).unwrap_or(0))
+            .bind(
+                monthly_price
+                    .as_ref()
+                    .and_then(|p| p.unit_amount)
+                    .unwrap_or(0),
+            )
+            .bind(
+                yearly_price
+                    .as_ref()
+                    .and_then(|p| p.unit_amount)
+                    .unwrap_or(0),
+            )
             .bind(limits.max_backends)
             .bind(limits.max_origins_per_backend)
             .bind(limits.max_domains)
@@ -1056,7 +1066,12 @@ impl StripeService {
         .bind(payment_intent_id)
         .bind(&stripe_invoice.number)
         .bind(status)
-        .bind(stripe_invoice.currency.map(|c| c.to_string()).unwrap_or_else(|| "usd".to_string()))
+        .bind(
+            stripe_invoice
+                .currency
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "usd".to_string()),
+        )
         .bind(stripe_invoice.subtotal.unwrap_or(0))
         .bind(stripe_invoice.tax.unwrap_or(0))
         .bind(stripe_invoice.total.unwrap_or(0))

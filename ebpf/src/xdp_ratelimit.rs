@@ -77,7 +77,7 @@ pub struct RateLimitConfig {
 /// Subnet rate limit key (for /24 or /48 limiting)
 #[repr(C, packed)]
 pub struct SubnetKey {
-    pub prefix: u32,  // First 24 bits for IPv4
+    pub prefix: u32, // First 24 bits for IPv4
     pub padding: u32,
 }
 
@@ -85,8 +85,7 @@ pub struct SubnetKey {
 
 /// Per-IP token buckets (IPv4)
 #[map]
-static TOKEN_BUCKETS_V4: LruHashMap<u32, TokenBucket> =
-    LruHashMap::with_max_entries(2_000_000, 0);
+static TOKEN_BUCKETS_V4: LruHashMap<u32, TokenBucket> = LruHashMap::with_max_entries(2_000_000, 0);
 
 /// Per-IP token buckets (IPv6)
 #[map]
@@ -156,8 +155,20 @@ fn try_xdp_ratelimit(ctx: XdpContext) -> Result<u32, ()> {
     let packet_size = (data_end - data) as u64;
 
     match eth_proto {
-        ETH_P_IP => ratelimit_ipv4(&ctx, data + mem::size_of::<EthHdr>(), data_end, packet_size, &config),
-        ETH_P_IPV6 => ratelimit_ipv6(&ctx, data + mem::size_of::<EthHdr>(), data_end, packet_size, &config),
+        ETH_P_IP => ratelimit_ipv4(
+            &ctx,
+            data + mem::size_of::<EthHdr>(),
+            data_end,
+            packet_size,
+            &config,
+        ),
+        ETH_P_IPV6 => ratelimit_ipv6(
+            &ctx,
+            data + mem::size_of::<EthHdr>(),
+            data_end,
+            packet_size,
+            &config,
+        ),
         _ => Ok(xdp_action::XDP_PASS),
     }
 }
@@ -304,7 +315,12 @@ fn check_subnet_bucket(subnet: &SubnetKey, packet_size: u64, config: &RateLimitC
 }
 
 #[inline(always)]
-fn process_bucket(bucket: &mut TokenBucket, now: u64, packet_size: u64, config: &RateLimitConfig) -> bool {
+fn process_bucket(
+    bucket: &mut TokenBucket,
+    now: u64,
+    packet_size: u64,
+    config: &RateLimitConfig,
+) -> bool {
     // Calculate tokens to add based on elapsed time
     let elapsed = now.saturating_sub(bucket.last_update);
     let tokens_to_add = (elapsed * config.tokens_per_second) / NANOS_PER_SEC;

@@ -8,11 +8,11 @@
 
 use super::WorkerState;
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
@@ -73,7 +73,11 @@ async fn health_check(State(state): State<WorkerState>) -> impl IntoResponse {
     let health_result = state.health_check();
 
     let response = HealthResponse {
-        status: if health_result.healthy { "healthy" } else { "unhealthy" },
+        status: if health_result.healthy {
+            "healthy"
+        } else {
+            "unhealthy"
+        },
         service: "worker",
         version: env!("CARGO_PKG_VERSION"),
         worker_id: state.worker_id(),
@@ -434,7 +438,7 @@ async fn block_ip(
                     success: false,
                     message: format!("Invalid IP address: {}", request.ip),
                 }),
-            )
+            );
         }
     };
 
@@ -470,7 +474,7 @@ async fn unblock_ip(
                     success: false,
                     message: format!("Invalid IP address: {}", ip_str),
                 }),
-            )
+            );
         }
     };
 

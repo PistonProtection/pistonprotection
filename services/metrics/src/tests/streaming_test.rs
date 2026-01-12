@@ -1,6 +1,6 @@
 //! Streaming metrics tests
 
-use super::test_utils::{constants, TestTrafficMetrics};
+use super::test_utils::{TestTrafficMetrics, constants};
 use crate::streaming::{
     MetricStream, StreamConfig, StreamFilter, StreamSubscription, StreamingService,
 };
@@ -157,10 +157,7 @@ mod publishing_tests {
         service.publish(constants::TEST_BACKEND_ID, &metrics).await;
 
         // Receive should work
-        let received = tokio::time::timeout(
-            StdDuration::from_secs(1),
-            stream.next(),
-        ).await;
+        let received = tokio::time::timeout(StdDuration::from_secs(1), stream.next()).await;
 
         assert!(received.is_ok());
         assert!(received.unwrap().is_some());
@@ -186,10 +183,7 @@ mod publishing_tests {
         service.publish("backend-2", &metrics).await;
 
         // Should timeout (no message)
-        let received = tokio::time::timeout(
-            StdDuration::from_millis(100),
-            stream.next(),
-        ).await;
+        let received = tokio::time::timeout(StdDuration::from_millis(100), stream.next()).await;
 
         assert!(received.is_err()); // Timeout means no message
 
@@ -197,10 +191,7 @@ mod publishing_tests {
         let metrics = TestTrafficMetrics::new().with_backend_id("backend-1");
         service.publish("backend-1", &metrics).await;
 
-        let received = tokio::time::timeout(
-            StdDuration::from_secs(1),
-            stream.next(),
-        ).await;
+        let received = tokio::time::timeout(StdDuration::from_secs(1), stream.next()).await;
 
         assert!(received.is_ok());
     }
@@ -220,16 +211,11 @@ mod publishing_tests {
         let mut stream = subscription.stream;
 
         // Publish matching metric
-        service.publish_metric(
-            constants::TEST_BACKEND_ID,
-            "requests_total",
-            1000.0,
-        ).await;
+        service
+            .publish_metric(constants::TEST_BACKEND_ID, "requests_total", 1000.0)
+            .await;
 
-        let received = tokio::time::timeout(
-            StdDuration::from_secs(1),
-            stream.next(),
-        ).await;
+        let received = tokio::time::timeout(StdDuration::from_secs(1), stream.next()).await;
 
         assert!(received.is_ok());
     }
@@ -257,10 +243,7 @@ mod publishing_tests {
         // Should receive fewer due to rate limiting
         let mut count = 0;
         loop {
-            let received = tokio::time::timeout(
-                StdDuration::from_millis(50),
-                stream.next(),
-            ).await;
+            let received = tokio::time::timeout(StdDuration::from_millis(50), stream.next()).await;
 
             if received.is_err() {
                 break;
@@ -290,7 +273,10 @@ mod publishing_tests {
         // Publish batch
         let batch: Vec<_> = (0..10)
             .map(|i| {
-                (constants::TEST_BACKEND_ID.to_string(), TestTrafficMetrics::new())
+                (
+                    constants::TEST_BACKEND_ID.to_string(),
+                    TestTrafficMetrics::new(),
+                )
             })
             .collect();
 
@@ -299,10 +285,7 @@ mod publishing_tests {
         // Should receive all
         let mut count = 0;
         loop {
-            let received = tokio::time::timeout(
-                StdDuration::from_millis(100),
-                stream.next(),
-            ).await;
+            let received = tokio::time::timeout(StdDuration::from_millis(100), stream.next()).await;
 
             if received.is_err() {
                 break;
@@ -367,14 +350,8 @@ mod stream_tests {
         service.publish(constants::TEST_BACKEND_ID, &metrics).await;
 
         // Both should receive
-        let recv1 = tokio::time::timeout(
-            StdDuration::from_secs(1),
-            stream1.next(),
-        ).await;
-        let recv2 = tokio::time::timeout(
-            StdDuration::from_secs(1),
-            stream2.next(),
-        ).await;
+        let recv1 = tokio::time::timeout(StdDuration::from_secs(1), stream1.next()).await;
+        let recv2 = tokio::time::timeout(StdDuration::from_secs(1), stream2.next()).await;
 
         assert!(recv1.is_ok());
         assert!(recv2.is_ok());
@@ -440,10 +417,7 @@ mod heartbeat_tests {
         let mut stream = subscription.stream;
 
         // Wait for heartbeat
-        let received = tokio::time::timeout(
-            StdDuration::from_millis(500),
-            stream.next(),
-        ).await;
+        let received = tokio::time::timeout(StdDuration::from_millis(500), stream.next()).await;
 
         // Should receive heartbeat (or actual data)
         assert!(received.is_ok());

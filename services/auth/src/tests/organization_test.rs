@@ -1,6 +1,6 @@
 //! Organization and RBAC tests
 
-use super::test_utils::{constants, generate_test_id, TestOrganization, TestUser};
+use super::test_utils::{TestOrganization, TestUser, constants, generate_test_id};
 use crate::services::organization::{
     InvitationStatus, MemberRole, Organization, OrganizationService,
 };
@@ -51,8 +51,10 @@ mod organization_crud_tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().to_lowercase().contains("slug")
-            || err.to_string().to_lowercase().contains("exist"));
+        assert!(
+            err.to_string().to_lowercase().contains("slug")
+                || err.to_string().to_lowercase().contains("exist")
+        );
     }
 
     /// Test getting an organization
@@ -187,9 +189,7 @@ mod slug_tests {
         ];
 
         for slug in invalid_slugs {
-            let result = service
-                .create_organization(&user.id, "Test", slug)
-                .await;
+            let result = service.create_organization(&user.id, "Test", slug).await;
             // Should either normalize or fail
         }
     }
@@ -416,7 +416,12 @@ mod invitation_tests {
             .unwrap();
 
         let result = service
-            .create_invitation(&org.id, &owner.id, "invitee@example.com", MemberRole::Member)
+            .create_invitation(
+                &org.id,
+                &owner.id,
+                "invitee@example.com",
+                MemberRole::Member,
+            )
             .await;
 
         assert!(result.is_ok());
@@ -440,7 +445,12 @@ mod invitation_tests {
             .unwrap();
 
         let invitation = service
-            .create_invitation(&org.id, &owner.id, "invitee@example.com", MemberRole::Member)
+            .create_invitation(
+                &org.id,
+                &owner.id,
+                "invitee@example.com",
+                MemberRole::Member,
+            )
             .await
             .unwrap();
 
@@ -467,7 +477,12 @@ mod invitation_tests {
             .unwrap();
 
         let invitation = service
-            .create_invitation(&org.id, &owner.id, "decline@example.com", MemberRole::Member)
+            .create_invitation(
+                &org.id,
+                &owner.id,
+                "decline@example.com",
+                MemberRole::Member,
+            )
             .await
             .unwrap();
 
@@ -504,7 +519,9 @@ mod invitation_tests {
             .await
             .unwrap();
 
-        let result = service.revoke_invitation(&org.id, &owner.id, &invitation.id).await;
+        let result = service
+            .revoke_invitation(&org.id, &owner.id, &invitation.id)
+            .await;
 
         assert!(result.is_ok());
     }
@@ -530,9 +547,24 @@ mod permission_tests {
             .unwrap();
 
         // Owner can do everything
-        assert!(service.can_manage_members(&org.id, &owner.id).await.unwrap());
-        assert!(service.can_manage_settings(&org.id, &owner.id).await.unwrap());
-        assert!(service.can_delete_organization(&org.id, &owner.id).await.unwrap());
+        assert!(
+            service
+                .can_manage_members(&org.id, &owner.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            service
+                .can_manage_settings(&org.id, &owner.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            service
+                .can_delete_organization(&org.id, &owner.id)
+                .await
+                .unwrap()
+        );
         assert!(service.can_view_billing(&org.id, &owner.id).await.unwrap());
     }
 
@@ -554,10 +586,25 @@ mod permission_tests {
             .unwrap();
 
         // Admin can manage members and settings
-        assert!(service.can_manage_members(&org.id, &admin.id).await.unwrap());
-        assert!(service.can_manage_settings(&org.id, &admin.id).await.unwrap());
+        assert!(
+            service
+                .can_manage_members(&org.id, &admin.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            service
+                .can_manage_settings(&org.id, &admin.id)
+                .await
+                .unwrap()
+        );
         // Admin cannot delete organization
-        assert!(!service.can_delete_organization(&org.id, &admin.id).await.unwrap());
+        assert!(
+            !service
+                .can_delete_organization(&org.id, &admin.id)
+                .await
+                .unwrap()
+        );
     }
 
     /// Test member permissions
@@ -578,9 +625,24 @@ mod permission_tests {
             .unwrap();
 
         // Member has limited permissions
-        assert!(!service.can_manage_members(&org.id, &member.id).await.unwrap());
-        assert!(!service.can_manage_settings(&org.id, &member.id).await.unwrap());
-        assert!(!service.can_delete_organization(&org.id, &member.id).await.unwrap());
+        assert!(
+            !service
+                .can_manage_members(&org.id, &member.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !service
+                .can_manage_settings(&org.id, &member.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !service
+                .can_delete_organization(&org.id, &member.id)
+                .await
+                .unwrap()
+        );
     }
 
     /// Test viewer permissions
@@ -601,11 +663,31 @@ mod permission_tests {
             .unwrap();
 
         // Viewer can only view
-        assert!(!service.can_manage_members(&org.id, &viewer.id).await.unwrap());
-        assert!(!service.can_manage_settings(&org.id, &viewer.id).await.unwrap());
-        assert!(!service.can_delete_organization(&org.id, &viewer.id).await.unwrap());
+        assert!(
+            !service
+                .can_manage_members(&org.id, &viewer.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !service
+                .can_manage_settings(&org.id, &viewer.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !service
+                .can_delete_organization(&org.id, &viewer.id)
+                .await
+                .unwrap()
+        );
         // Viewer can view resources
-        assert!(service.can_view_resources(&org.id, &viewer.id).await.unwrap());
+        assert!(
+            service
+                .can_view_resources(&org.id, &viewer.id)
+                .await
+                .unwrap()
+        );
     }
 
     /// Test non-member has no permissions
@@ -621,7 +703,17 @@ mod permission_tests {
             .unwrap();
 
         // Non-member has no permissions
-        assert!(!service.can_view_resources(&org.id, &outsider.id).await.unwrap());
-        assert!(!service.can_manage_members(&org.id, &outsider.id).await.unwrap());
+        assert!(
+            !service
+                .can_view_resources(&org.id, &outsider.id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !service
+                .can_manage_members(&org.id, &outsider.id)
+                .await
+                .unwrap()
+        );
     }
 }

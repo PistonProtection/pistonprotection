@@ -31,12 +31,7 @@ fn reconciliation_benchmark(c: &mut Criterion) {
 fn validation_benchmark(c: &mut Criterion) {
     c.bench_function("ip_validation", |b| {
         b.iter(|| {
-            let ips = vec![
-                "10.0.0.1",
-                "192.168.1.0/24",
-                "2001:db8::1",
-                "invalid",
-            ];
+            let ips = vec!["10.0.0.1", "192.168.1.0/24", "2001:db8::1", "invalid"];
             for ip in &ips {
                 black_box(ip.parse::<std::net::IpAddr>().is_ok());
             }
@@ -47,10 +42,7 @@ fn validation_benchmark(c: &mut Criterion) {
 fn metrics_benchmark(c: &mut Criterion) {
     c.bench_function("metrics_encoding", |b| {
         let registry = prometheus::Registry::new();
-        let counter = prometheus::IntCounter::new(
-            "test_counter",
-            "Test counter"
-        ).unwrap();
+        let counter = prometheus::IntCounter::new("test_counter", "Test counter").unwrap();
         registry.register(Box::new(counter.clone())).unwrap();
 
         b.iter(|| {

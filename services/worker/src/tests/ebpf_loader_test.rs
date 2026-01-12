@@ -3,7 +3,7 @@
 //! Note: These tests use mocks since actual eBPF operations require
 //! root privileges and specific kernel support.
 
-use super::test_utils::{constants, MockNetworkInterface, TestPacketMeta};
+use super::test_utils::{MockNetworkInterface, TestPacketMeta, constants};
 use crate::ebpf::loader::{AttachedProgram, EbpfLoader, XdpMode};
 use std::path::Path;
 
@@ -75,12 +75,15 @@ impl MockEbpfLoader {
     }
 
     fn detach_xdp(&mut self, interface_name: &str) -> Result<(), String> {
-        self.attached_programs.retain(|p| p.interface != interface_name);
+        self.attached_programs
+            .retain(|p| p.interface != interface_name);
         Ok(())
     }
 
     fn is_attached(&self, interface_name: &str) -> bool {
-        self.attached_programs.iter().any(|p| p.interface == interface_name)
+        self.attached_programs
+            .iter()
+            .any(|p| p.interface == interface_name)
     }
 
     fn list_attached(&self) -> Vec<&AttachedProgram> {
@@ -224,7 +227,9 @@ mod attachment_tests {
         for name in &interfaces {
             let mut interface = MockNetworkInterface::default();
             interface.name = name.to_string();
-            loader.attach_xdp("xdp_filter", &interface, XdpMode::Generic).unwrap();
+            loader
+                .attach_xdp("xdp_filter", &interface, XdpMode::Generic)
+                .unwrap();
         }
 
         for name in interfaces {
@@ -262,7 +267,9 @@ mod detachment_tests {
         let interface = MockNetworkInterface::default();
 
         loader.load_from_bytes("xdp_filter", &[]).unwrap();
-        loader.attach_xdp("xdp_filter", &interface, XdpMode::Generic).unwrap();
+        loader
+            .attach_xdp("xdp_filter", &interface, XdpMode::Generic)
+            .unwrap();
         assert!(loader.is_attached(&interface.name));
 
         let result = loader.detach_xdp(&interface.name);
@@ -293,8 +300,12 @@ mod detachment_tests {
         let mut if2 = MockNetworkInterface::default();
         if2.name = "eth1".to_string();
 
-        loader.attach_xdp("xdp_filter", &if1, XdpMode::Generic).unwrap();
-        loader.attach_xdp("xdp_filter", &if2, XdpMode::Generic).unwrap();
+        loader
+            .attach_xdp("xdp_filter", &if1, XdpMode::Generic)
+            .unwrap();
+        loader
+            .attach_xdp("xdp_filter", &if2, XdpMode::Generic)
+            .unwrap();
 
         // Detach only eth0
         loader.detach_xdp("eth0").unwrap();
@@ -401,7 +412,9 @@ mod cleanup_tests {
         let interface = MockNetworkInterface::default();
 
         loader.load_from_bytes("xdp_filter", &[]).unwrap();
-        loader.attach_xdp("xdp_filter", &interface, XdpMode::Generic).unwrap();
+        loader
+            .attach_xdp("xdp_filter", &interface, XdpMode::Generic)
+            .unwrap();
 
         // Drop loader - should clean up
         drop(loader);

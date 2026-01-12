@@ -314,7 +314,12 @@ pub enum FragmentAction {
 /// - Fragment floods: Resource exhaustion attacks
 /// - Teardrop: Overlapping fragments with invalid offsets
 #[inline(always)]
-pub fn analyze_ipv4_fragment(frag_off: u16, tot_len: u16, ihl: u8, protection_level: u32) -> FragmentAction {
+pub fn analyze_ipv4_fragment(
+    frag_off: u16,
+    tot_len: u16,
+    ihl: u8,
+    protection_level: u32,
+) -> FragmentAction {
     use protocol::ipv4_frag::*;
 
     // Check if this is a fragment at all
@@ -352,12 +357,7 @@ pub fn analyze_ipv4_fragment(frag_off: u16, tot_len: u16, ihl: u8, protection_le
 
 /// Calculate a simple hash for connection tracking
 #[inline(always)]
-pub fn hash_connection(
-    src_ip: u32,
-    dst_ip: u32,
-    src_port: u16,
-    dst_port: u16,
-) -> u64 {
+pub fn hash_connection(src_ip: u32, dst_ip: u32, src_port: u16, dst_port: u16) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325; // FNV-1a offset basis
 
     // Mix in source IP
@@ -377,12 +377,7 @@ pub fn hash_connection(
 
 /// Calculate a symmetric hash (same for both directions)
 #[inline(always)]
-pub fn hash_connection_symmetric(
-    ip1: u32,
-    ip2: u32,
-    port1: u16,
-    port2: u16,
-) -> u64 {
+pub fn hash_connection_symmetric(ip1: u32, ip2: u32, port1: u16, port2: u16) -> u64 {
     let (src_ip, dst_ip, src_port, dst_port) = if ip1 < ip2 {
         (ip1, ip2, port1, port2)
     } else if ip1 > ip2 {

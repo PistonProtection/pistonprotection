@@ -107,10 +107,7 @@ impl MockReconciler {
         })
     }
 
-    fn validate_spec(
-        &self,
-        spec: &DDoSProtectionSpec,
-    ) -> Result<(), String> {
+    fn validate_spec(&self, spec: &DDoSProtectionSpec) -> Result<(), String> {
         if spec.backends.is_empty() {
             return Err("At least one backend is required".to_string());
         }
@@ -146,10 +143,7 @@ impl MockReconciler {
     }
 
     /// Reconcile a FilterRule resource
-    fn reconcile_filter_rule(
-        &mut self,
-        rule: &FilterRule,
-    ) -> Result<FilterRuleStatus, String> {
+    fn reconcile_filter_rule(&mut self, rule: &FilterRule) -> Result<FilterRuleStatus, String> {
         // Validate rule
         if let Err(e) = self.validate_filter_rule(&rule.spec) {
             return Err(e);

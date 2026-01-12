@@ -51,9 +51,7 @@ impl ScoringService {
 
     /// Get threat scores for multiple IPs
     pub fn get_ip_scores_batch(&self, ips: &[IpAddr]) -> Vec<(IpAddr, Option<IPRecord>)> {
-        ips.iter()
-            .map(|ip| (*ip, self.engine().get(ip)))
-            .collect()
+        ips.iter().map(|ip| (*ip, self.engine().get(ip))).collect()
     }
 
     /// Record an action taken on an IP
@@ -154,11 +152,11 @@ pub struct ScoringStats {
 pub mod api {
     use super::*;
     use axum::{
+        Json, Router,
         extract::{Path, Query, State},
         http::StatusCode,
         response::IntoResponse,
         routing::{delete, get, post},
-        Json, Router,
     };
     use serde::{Deserialize, Serialize};
 
@@ -261,7 +259,7 @@ pub mod api {
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "Invalid IP address"})),
                 )
-                    .into_response()
+                    .into_response();
             }
         };
 
@@ -297,11 +295,15 @@ pub mod api {
                         success: false,
                         message: "Invalid IP address".to_string(),
                     }),
-                )
+                );
             }
         };
 
-        service.block_ip(ip, request.duration_seconds.unwrap_or(3600), &request.reason);
+        service.block_ip(
+            ip,
+            request.duration_seconds.unwrap_or(3600),
+            &request.reason,
+        );
 
         info!(ip = %ip, reason = %request.reason, "IP blocked via API");
 
@@ -327,7 +329,7 @@ pub mod api {
                         success: false,
                         message: "Invalid IP address".to_string(),
                     }),
-                )
+                );
             }
         };
 
@@ -381,7 +383,7 @@ pub mod api {
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "Invalid IP address"})),
                 )
-                    .into_response()
+                    .into_response();
             }
         };
 
@@ -397,7 +399,7 @@ pub mod api {
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "Invalid action type"})),
                 )
-                    .into_response()
+                    .into_response();
             }
         };
 
@@ -420,7 +422,7 @@ pub mod api {
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "Invalid category"})),
                 )
-                    .into_response()
+                    .into_response();
             }
         };
 
@@ -562,7 +564,7 @@ pub mod api {
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "Invalid IP address"})),
                 )
-                    .into_response()
+                    .into_response();
             }
         };
 

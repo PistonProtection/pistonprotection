@@ -116,10 +116,7 @@ pub fn get_version(payload: &[u8]) -> Option<u32> {
     }
 
     Some(u32::from_be_bytes([
-        payload[1],
-        payload[2],
-        payload[3],
-        payload[4],
+        payload[1], payload[2], payload[3], payload[4],
     ]))
 }
 

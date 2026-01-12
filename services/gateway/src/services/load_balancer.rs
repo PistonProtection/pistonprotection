@@ -14,8 +14,8 @@ use pistonprotection_common::error::{Error, Result};
 use pistonprotection_proto::backend::Origin;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use tracing::{debug, warn};
 
 /// Load balancing algorithm
@@ -193,21 +193,15 @@ impl LoadBalancer {
         }
 
         let selected = match algorithm {
-            LoadBalancingAlgorithm::RoundRobin => {
-                self.select_round_robin(&healthy_origins)
-            }
+            LoadBalancingAlgorithm::RoundRobin => self.select_round_robin(&healthy_origins),
             LoadBalancingAlgorithm::WeightedRoundRobin => {
                 self.select_weighted_round_robin(&healthy_origins)
             }
             LoadBalancingAlgorithm::LeastConnections => {
                 self.select_least_connections(&healthy_origins)
             }
-            LoadBalancingAlgorithm::Random => {
-                self.select_random(&healthy_origins)
-            }
-            LoadBalancingAlgorithm::IpHash => {
-                self.select_ip_hash(&healthy_origins, client_ip)
-            }
+            LoadBalancingAlgorithm::Random => self.select_random(&healthy_origins),
+            LoadBalancingAlgorithm::IpHash => self.select_ip_hash(&healthy_origins, client_ip),
         };
 
         let tracked = Arc::clone(selected);
@@ -221,10 +215,7 @@ impl LoadBalancer {
     }
 
     /// Simple round-robin selection
-    fn select_round_robin<'a>(
-        &self,
-        origins: &[&'a Arc<TrackedOrigin>],
-    ) -> &'a Arc<TrackedOrigin> {
+    fn select_round_robin<'a>(&self, origins: &[&'a Arc<TrackedOrigin>]) -> &'a Arc<TrackedOrigin> {
         let index = self.round_robin_index.fetch_add(1, Ordering::Relaxed);
         let idx = (index as usize) % origins.len();
         origins[idx]
@@ -256,7 +247,9 @@ impl LoadBalancer {
 
         for (idx, origin) in origins.iter().enumerate() {
             let ew = origin.effective_weight.load(Ordering::Relaxed) as i64;
-            let cw = origin.current_weight.fetch_add(ew as u32, Ordering::Relaxed) as i64;
+            let cw = origin
+                .current_weight
+                .fetch_add(ew as u32, Ordering::Relaxed) as i64;
             let new_cw = cw + ew;
 
             if new_cw > best_weight {
@@ -292,10 +285,7 @@ impl LoadBalancer {
     }
 
     /// Random selection
-    fn select_random<'a>(
-        &self,
-        origins: &[&'a Arc<TrackedOrigin>],
-    ) -> &'a Arc<TrackedOrigin> {
+    fn select_random<'a>(&self, origins: &[&'a Arc<TrackedOrigin>]) -> &'a Arc<TrackedOrigin> {
         use std::time::{SystemTime, UNIX_EPOCH};
 
         // Simple pseudo-random using time
@@ -353,7 +343,12 @@ impl LoadBalancer {
             total_origins: origins.len(),
             healthy_origins: origin_stats
                 .iter()
-                .filter(|s| matches!(s.circuit_state, CircuitState::Closed | CircuitState::HalfOpen))
+                .filter(|s| {
+                    matches!(
+                        s.circuit_state,
+                        CircuitState::Closed | CircuitState::HalfOpen
+                    )
+                })
                 .count(),
             origin_stats,
         }
@@ -612,9 +607,7 @@ mod tests {
             Arc::clone(&cb_manager),
         );
 
-        lb.update_origins(vec![
-            create_origin("origin-1", 1, true),
-        ]);
+        lb.update_origins(vec![create_origin("origin-1", 1, true)]);
 
         // Force circuit breaker open
         let cb = cb_manager.get_or_create("origin-1");

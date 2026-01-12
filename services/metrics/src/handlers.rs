@@ -1,15 +1,10 @@
 //! gRPC handlers for the metrics service
 
 use crate::{
-    aggregator::MetricsAggregator,
-    alerts::AlertManager,
-    storage::TimeSeriesStorage,
+    aggregator::MetricsAggregator, alerts::AlertManager, storage::TimeSeriesStorage,
     streams::MetricsStreamer,
 };
-use pistonprotection_proto::metrics::{
-    metrics_service_server::MetricsService,
-    *,
-};
+use pistonprotection_proto::metrics::{metrics_service_server::MetricsService, *};
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::Stream;
@@ -75,14 +70,10 @@ impl MetricsService for MetricsGrpcService {
     ) -> Result<Response<GetTimeSeriesResponse>, Status> {
         let query = request.into_inner();
 
-        let series = self
-            .storage
-            .query_time_series(&query)
-            .await
-            .map_err(|e| {
-                error!("Failed to query traffic time series: {}", e);
-                Status::internal(format!("Failed to query time series: {}", e))
-            })?;
+        let series = self.storage.query_time_series(&query).await.map_err(|e| {
+            error!("Failed to query traffic time series: {}", e);
+            Status::internal(format!("Failed to query time series: {}", e))
+        })?;
 
         Ok(Response::new(GetTimeSeriesResponse { series }))
     }
@@ -332,19 +323,15 @@ impl MetricsService for MetricsGrpcService {
         let req = request.into_inner();
         tracing::Span::current().record("alert_id", &req.alert_id);
 
-        let alert = self
-            .alerts
-            .get_alert(&req.alert_id)
-            .await
-            .map_err(|e| {
-                error!("Failed to get alert: {}", e);
-                match e {
-                    crate::alerts::AlertError::NotFound(_) => {
-                        Status::not_found(format!("Alert not found: {}", req.alert_id))
-                    }
-                    _ => Status::internal(format!("Failed to get alert: {}", e)),
+        let alert = self.alerts.get_alert(&req.alert_id).await.map_err(|e| {
+            error!("Failed to get alert: {}", e);
+            match e {
+                crate::alerts::AlertError::NotFound(_) => {
+                    Status::not_found(format!("Alert not found: {}", req.alert_id))
                 }
-            })?;
+                _ => Status::internal(format!("Failed to get alert: {}", e)),
+            }
+        })?;
 
         Ok(Response::new(GetAlertResponse { alert: Some(alert) }))
     }
@@ -364,9 +351,7 @@ impl MetricsService for MetricsGrpcService {
         let updated_alert = self.alerts.update_alert(alert).await.map_err(|e| {
             error!("Failed to update alert: {}", e);
             match e {
-                crate::alerts::AlertError::NotFound(_) => {
-                    Status::not_found("Alert not found")
-                }
+                crate::alerts::AlertError::NotFound(_) => Status::not_found("Alert not found"),
                 _ => Status::internal(format!("Failed to update alert: {}", e)),
             }
         })?;
@@ -453,7 +438,12 @@ impl MetricsService for MetricsGrpcService {
 
         let (events, pagination_info) = self
             .storage
-            .list_attack_events(&req.backend_id, req.start_time, req.end_time, req.pagination)
+            .list_attack_events(
+                &req.backend_id,
+                req.start_time,
+                req.end_time,
+                req.pagination,
+            )
             .await
             .map_err(|e| {
                 error!("Failed to list attack events: {}", e);

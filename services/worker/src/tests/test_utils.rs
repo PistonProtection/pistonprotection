@@ -304,9 +304,7 @@ mod tests {
 
     #[test]
     fn test_packet_meta_builder() {
-        let meta = TestPacketMeta::new()
-            .udp()
-            .to_port(19132);
+        let meta = TestPacketMeta::new().udp().to_port(19132);
 
         assert_eq!(meta.protocol, 17);
         assert_eq!(meta.dst_port, 19132);

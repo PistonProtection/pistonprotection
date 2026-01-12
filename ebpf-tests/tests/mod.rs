@@ -6,11 +6,11 @@
 // Use the library crate for packet generation
 use pistonprotection_ebpf_tests::packet_generator;
 
-mod varint_tests;
-mod minecraft_tests;
-mod tcp_tests;
-mod raknet_tests;
 mod http_tests;
+mod minecraft_tests;
+mod raknet_tests;
+mod tcp_tests;
+mod varint_tests;
 
 /// Test configuration defaults
 pub const DEFAULT_TEST_TIMEOUT_MS: u64 = 1000;

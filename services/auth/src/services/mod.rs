@@ -5,29 +5,29 @@ use pistonprotection_common::{config::Config, redis::CacheService};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-pub mod auth;
-pub mod session;
-pub mod jwt;
 pub mod apikey;
-pub mod permission;
-pub mod user;
-pub mod organization;
 pub mod audit;
-pub mod stripe;
-pub mod email;
+pub mod auth;
 pub mod dunning;
+pub mod email;
+pub mod jwt;
+pub mod organization;
+pub mod permission;
+pub mod session;
+pub mod stripe;
+pub mod user;
 
-pub use auth::AuthService;
-pub use session::SessionService;
-pub use jwt::JwtService;
 pub use apikey::ApiKeyService;
-pub use permission::PermissionService;
-pub use user::UserService;
-pub use organization::OrganizationService;
 pub use audit::AuditService;
+pub use auth::AuthService;
+pub use dunning::{DunningConfig, DunningRecord, DunningService, DunningState};
+pub use email::{EmailConfig, EmailMessage, EmailRecipient, EmailService, EmailTemplate};
+pub use jwt::JwtService;
+pub use organization::OrganizationService;
+pub use permission::PermissionService;
+pub use session::SessionService;
 pub use stripe::StripeService;
-pub use email::{EmailService, EmailConfig, EmailRecipient, EmailTemplate, EmailMessage};
-pub use dunning::{DunningService, DunningConfig, DunningRecord, DunningState};
+pub use user::UserService;
 
 use crate::config::AuthConfig;
 

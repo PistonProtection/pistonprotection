@@ -15,9 +15,9 @@ use pistonprotection_proto::worker::{
 };
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Notify};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use tokio::sync::{Notify, mpsc};
 use tracing::{debug, error, info, warn};
 
 /// Configuration version tracking
@@ -412,8 +412,8 @@ impl ConfigSyncManager {
         map_manager: &mut MapManager,
         update: &MapUpdate,
     ) -> Result<()> {
-        let operation = MapOperation::try_from(update.operation)
-            .unwrap_or(MapOperation::Unspecified);
+        let operation =
+            MapOperation::try_from(update.operation).unwrap_or(MapOperation::Unspecified);
 
         match update.map_name.as_str() {
             "blocked_ips" | "ip_blocklist" => {
@@ -735,8 +735,14 @@ mod tests {
             generated_at: None,
         };
 
-        assert_eq!(calculate_config_hash(&config1), calculate_config_hash(&config2));
-        assert_ne!(calculate_config_hash(&config1), calculate_config_hash(&config3));
+        assert_eq!(
+            calculate_config_hash(&config1),
+            calculate_config_hash(&config2)
+        );
+        assert_ne!(
+            calculate_config_hash(&config1),
+            calculate_config_hash(&config3)
+        );
     }
 
     #[test]

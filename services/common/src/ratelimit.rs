@@ -38,14 +38,15 @@ pub struct GlobalRateLimiter {
 impl GlobalRateLimiter {
     /// Create a new global rate limiter
     pub fn new(config: &RateLimitConfig) -> Result<Self> {
-        let quota = Quota::per_second(
-            NonZeroU32::new(config.requests_per_second)
-                .ok_or_else(|| Error::validation("Invalid rate limit: requests_per_second must be > 0"))?,
-        )
-        .allow_burst(
-            NonZeroU32::new(config.burst_size)
-                .ok_or_else(|| Error::validation("Invalid rate limit: burst_size must be > 0"))?,
-        );
+        let quota =
+            Quota::per_second(NonZeroU32::new(config.requests_per_second).ok_or_else(|| {
+                Error::validation("Invalid rate limit: requests_per_second must be > 0")
+            })?)
+            .allow_burst(
+                NonZeroU32::new(config.burst_size).ok_or_else(|| {
+                    Error::validation("Invalid rate limit: burst_size must be > 0")
+                })?,
+            );
 
         Ok(Self {
             limiter: RateLimiter::direct(quota),
@@ -99,7 +100,8 @@ impl IpRateLimiter {
         }
 
         let quota = Quota::per_second(
-            NonZeroU32::new(self.config.requests_per_second).unwrap_or(NonZeroU32::new(100).unwrap()),
+            NonZeroU32::new(self.config.requests_per_second)
+                .unwrap_or(NonZeroU32::new(100).unwrap()),
         )
         .allow_burst(
             NonZeroU32::new(self.config.burst_size).unwrap_or(NonZeroU32::new(200).unwrap()),

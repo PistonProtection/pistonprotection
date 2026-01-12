@@ -228,14 +228,12 @@ impl DunningService {
             };
 
             match self.process_record(&record).await {
-                Ok(outcome) => {
-                    match outcome {
-                        DunningOutcome::PaymentRecovered => stats.recovered += 1,
-                        DunningOutcome::RetryScheduled => stats.retried += 1,
-                        DunningOutcome::Downgraded => stats.downgraded += 1,
-                        DunningOutcome::NoAction => {}
-                    }
-                }
+                Ok(outcome) => match outcome {
+                    DunningOutcome::PaymentRecovered => stats.recovered += 1,
+                    DunningOutcome::RetryScheduled => stats.retried += 1,
+                    DunningOutcome::Downgraded => stats.downgraded += 1,
+                    DunningOutcome::NoAction => {}
+                },
                 Err(e) => {
                     error!(
                         record_id = %record.id,
@@ -453,10 +451,7 @@ impl DunningService {
         let amount = format_currency(record.amount_due, &record.currency);
         let failure_reason = "Card declined"; // In real impl, get from Stripe
 
-        let recipient = EmailRecipient {
-            email,
-            name,
-        };
+        let recipient = EmailRecipient { email, name };
 
         self.email_service
             .send_payment_failed_email(recipient, &amount, failure_reason, attempt as u32)
@@ -497,10 +492,7 @@ impl DunningService {
             None => return Err(Error::not_found("Organization", &record.organization_id)),
         };
 
-        let recipient = EmailRecipient {
-            email,
-            name,
-        };
+        let recipient = EmailRecipient { email, name };
 
         self.email_service
             .send_account_downgraded_email(recipient)
@@ -510,10 +502,7 @@ impl DunningService {
     }
 
     /// Get active dunning records for an organization
-    pub async fn get_active_dunning(
-        &self,
-        organization_id: &str,
-    ) -> Result<Vec<DunningRecord>> {
+    pub async fn get_active_dunning(&self, organization_id: &str) -> Result<Vec<DunningRecord>> {
         let rows = sqlx::query(
             r#"
             SELECT

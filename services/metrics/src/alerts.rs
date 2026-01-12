@@ -11,13 +11,13 @@ use pistonprotection_proto::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPool;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -235,9 +235,10 @@ impl AlertManager {
 
         // Store in database
         if let Some(ref pool) = self.db_pool {
-            let condition = alert.condition.as_ref().ok_or_else(|| {
-                AlertError::Validation("Alert condition is required".to_string())
-            })?;
+            let condition = alert
+                .condition
+                .as_ref()
+                .ok_or_else(|| AlertError::Validation("Alert condition is required".to_string()))?;
 
             let notifications_json = serde_json::to_value(&alert.notifications)
                 .map_err(|e| AlertError::Internal(e.to_string()))?;
@@ -333,9 +334,10 @@ impl AlertManager {
 
         // Update in database
         if let Some(ref pool) = self.db_pool {
-            let condition = updated_alert.condition.as_ref().ok_or_else(|| {
-                AlertError::Validation("Alert condition is required".to_string())
-            })?;
+            let condition = updated_alert
+                .condition
+                .as_ref()
+                .ok_or_else(|| AlertError::Validation("Alert condition is required".to_string()))?;
 
             let notifications_json = serde_json::to_value(&updated_alert.notifications)
                 .map_err(|e| AlertError::Internal(e.to_string()))?;
@@ -372,7 +374,8 @@ impl AlertManager {
         }
 
         // Update in memory
-        self.alerts.insert(updated_alert.id.clone(), updated_alert.clone());
+        self.alerts
+            .insert(updated_alert.id.clone(), updated_alert.clone());
 
         Ok(updated_alert)
     }
@@ -419,10 +422,11 @@ impl AlertManager {
             let offset = (page - 1) * page_size;
 
             // Get total count
-            let count_row = sqlx::query("SELECT COUNT(*) as count FROM alerts WHERE backend_id = $1")
-                .bind(backend_id)
-                .fetch_one(pool)
-                .await?;
+            let count_row =
+                sqlx::query("SELECT COUNT(*) as count FROM alerts WHERE backend_id = $1")
+                    .bind(backend_id)
+                    .fetch_one(pool)
+                    .await?;
             let total_count: i64 = count_row.get("count");
 
             // Get alerts
@@ -536,17 +540,17 @@ impl AlertManager {
         let condition_met = self.check_condition(current_value, condition);
         let now = Utc::now();
 
-        let mut state = self
-            .eval_states
-            .entry(alert.id.clone())
-            .or_insert_with(|| AlertEvalState {
-                alert_id: alert.id.clone(),
-                state: AlertState::Ok,
-                condition_met_since: None,
-                last_evaluated: now,
-                last_triggered: None,
-                consecutive_failures: 0,
-            });
+        let mut state =
+            self.eval_states
+                .entry(alert.id.clone())
+                .or_insert_with(|| AlertEvalState {
+                    alert_id: alert.id.clone(),
+                    state: AlertState::Ok,
+                    condition_met_since: None,
+                    last_evaluated: now,
+                    last_triggered: None,
+                    consecutive_failures: 0,
+                });
 
         state.last_evaluated = now;
 
@@ -598,7 +602,8 @@ impl AlertManager {
 
     /// Check if condition is met
     fn check_condition(&self, current_value: f64, condition: &AlertCondition) -> bool {
-        let operator = AlertOperator::try_from(condition.operator).unwrap_or(AlertOperator::Unspecified);
+        let operator =
+            AlertOperator::try_from(condition.operator).unwrap_or(AlertOperator::Unspecified);
 
         match operator {
             AlertOperator::GreaterThan => current_value > condition.threshold,
@@ -693,9 +698,7 @@ impl AlertManager {
             // Get alert to find notification targets
             if let Some(alert) = self.alerts.get(&payload.alert_id) {
                 for notification in &alert.notifications {
-                    let result = self
-                        .send_notification(notification, &payload)
-                        .await;
+                    let result = self.send_notification(notification, &payload).await;
 
                     if let Err(e) = result {
                         error!(
@@ -718,8 +721,8 @@ impl AlertManager {
         notification: &AlertNotification,
         payload: &AlertNotificationPayload,
     ) -> Result<(), AlertError> {
-        let notification_type =
-            AlertNotificationType::try_from(notification.r#type).unwrap_or(AlertNotificationType::Unspecified);
+        let notification_type = AlertNotificationType::try_from(notification.r#type)
+            .unwrap_or(AlertNotificationType::Unspecified);
 
         match notification_type {
             AlertNotificationType::Webhook => {
@@ -980,7 +983,9 @@ impl AlertManager {
 
     /// Convert database row to Alert
     fn row_to_alert(&self, row: &sqlx::postgres::PgRow) -> Result<Alert, AlertError> {
-        let notifications_json: serde_json::Value = row.try_get("notifications").unwrap_or(serde_json::json!([]));
+        let notifications_json: serde_json::Value = row
+            .try_get("notifications")
+            .unwrap_or(serde_json::json!([]));
         let notifications: Vec<AlertNotification> = serde_json::from_value(notifications_json)
             .map_err(|e| AlertError::Internal(e.to_string()))?;
 

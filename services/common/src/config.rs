@@ -242,8 +242,7 @@ impl Config {
             .set_default("environment", environment.clone())?
             // Load from config directory
             .add_source(
-                config::File::with_name(&format!("config/{}", service_name))
-                    .required(false),
+                config::File::with_name(&format!("config/{}", service_name)).required(false),
             )
             // Load environment-specific config
             .add_source(

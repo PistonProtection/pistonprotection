@@ -41,14 +41,19 @@ impl PermissionService {
         // Check cache if enabled
         if self.config.cache_permissions {
             let cache_key = format!("perms:{}:{}", user_id, organization_id);
-            if let Some(cached) = self.cache.get::<CachedPermissions>(&cache_key).await
-                .map_err(|e| PermissionError::CacheError(e.to_string()))? {
+            if let Some(cached) = self
+                .cache
+                .get::<CachedPermissions>(&cache_key)
+                .await
+                .map_err(|e| PermissionError::CacheError(e.to_string()))?
+            {
                 return Ok(cached.permissions);
             }
         }
 
         // Get organization member
-        let member = db::get_organization_member(db, organization_id, user_id).await
+        let member = db::get_organization_member(db, organization_id, user_id)
+            .await
             .map_err(|e| PermissionError::DatabaseError(e.to_string()))?
             .ok_or_else(|| PermissionError::NotMember)?;
 
@@ -71,11 +76,14 @@ impl PermissionService {
                 role: role_name.to_string(),
                 permissions: permissions.clone(),
             };
-            let _ = self.cache.set(
-                &cache_key,
-                &cached,
-                Duration::from_secs(self.config.cache_ttl_secs),
-            ).await;
+            let _ = self
+                .cache
+                .set(
+                    &cache_key,
+                    &cached,
+                    Duration::from_secs(self.config.cache_ttl_secs),
+                )
+                .await;
         }
 
         Ok(permissions)
@@ -90,7 +98,9 @@ impl PermissionService {
         resource: &str,
         action: &str,
     ) -> Result<bool, PermissionError> {
-        let permissions = self.get_user_permissions(db, user_id, organization_id).await?;
+        let permissions = self
+            .get_user_permissions(db, user_id, organization_id)
+            .await?;
 
         let allowed = PermissionHelper::check_permission(&permissions, resource, action);
 
@@ -112,9 +122,12 @@ impl PermissionService {
         action: &str,
         scope: Option<&str>,
     ) -> Result<bool, PermissionError> {
-        let permissions = self.get_user_permissions(db, user_id, organization_id).await?;
+        let permissions = self
+            .get_user_permissions(db, user_id, organization_id)
+            .await?;
 
-        let allowed = PermissionHelper::check_scoped_permission(&permissions, resource, action, scope);
+        let allowed =
+            PermissionHelper::check_scoped_permission(&permissions, resource, action, scope);
 
         Ok(allowed)
     }
@@ -128,7 +141,10 @@ impl PermissionService {
         resource: &str,
         action: &str,
     ) -> Result<(), PermissionError> {
-        if !self.check_permission(db, user_id, organization_id, resource, action).await? {
+        if !self
+            .check_permission(db, user_id, organization_id, resource, action)
+            .await?
+        {
             return Err(PermissionError::PermissionDenied {
                 resource: resource.to_string(),
                 action: action.to_string(),
@@ -145,7 +161,8 @@ impl PermissionService {
         user_id: &str,
         organization_id: &str,
     ) -> Result<OrganizationRole, PermissionError> {
-        let member = db::get_organization_member(db, organization_id, user_id).await
+        let member = db::get_organization_member(db, organization_id, user_id)
+            .await
             .map_err(|e| PermissionError::DatabaseError(e.to_string()))?
             .ok_or_else(|| PermissionError::NotMember)?;
 
@@ -153,7 +170,11 @@ impl PermissionService {
     }
 
     /// Check if user can manage a target role
-    pub fn can_manage_role(&self, actor_role: OrganizationRole, target_role: OrganizationRole) -> bool {
+    pub fn can_manage_role(
+        &self,
+        actor_role: OrganizationRole,
+        target_role: OrganizationRole,
+    ) -> bool {
         // Owner can manage all roles
         if actor_role == OrganizationRole::Owner {
             return true;
@@ -161,7 +182,10 @@ impl PermissionService {
 
         // Admin can manage members and viewers
         if actor_role == OrganizationRole::Admin {
-            return matches!(target_role, OrganizationRole::Member | OrganizationRole::Viewer);
+            return matches!(
+                target_role,
+                OrganizationRole::Member | OrganizationRole::Viewer
+            );
         }
 
         // Members and viewers cannot manage anyone
@@ -169,15 +193,25 @@ impl PermissionService {
     }
 
     /// Check if user is at least at a certain role level
-    pub fn is_at_least(&self, user_role: OrganizationRole, required_role: OrganizationRole) -> bool {
+    pub fn is_at_least(
+        &self,
+        user_role: OrganizationRole,
+        required_role: OrganizationRole,
+    ) -> bool {
         user_role.permission_level() >= required_role.permission_level()
     }
 
     /// Invalidate cached permissions for a user
-    pub async fn invalidate_user_cache(&self, user_id: &str, organization_id: &str) -> Result<(), PermissionError> {
+    pub async fn invalidate_user_cache(
+        &self,
+        user_id: &str,
+        organization_id: &str,
+    ) -> Result<(), PermissionError> {
         if self.config.cache_permissions {
             let cache_key = format!("perms:{}:{}", user_id, organization_id);
-            self.cache.delete(&cache_key).await
+            self.cache
+                .delete(&cache_key)
+                .await
                 .map_err(|e| PermissionError::CacheError(e.to_string()))?;
         }
         Ok(())
@@ -187,7 +221,9 @@ impl PermissionService {
     pub async fn invalidate_org_cache(&self, organization_id: &str) -> Result<(), PermissionError> {
         if self.config.cache_permissions {
             let pattern = format!("perms:*:{}", organization_id);
-            self.cache.delete_pattern(&pattern).await
+            self.cache
+                .delete_pattern(&pattern)
+                .await
                 .map_err(|e| PermissionError::CacheError(e.to_string()))?;
         }
         Ok(())
@@ -201,10 +237,7 @@ pub enum PermissionError {
     NotMember,
 
     #[error("Permission denied: {resource}:{action}")]
-    PermissionDenied {
-        resource: String,
-        action: String,
-    },
+    PermissionDenied { resource: String, action: String },
 
     #[error("Insufficient role")]
     InsufficientRole,
@@ -247,15 +280,32 @@ mod tests {
         // Would need mock for full test
 
         // Test role hierarchy
-        assert!(OrganizationRole::Owner.permission_level() > OrganizationRole::Admin.permission_level());
-        assert!(OrganizationRole::Admin.permission_level() > OrganizationRole::Member.permission_level());
-        assert!(OrganizationRole::Member.permission_level() > OrganizationRole::Viewer.permission_level());
+        assert!(
+            OrganizationRole::Owner.permission_level() > OrganizationRole::Admin.permission_level()
+        );
+        assert!(
+            OrganizationRole::Admin.permission_level()
+                > OrganizationRole::Member.permission_level()
+        );
+        assert!(
+            OrganizationRole::Member.permission_level()
+                > OrganizationRole::Viewer.permission_level()
+        );
     }
 
     #[test]
     fn test_is_at_least() {
-        assert!(OrganizationRole::Owner.permission_level() >= OrganizationRole::Admin.permission_level());
-        assert!(OrganizationRole::Admin.permission_level() >= OrganizationRole::Admin.permission_level());
-        assert!(!(OrganizationRole::Member.permission_level() >= OrganizationRole::Admin.permission_level()));
+        assert!(
+            OrganizationRole::Owner.permission_level()
+                >= OrganizationRole::Admin.permission_level()
+        );
+        assert!(
+            OrganizationRole::Admin.permission_level()
+                >= OrganizationRole::Admin.permission_level()
+        );
+        assert!(
+            !(OrganizationRole::Member.permission_level()
+                >= OrganizationRole::Admin.permission_level())
+        );
     }
 }

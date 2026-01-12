@@ -1,6 +1,8 @@
 //! Session management tests
 
-use super::test_utils::{constants, current_timestamp, future_timestamp, generate_test_id, TestUser};
+use super::test_utils::{
+    TestUser, constants, current_timestamp, future_timestamp, generate_test_id,
+};
 use crate::services::session::{Session, SessionConfig, SessionService, SessionStore};
 use std::net::IpAddr;
 use std::time::Duration;
@@ -68,9 +70,7 @@ mod session_creation_tests {
         let user = TestUser::new();
         let ip: IpAddr = "192.168.1.100".parse().unwrap();
 
-        let result = service
-            .create_session(&user.id, Some(ip), None)
-            .await;
+        let result = service.create_session(&user.id, Some(ip), None).await;
 
         assert!(result.is_ok());
         let session = result.unwrap();

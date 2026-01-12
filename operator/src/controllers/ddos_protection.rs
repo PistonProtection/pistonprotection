@@ -15,6 +15,7 @@ use crate::crd::{
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
+use k8s_openapi::api::core::v1::ObjectReference;
 use k8s_openapi::api::{
     apps::v1::{Deployment, DeploymentSpec, DeploymentStatus as K8sDeploymentStatus},
     core::v1::{
@@ -23,7 +24,6 @@ use k8s_openapi::api::{
     },
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, OwnerReference};
-use k8s_openapi::api::core::v1::ObjectReference;
 use kube::{
     api::{Api, ObjectMeta, Patch, PatchParams, PostParams},
     runtime::{
@@ -84,9 +84,7 @@ pub async fn reconcile(
 
     info!(
         "Reconciling DDoSProtection {}/{} (generation: {:?})",
-        namespace,
-        name,
-        ddos.metadata.generation
+        namespace, name, ddos.metadata.generation
     );
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "DDoSProtection", &namespace);
@@ -290,7 +288,11 @@ async fn reconcile_cleanup(
         .ok();
 
     // Remove from gateway
-    if let Err(e) = ctx.gateway_client.delete_ddos_protection(namespace, name).await {
+    if let Err(e) = ctx
+        .gateway_client
+        .delete_ddos_protection(namespace, name)
+        .await
+    {
         warn!(
             "Failed to remove DDoSProtection {}/{} from gateway: {}",
             namespace, name, e
@@ -318,15 +320,24 @@ fn validate_ddos_protection(ddos: &DDoSProtection) -> Result<()> {
 
     // Check backends
     if ddos.spec.backends.is_empty() {
-        return Err(Error::validation("backends", "at least one backend is required"));
+        return Err(Error::validation(
+            "backends",
+            "at least one backend is required",
+        ));
     }
 
     for backend in &ddos.spec.backends {
         if backend.name.is_empty() {
-            return Err(Error::validation("backends[].name", "backend name is required"));
+            return Err(Error::validation(
+                "backends[].name",
+                "backend name is required",
+            ));
         }
         if backend.address.is_empty() {
-            return Err(Error::validation("backends[].address", "backend address is required"));
+            return Err(Error::validation(
+                "backends[].address",
+                "backend address is required",
+            ));
         }
     }
 
@@ -759,10 +770,7 @@ fn build_status(
 }
 
 /// Determine the phase based on deployment status
-fn determine_phase(
-    deployment_status: &Option<K8sDeploymentStatus>,
-    gateway_synced: bool,
-) -> Phase {
+fn determine_phase(deployment_status: &Option<K8sDeploymentStatus>, gateway_synced: bool) -> Phase {
     match deployment_status {
         Some(status) => {
             let ready = status.ready_replicas.unwrap_or(0);
@@ -817,9 +825,7 @@ fn create_owner_reference(ddos: &DDoSProtection) -> OwnerReference {
 }
 
 /// Build resource requirements
-fn build_resources(
-    resources: &Option<crate::crd::ResourceSpec>,
-) -> ResourceRequirements {
+fn build_resources(resources: &Option<crate::crd::ResourceSpec>) -> ResourceRequirements {
     let (cpu_request, mem_request, cpu_limit, mem_limit) = match resources {
         Some(r) => (
             r.cpu_request.clone().unwrap_or_else(|| "100m".to_string()),
@@ -865,11 +871,7 @@ fn build_resources(
 }
 
 /// Error policy for the controller
-pub fn error_policy(
-    ddos: Arc<DDoSProtection>,
-    error: &Error,
-    _ctx: Arc<Context>,
-) -> Action {
+pub fn error_policy(ddos: Arc<DDoSProtection>, error: &Error, _ctx: Arc<Context>) -> Action {
     let name = ddos.name_any();
     let namespace = ddos.namespace().unwrap_or_default();
 

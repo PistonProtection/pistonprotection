@@ -3,7 +3,7 @@
 //! Tests for the Minecraft VarInt encoding format, focusing on edge cases
 //! that could be exploited for attacks.
 
-use pistonprotection_ebpf_tests::packet_generator::{encode_varint, decode_varint};
+use pistonprotection_ebpf_tests::packet_generator::{decode_varint, encode_varint};
 
 #[cfg(test)]
 mod varint_edge_cases {
@@ -69,13 +69,8 @@ mod varint_edge_cases {
     /// Test various negative values
     #[test]
     fn test_varint_negative_values() {
-        let test_cases: &[(i32, usize)] = &[
-            (-1, 5),
-            (-128, 5),
-            (-256, 5),
-            (-1000, 5),
-            (-2147483648, 5),
-        ];
+        let test_cases: &[(i32, usize)] =
+            &[(-1, 5), (-128, 5), (-256, 5), (-1000, 5), (-2147483648, 5)];
 
         for &(value, expected_bytes) in test_cases {
             let encoded = encode_varint(value);
@@ -129,14 +124,20 @@ mod varint_edge_cases {
         let (value, _) = decode_varint(&negative_one).unwrap();
 
         // The key check: value < 0 should be detected
-        assert!(value < 0, "Negative VarInt not properly detected as negative");
+        assert!(
+            value < 0,
+            "Negative VarInt not properly detected as negative"
+        );
 
         // This is the check that should happen in the filter
         // WRONG: if packet_id > 0x03 { drop }  -- This passes for negative!
         // RIGHT: if packet_id < 0 || packet_id > 0x03 { drop }
         let packet_id = value;
         let is_valid_login_packet = packet_id >= 0x00 && packet_id <= 0x03;
-        assert!(!is_valid_login_packet, "Negative packet ID incorrectly allowed");
+        assert!(
+            !is_valid_login_packet,
+            "Negative packet ID incorrectly allowed"
+        );
     }
 
     /// Test Minecraft protocol version encoding
@@ -144,14 +145,14 @@ mod varint_edge_cases {
     fn test_protocol_version_encoding() {
         // Common protocol versions
         let versions = [
-            (4, "1.7.2"),      // 1 byte
-            (47, "1.8.x"),     // 1 byte
-            (315, "1.11"),     // 2 bytes
-            (498, "1.14.4"),   // 2 bytes
-            (754, "1.16.5"),   // 2 bytes
-            (756, "1.17"),     // 2 bytes
-            (765, "1.20.4"),   // 2 bytes
-            (767, "1.21"),     // 2 bytes
+            (4, "1.7.2"),    // 1 byte
+            (47, "1.8.x"),   // 1 byte
+            (315, "1.11"),   // 2 bytes
+            (498, "1.14.4"), // 2 bytes
+            (754, "1.16.5"), // 2 bytes
+            (756, "1.17"),   // 2 bytes
+            (765, "1.20.4"), // 2 bytes
+            (767, "1.21"),   // 2 bytes
         ];
 
         for (version, name) in versions {
@@ -291,14 +292,14 @@ mod varint_security_tests {
     #[test]
     fn test_packet_id_boundary_values() {
         let boundary_values = [
-            (0x00, true),   // Handshake/Status Request
-            (0x01, true),   // Ping Request
-            (0x02, true),   // Login Plugin Response
-            (0x03, true),   // Login Acknowledged
-            (0x04, false),  // Just outside login range
-            (0x7f, false),  // Max valid unsigned
-            (-1, false),    // Negative
-            (-128, false),  // More negative
+            (0x00, true),  // Handshake/Status Request
+            (0x01, true),  // Ping Request
+            (0x02, true),  // Login Plugin Response
+            (0x03, true),  // Login Acknowledged
+            (0x04, false), // Just outside login range
+            (0x7f, false), // Max valid unsigned
+            (-1, false),   // Negative
+            (-128, false), // More negative
         ];
 
         for (value, should_be_valid_for_login) in boundary_values {

@@ -14,23 +14,21 @@ mod tcp_flag_tests {
     #[test]
     fn test_valid_tcp_flags() {
         let valid_combinations = [
-            TCP_SYN,                    // Initial connection
-            TCP_SYN | TCP_ACK,          // SYN-ACK response
-            TCP_ACK,                    // Data/ACK
-            TCP_ACK | TCP_PSH,          // Data push
-            TCP_ACK | TCP_FIN,          // FIN-ACK
-            TCP_ACK | TCP_RST,          // RST-ACK
-            TCP_RST,                    // Reset
-            TCP_ACK | TCP_URG,          // Urgent data
-            TCP_ACK | TCP_ECE,          // ECN capable
-            TCP_ACK | TCP_CWR,          // Congestion window reduced
+            TCP_SYN,                     // Initial connection
+            TCP_SYN | TCP_ACK,           // SYN-ACK response
+            TCP_ACK,                     // Data/ACK
+            TCP_ACK | TCP_PSH,           // Data push
+            TCP_ACK | TCP_FIN,           // FIN-ACK
+            TCP_ACK | TCP_RST,           // RST-ACK
+            TCP_RST,                     // Reset
+            TCP_ACK | TCP_URG,           // Urgent data
+            TCP_ACK | TCP_ECE,           // ECN capable
+            TCP_ACK | TCP_CWR,           // Congestion window reduced
             TCP_ACK | TCP_PSH | TCP_URG, // Urgent data push
         ];
 
         for &flags in &valid_combinations {
-            let segment = TcpSegment::new()
-                .with_flags(flags)
-                .build();
+            let segment = TcpSegment::new().with_flags(flags).build();
 
             // Verify flags are set
             let doff_flags = u16::from_be_bytes([segment[12], segment[13]]);
@@ -45,9 +43,7 @@ mod tcp_flag_tests {
     #[test]
     fn test_invalid_tcp_flags_null_scan() {
         // NULL scan: no flags set
-        let null_segment = TcpSegment::new()
-            .with_flags(0x00)
-            .build();
+        let null_segment = TcpSegment::new().with_flags(0x00).build();
 
         let doff_flags = u16::from_be_bytes([null_segment[12], null_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -60,9 +56,7 @@ mod tcp_flag_tests {
     fn test_invalid_tcp_flags_xmas_scan() {
         // XMAS scan: FIN + URG + PSH
         let xmas_flags = TCP_FIN | TCP_URG | TCP_PSH;
-        let xmas_segment = TcpSegment::new()
-            .with_flags(xmas_flags)
-            .build();
+        let xmas_segment = TcpSegment::new().with_flags(xmas_flags).build();
 
         let doff_flags = u16::from_be_bytes([xmas_segment[12], xmas_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -73,9 +67,7 @@ mod tcp_flag_tests {
     /// Test SYN+FIN combination (invalid)
     #[test]
     fn test_invalid_tcp_flags_syn_fin() {
-        let syn_fin_segment = TcpSegment::new()
-            .with_flags(TCP_SYN | TCP_FIN)
-            .build();
+        let syn_fin_segment = TcpSegment::new().with_flags(TCP_SYN | TCP_FIN).build();
 
         let doff_flags = u16::from_be_bytes([syn_fin_segment[12], syn_fin_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -87,9 +79,7 @@ mod tcp_flag_tests {
     /// Test SYN+RST combination (invalid)
     #[test]
     fn test_invalid_tcp_flags_syn_rst() {
-        let syn_rst_segment = TcpSegment::new()
-            .with_flags(TCP_SYN | TCP_RST)
-            .build();
+        let syn_rst_segment = TcpSegment::new().with_flags(TCP_SYN | TCP_RST).build();
 
         let doff_flags = u16::from_be_bytes([syn_rst_segment[12], syn_rst_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -100,9 +90,7 @@ mod tcp_flag_tests {
     /// Test FIN+RST combination (invalid)
     #[test]
     fn test_invalid_tcp_flags_fin_rst() {
-        let fin_rst_segment = TcpSegment::new()
-            .with_flags(TCP_FIN | TCP_RST)
-            .build();
+        let fin_rst_segment = TcpSegment::new().with_flags(TCP_FIN | TCP_RST).build();
 
         let doff_flags = u16::from_be_bytes([fin_rst_segment[12], fin_rst_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -113,9 +101,7 @@ mod tcp_flag_tests {
     /// Test FIN without ACK (suspicious)
     #[test]
     fn test_invalid_tcp_flags_fin_alone() {
-        let fin_segment = TcpSegment::new()
-            .with_flags(TCP_FIN)
-            .build();
+        let fin_segment = TcpSegment::new().with_flags(TCP_FIN).build();
 
         let doff_flags = u16::from_be_bytes([fin_segment[12], fin_segment[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -137,9 +123,7 @@ mod tcp_flag_tests {
         ];
 
         for (flags, name) in invalid_combinations {
-            let segment = TcpSegment::new()
-                .with_flags(flags)
-                .build();
+            let segment = TcpSegment::new().with_flags(flags).build();
 
             let doff_flags = u16::from_be_bytes([segment[12], segment[13]]);
             let actual_flags = (doff_flags & 0x003f) as u8;
@@ -233,7 +217,7 @@ mod tcp_syn_cookie_tests {
         // - Upper 25 bits: hash
 
         let time_counter: u32 = 15; // Example time value (5 bits)
-        let mss_index: u32 = 3;     // MSS index (2 bits)
+        let mss_index: u32 = 3; // MSS index (2 bits)
         let hash: u32 = 0x12345678 & 0xFFFFFF80; // Hash value (25 bits)
 
         let cookie = hash | ((mss_index & 0x03) << 5) | (time_counter & 0x1f);
@@ -301,14 +285,7 @@ mod tcp_flood_tests {
 
         let mut syn_packets = Vec::new();
         for port in 10000..(10000 + threshold + 50) {
-            let packet = create_tcp_packet(
-                src_ip,
-                dst_ip,
-                port as u16,
-                80,
-                TCP_SYN,
-                vec![],
-            );
+            let packet = create_tcp_packet(src_ip, dst_ip, port as u16, 80, TCP_SYN, vec![]);
             syn_packets.push(packet);
         }
 
@@ -336,14 +313,7 @@ mod tcp_flood_tests {
                 .ack()
                 .build();
 
-            let packet = create_tcp_packet(
-                src_ip,
-                dst_ip,
-                54321,
-                80,
-                TCP_ACK,
-                vec![],
-            );
+            let packet = create_tcp_packet(src_ip, dst_ip, 54321, 80, TCP_ACK, vec![]);
             ack_packets.push(packet);
         }
 
@@ -362,14 +332,7 @@ mod tcp_flood_tests {
 
         let mut rst_packets = Vec::new();
         for port in 10000..(10000 + threshold + 50) {
-            let packet = create_tcp_packet(
-                src_ip,
-                dst_ip,
-                port as u16,
-                80,
-                TCP_RST,
-                vec![],
-            );
+            let packet = create_tcp_packet(src_ip, dst_ip, port as u16, 80, TCP_RST, vec![]);
             rst_packets.push(packet);
         }
 
@@ -388,14 +351,7 @@ mod tcp_flood_tests {
 
         let mut connections = Vec::new();
         for port in 10000..(10000 + limit + 50) {
-            let syn = create_tcp_packet(
-                src_ip,
-                dst_ip,
-                port as u16,
-                80,
-                TCP_SYN,
-                vec![],
-            );
+            let syn = create_tcp_packet(src_ip, dst_ip, port as u16, 80, TCP_SYN, vec![]);
             connections.push(syn);
         }
 
@@ -411,9 +367,7 @@ mod tcp_fragmentation_tests {
     /// Test first fragment with TCP header
     #[test]
     fn test_first_fragment() {
-        let tcp = TcpSegment::new()
-            .with_flags(TCP_SYN)
-            .build();
+        let tcp = TcpSegment::new().with_flags(TCP_SYN).build();
 
         // First fragment: has TCP header
         // IP flags: MF (More Fragments) = 1, offset = 0
@@ -423,9 +377,7 @@ mod tcp_fragmentation_tests {
             .with_payload(tcp)
             .build();
 
-        let frame = EthernetFrame::new()
-            .with_payload(ip)
-            .build();
+        let frame = EthernetFrame::new().with_payload(ip).build();
 
         // Verify fragment flags
         let frag_off = u16::from_be_bytes([frame[20], frame[21]]);
@@ -446,9 +398,7 @@ mod tcp_fragmentation_tests {
             .with_payload(data)
             .build();
 
-        let frame = EthernetFrame::new()
-            .with_payload(ip)
-            .build();
+        let frame = EthernetFrame::new().with_payload(ip).build();
 
         // Verify fragment offset
         let frag_off = u16::from_be_bytes([frame[20], frame[21]]);
@@ -463,9 +413,7 @@ mod tcp_fragmentation_tests {
         // This can be used to bypass filtering
 
         // Create a fragment with only 8 bytes of TCP header
-        let partial_tcp = TcpSegment::new()
-            .with_flags(TCP_SYN)
-            .build();
+        let partial_tcp = TcpSegment::new().with_flags(TCP_SYN).build();
         let tiny_payload = partial_tcp[..8].to_vec();
 
         let ip = Ipv4Packet::new()
@@ -509,10 +457,7 @@ mod tcp_window_tests {
     /// Test zero window
     #[test]
     fn test_zero_window() {
-        let segment = TcpSegment::new()
-            .with_window(0)
-            .ack()
-            .build();
+        let segment = TcpSegment::new().with_window(0).ack().build();
 
         let window = u16::from_be_bytes([segment[14], segment[15]]);
         assert_eq!(window, 0, "Window should be zero");
@@ -522,10 +467,7 @@ mod tcp_window_tests {
     /// Test maximum window
     #[test]
     fn test_max_window() {
-        let segment = TcpSegment::new()
-            .with_window(65535)
-            .ack()
-            .build();
+        let segment = TcpSegment::new().with_window(65535).ack().build();
 
         let window = u16::from_be_bytes([segment[14], segment[15]]);
         assert_eq!(window, 65535, "Window should be max");
@@ -537,10 +479,7 @@ mod tcp_window_tests {
         // Window probe: ACK with zero window to test if peer has opened window
         // Legitimate but should be tracked
 
-        let probe = TcpSegment::new()
-            .with_window(0)
-            .with_flags(TCP_ACK)
-            .build();
+        let probe = TcpSegment::new().with_window(0).with_flags(TCP_ACK).build();
 
         let doff_flags = u16::from_be_bytes([probe[12], probe[13]]);
         let flags = (doff_flags & 0x003f) as u8;
@@ -571,15 +510,13 @@ mod tcp_sequence_tests {
         assert_eq!(seq, max_seq);
 
         // Next packet would have seq = 0 (wrapped)
-        let wrapped_segment = TcpSegment::new()
-            .with_seq(0)
-            .with_ack(1)
-            .ack()
-            .build();
+        let wrapped_segment = TcpSegment::new().with_seq(0).with_ack(1).ack().build();
 
         let wrapped_seq = u32::from_be_bytes([
-            wrapped_segment[4], wrapped_segment[5],
-            wrapped_segment[6], wrapped_segment[7],
+            wrapped_segment[4],
+            wrapped_segment[5],
+            wrapped_segment[6],
+            wrapped_segment[7],
         ]);
         assert_eq!(wrapped_seq, 0);
     }

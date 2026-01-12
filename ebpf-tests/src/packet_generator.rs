@@ -24,8 +24,7 @@ pub const TCP_CWR: u8 = 0x80;
 
 /// RakNet magic bytes
 pub const RAKNET_MAGIC: [u8; 16] = [
-    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe,
-    0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
+    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
 ];
 
 /// RakNet packet IDs
@@ -789,7 +788,14 @@ pub fn create_minecraft_handshake_packet(
         .with_next_state(next_state)
         .build();
 
-    create_tcp_packet(src_ip, dst_ip, src_port, 25565, TCP_ACK | TCP_PSH, handshake)
+    create_tcp_packet(
+        src_ip,
+        dst_ip,
+        src_port,
+        25565,
+        TCP_ACK | TCP_PSH,
+        handshake,
+    )
 }
 
 /// Create a RakNet ping packet
@@ -799,9 +805,7 @@ pub fn create_raknet_ping_packet(
     src_port: u16,
     client_guid: u64,
 ) -> Vec<u8> {
-    let ping = RakNetPing::new()
-        .with_guid(client_guid)
-        .build();
+    let ping = RakNetPing::new().with_guid(client_guid).build();
 
     create_udp_packet(src_ip, dst_ip, src_port, 19132, ping)
 }
@@ -837,7 +841,10 @@ mod tests {
         assert_eq!(decode_varint(&[0xfd, 0x05]), Some((765, 2)));
 
         // Negative values
-        assert_eq!(decode_varint(&[0xff, 0xff, 0xff, 0xff, 0x0f]), Some((-1, 5)));
+        assert_eq!(
+            decode_varint(&[0xff, 0xff, 0xff, 0xff, 0x0f]),
+            Some((-1, 5))
+        );
     }
 
     #[test]
@@ -872,9 +879,7 @@ mod tests {
 
     #[test]
     fn test_raknet_ping_build() {
-        let ping = RakNetPing::new()
-            .with_guid(0x1234567890abcdef)
-            .build();
+        let ping = RakNetPing::new().with_guid(0x1234567890abcdef).build();
 
         assert_eq!(ping.len(), 33);
         assert_eq!(ping[0], RAKNET_UNCONNECTED_PING);

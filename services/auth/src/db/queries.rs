@@ -599,7 +599,10 @@ pub async fn create_api_key(
 }
 
 /// Get API key by hash
-pub async fn get_api_key_by_hash(pool: &PgPool, key_hash: &str) -> Result<Option<ApiKey>, sqlx::Error> {
+pub async fn get_api_key_by_hash(
+    pool: &PgPool,
+    key_hash: &str,
+) -> Result<Option<ApiKey>, sqlx::Error> {
     sqlx::query_as::<_, ApiKey>(
         r#"
         SELECT * FROM api_keys
@@ -883,12 +886,9 @@ pub async fn list_audit_logs(
     let offset = (page.saturating_sub(1)) * page_size;
 
     // Build dynamic query based on filters
-    let mut query = String::from(
-        "SELECT * FROM audit_logs WHERE organization_id = $1",
-    );
-    let mut count_query = String::from(
-        "SELECT COUNT(*) FROM audit_logs WHERE organization_id = $1",
-    );
+    let mut query = String::from("SELECT * FROM audit_logs WHERE organization_id = $1");
+    let mut count_query =
+        String::from("SELECT COUNT(*) FROM audit_logs WHERE organization_id = $1");
 
     let mut param_idx = 2;
     let mut conditions = Vec::new();

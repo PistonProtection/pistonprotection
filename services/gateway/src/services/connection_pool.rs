@@ -8,8 +8,8 @@ use parking_lot::{Mutex, RwLock};
 use pistonprotection_common::error::{Error, Result};
 use pistonprotection_proto::backend::Origin;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
@@ -213,7 +213,8 @@ impl OriginConnectionPool {
         let conn = Arc::new(PooledConnection::new(conn_id, origin_id.clone()));
         conn.mark_used();
 
-        self.total_connections_created.fetch_add(1, Ordering::Relaxed);
+        self.total_connections_created
+            .fetch_add(1, Ordering::Relaxed);
 
         {
             let mut connections = self.connections.write();
@@ -243,7 +244,8 @@ impl OriginConnectionPool {
         connections.retain(|conn| {
             let expired = conn.is_expired(self.config.max_lifetime, self.config.idle_timeout);
             if expired {
-                self.total_connections_closed.fetch_add(1, Ordering::Relaxed);
+                self.total_connections_closed
+                    .fetch_add(1, Ordering::Relaxed);
                 debug!(
                     origin_id = %self.origin.read().id,
                     conn_id = conn.id,
@@ -395,7 +397,10 @@ pub struct ConnectionPoolManager {
 
 impl ConnectionPoolManager {
     /// Create a new connection pool manager
-    pub fn new(config: ConnectionPoolConfig, circuit_breakers: Arc<CircuitBreakerManager>) -> Arc<Self> {
+    pub fn new(
+        config: ConnectionPoolConfig,
+        circuit_breakers: Arc<CircuitBreakerManager>,
+    ) -> Arc<Self> {
         let manager = Arc::new(Self {
             pools: RwLock::new(HashMap::new()),
             config,

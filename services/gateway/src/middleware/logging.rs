@@ -4,7 +4,7 @@ use std::task::{Context, Poll};
 use std::time::Instant;
 use tonic::body::BoxBody;
 use tower::{Layer, Service};
-use tracing::{info, info_span, Instrument};
+use tracing::{Instrument, info, info_span};
 
 /// Logging middleware
 #[derive(Clone)]
@@ -67,10 +67,7 @@ where
                             .observe(elapsed.as_secs_f64());
                     }
                     Err(_) => {
-                        info!(
-                            duration_ms = elapsed.as_millis() as u64,
-                            "Request failed"
-                        );
+                        info!(duration_ms = elapsed.as_millis() as u64, "Request failed");
 
                         pistonprotection_common::metrics::GRPC_REQUESTS_TOTAL
                             .with_label_values(&["gateway", uri.path(), "error"])

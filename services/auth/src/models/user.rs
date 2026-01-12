@@ -132,12 +132,19 @@ pub struct UpdateUserRequest {
 /// Validate username format
 fn validate_username(username: &str) -> Result<(), validator::ValidationError> {
     // Username must start with a letter
-    if !username.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
+    if !username
+        .chars()
+        .next()
+        .map_or(false, |c| c.is_ascii_alphabetic())
+    {
         return Err(validator::ValidationError::new("username_start_letter"));
     }
 
     // Username can only contain alphanumeric characters, underscores, and hyphens
-    if !username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+    if !username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
         return Err(validator::ValidationError::new("username_invalid_chars"));
     }
 
@@ -161,8 +168,8 @@ pub struct UserOAuthProvider {
 /// Convert to proto User
 impl User {
     pub fn to_proto(&self) -> pistonprotection_proto::auth::User {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::User {
             id: self.id.clone(),

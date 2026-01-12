@@ -1,9 +1,9 @@
 //! Alert evaluation tests
 
-use super::test_utils::{constants, TestAlertConfig};
+use super::test_utils::{TestAlertConfig, constants};
 use crate::alerts::{
-    Alert, AlertCondition, AlertConfig, AlertManager, AlertNotification,
-    AlertNotificationType, AlertOperator, AlertState,
+    Alert, AlertCondition, AlertConfig, AlertManager, AlertNotification, AlertNotificationType,
+    AlertOperator, AlertState,
 };
 use chrono::{Duration, Utc};
 use std::collections::HashMap;
@@ -55,7 +55,9 @@ mod crud_tests {
         let manager = create_test_alert_manager();
         let alert = create_test_alert("alert-1", "requests_per_second", 1000.0);
 
-        let result = manager.create_alert(constants::TEST_BACKEND_ID, alert).await;
+        let result = manager
+            .create_alert(constants::TEST_BACKEND_ID, alert)
+            .await;
 
         assert!(result.is_ok());
         let created = result.unwrap();
@@ -512,7 +514,9 @@ mod validation_tests {
             ..Default::default()
         };
 
-        let result = manager.create_alert(constants::TEST_BACKEND_ID, alert).await;
+        let result = manager
+            .create_alert(constants::TEST_BACKEND_ID, alert)
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -533,7 +537,9 @@ mod validation_tests {
             ..Default::default()
         };
 
-        let result = manager.create_alert(constants::TEST_BACKEND_ID, alert).await;
+        let result = manager
+            .create_alert(constants::TEST_BACKEND_ID, alert)
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -559,7 +565,9 @@ mod validation_tests {
             ..Default::default()
         };
 
-        let result = manager.create_alert(constants::TEST_BACKEND_ID, alert).await;
+        let result = manager
+            .create_alert(constants::TEST_BACKEND_ID, alert)
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -585,7 +593,9 @@ mod validation_tests {
             ..Default::default()
         };
 
-        let result = manager.create_alert(constants::TEST_BACKEND_ID, alert).await;
+        let result = manager
+            .create_alert(constants::TEST_BACKEND_ID, alert)
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();

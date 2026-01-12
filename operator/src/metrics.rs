@@ -4,8 +4,8 @@
 //! reconciliation performance, and resource management.
 
 use prometheus::{
-    Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec,
-    IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry,
+    Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
+    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry,
 };
 use std::sync::Arc;
 use tracing::error;
@@ -162,7 +162,9 @@ impl Metrics {
                 "pistonprotection_reconciliation_duration_seconds",
                 "Duration of reconciliation operations",
             )
-            .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]),
+            .buckets(vec![
+                0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+            ]),
             &[RESOURCE_TYPE_LABEL],
         )
         .expect("metric creation should succeed");
@@ -328,7 +330,9 @@ impl Metrics {
                 "pistonprotection_kube_api_duration_seconds",
                 "Duration of Kubernetes API calls",
             )
-            .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5]),
+            .buckets(vec![
+                0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5,
+            ]),
             &[OPERATION_LABEL, RESOURCE_TYPE_LABEL],
         )
         .expect("metric creation should succeed");
@@ -408,32 +412,58 @@ impl Metrics {
 
     /// Register all metrics with the registry
     fn register_all(&self) -> Result<(), prometheus::Error> {
-        self.registry.register(Box::new(self.reconciliations_total.clone()))?;
-        self.registry.register(Box::new(self.reconciliation_errors_total.clone()))?;
-        self.registry.register(Box::new(self.reconciliation_duration_seconds.clone()))?;
-        self.registry.register(Box::new(self.reconciliation_queue_depth.clone()))?;
-        self.registry.register(Box::new(self.active_reconciliations.clone()))?;
-        self.registry.register(Box::new(self.resources_managed.clone()))?;
-        self.registry.register(Box::new(self.resources_created_total.clone()))?;
-        self.registry.register(Box::new(self.resources_updated_total.clone()))?;
-        self.registry.register(Box::new(self.resources_deleted_total.clone()))?;
-        self.registry.register(Box::new(self.gateway_sync_total.clone()))?;
-        self.registry.register(Box::new(self.gateway_sync_errors_total.clone()))?;
-        self.registry.register(Box::new(self.gateway_sync_duration_seconds.clone()))?;
-        self.registry.register(Box::new(self.gateway_connected.clone()))?;
-        self.registry.register(Box::new(self.gateway_last_sync_timestamp.clone()))?;
-        self.registry.register(Box::new(self.backends_total.clone()))?;
-        self.registry.register(Box::new(self.backends_healthy.clone()))?;
-        self.registry.register(Box::new(self.workers_desired.clone()))?;
-        self.registry.register(Box::new(self.workers_ready.clone()))?;
-        self.registry.register(Box::new(self.workers_available.clone()))?;
-        self.registry.register(Box::new(self.kube_api_calls_total.clone()))?;
-        self.registry.register(Box::new(self.kube_api_duration_seconds.clone()))?;
-        self.registry.register(Box::new(self.kube_api_errors_total.clone()))?;
-        self.registry.register(Box::new(self.leader_election_leader.clone()))?;
-        self.registry.register(Box::new(self.leader_election_transitions_total.clone()))?;
-        self.registry.register(Box::new(self.health_status.clone()))?;
-        self.registry.register(Box::new(self.startup_timestamp.clone()))?;
+        self.registry
+            .register(Box::new(self.reconciliations_total.clone()))?;
+        self.registry
+            .register(Box::new(self.reconciliation_errors_total.clone()))?;
+        self.registry
+            .register(Box::new(self.reconciliation_duration_seconds.clone()))?;
+        self.registry
+            .register(Box::new(self.reconciliation_queue_depth.clone()))?;
+        self.registry
+            .register(Box::new(self.active_reconciliations.clone()))?;
+        self.registry
+            .register(Box::new(self.resources_managed.clone()))?;
+        self.registry
+            .register(Box::new(self.resources_created_total.clone()))?;
+        self.registry
+            .register(Box::new(self.resources_updated_total.clone()))?;
+        self.registry
+            .register(Box::new(self.resources_deleted_total.clone()))?;
+        self.registry
+            .register(Box::new(self.gateway_sync_total.clone()))?;
+        self.registry
+            .register(Box::new(self.gateway_sync_errors_total.clone()))?;
+        self.registry
+            .register(Box::new(self.gateway_sync_duration_seconds.clone()))?;
+        self.registry
+            .register(Box::new(self.gateway_connected.clone()))?;
+        self.registry
+            .register(Box::new(self.gateway_last_sync_timestamp.clone()))?;
+        self.registry
+            .register(Box::new(self.backends_total.clone()))?;
+        self.registry
+            .register(Box::new(self.backends_healthy.clone()))?;
+        self.registry
+            .register(Box::new(self.workers_desired.clone()))?;
+        self.registry
+            .register(Box::new(self.workers_ready.clone()))?;
+        self.registry
+            .register(Box::new(self.workers_available.clone()))?;
+        self.registry
+            .register(Box::new(self.kube_api_calls_total.clone()))?;
+        self.registry
+            .register(Box::new(self.kube_api_duration_seconds.clone()))?;
+        self.registry
+            .register(Box::new(self.kube_api_errors_total.clone()))?;
+        self.registry
+            .register(Box::new(self.leader_election_leader.clone()))?;
+        self.registry
+            .register(Box::new(self.leader_election_transitions_total.clone()))?;
+        self.registry
+            .register(Box::new(self.health_status.clone()))?;
+        self.registry
+            .register(Box::new(self.startup_timestamp.clone()))?;
         Ok(())
     }
 
@@ -575,7 +605,8 @@ impl Metrics {
 
     /// Set leader election status
     pub fn set_leader(&self, is_leader: bool) {
-        self.leader_election_leader.set(if is_leader { 1 } else { 0 });
+        self.leader_election_leader
+            .set(if is_leader { 1 } else { 0 });
         if is_leader {
             self.leader_election_transitions_total.inc();
         }
@@ -685,11 +716,8 @@ impl Drop for ReconciliationTimer<'_> {
             duration,
             false,
         );
-        self.metrics.record_reconciliation_error(
-            &self.resource_type,
-            &self.namespace,
-            "unknown",
-        );
+        self.metrics
+            .record_reconciliation_error(&self.resource_type, &self.namespace, "unknown");
     }
 }
 

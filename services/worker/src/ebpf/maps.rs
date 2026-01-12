@@ -151,8 +151,11 @@ impl MapManager {
         });
 
         // Clean old conntrack entries (older than 5 minutes)
-        let five_mins_ago = (now - chrono::Duration::minutes(5)).timestamp_nanos_opt().unwrap_or(0) as u64;
-        self.conntrack.retain(|_, entry| entry.last_seen > five_mins_ago);
+        let five_mins_ago = (now - chrono::Duration::minutes(5))
+            .timestamp_nanos_opt()
+            .unwrap_or(0) as u64;
+        self.conntrack
+            .retain(|_, entry| entry.last_seen > five_mins_ago);
     }
 
     /// Update rate limit for an IP
@@ -179,7 +182,13 @@ impl MapManager {
     }
 
     /// Update connection tracking entry
-    pub fn update_conntrack(&mut self, key: ConnTrackKey, state: ConnTrackState, packets: u64, bytes: u64) {
+    pub fn update_conntrack(
+        &mut self,
+        key: ConnTrackKey,
+        state: ConnTrackState,
+        packets: u64,
+        bytes: u64,
+    ) {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos() as u64)

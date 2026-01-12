@@ -153,9 +153,7 @@ mod tests {
 
     #[test]
     fn test_user_builder() {
-        let user = TestUser::new()
-            .with_email("custom@example.com")
-            .admin();
+        let user = TestUser::new().with_email("custom@example.com").admin();
 
         assert_eq!(user.email, "custom@example.com");
         assert!(user.is_admin);

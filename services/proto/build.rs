@@ -28,7 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .out_dir(&out_dir)
         .file_descriptor_set_path(out_dir.join("descriptor.bin"))
         .compile_protos(
-            &proto_files.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>(),
+            &proto_files
+                .iter()
+                .map(|p| p.to_str().unwrap())
+                .collect::<Vec<_>>(),
             &[proto_dir.to_str().unwrap()],
         )?;
 

@@ -4,16 +4,13 @@ use crate::config::TelemetryConfig;
 use crate::error::Result;
 use tracing::info;
 use tracing_subscriber::{
-    fmt,
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-    EnvFilter, Layer, Registry,
+    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer, Registry,
 };
 
 /// Initialize telemetry (tracing and logging)
 pub fn init(service_name: &str, config: &TelemetryConfig) -> Result<()> {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
     let fmt_layer = if config.json_logs {
         fmt::layer()

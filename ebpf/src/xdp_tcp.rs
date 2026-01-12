@@ -235,12 +235,12 @@ const TCP_ECE: u16 = 0x0040;
 const TCP_CWR: u16 = 0x0080;
 
 // Invalid flag combinations
-const TCP_SYN_FIN: u16 = TCP_SYN | TCP_FIN;           // Invalid
-const TCP_SYN_RST: u16 = TCP_SYN | TCP_RST;           // Invalid
-const TCP_FIN_RST: u16 = TCP_FIN | TCP_RST;           // Invalid
-const TCP_SYN_FIN_RST: u16 = TCP_SYN | TCP_FIN | TCP_RST;  // Invalid (XMAS variant)
-const TCP_NULL_FLAGS: u16 = 0;                         // NULL scan
-const TCP_XMAS_FLAGS: u16 = TCP_FIN | TCP_URG | TCP_PSH;  // XMAS scan
+const TCP_SYN_FIN: u16 = TCP_SYN | TCP_FIN; // Invalid
+const TCP_SYN_RST: u16 = TCP_SYN | TCP_RST; // Invalid
+const TCP_FIN_RST: u16 = TCP_FIN | TCP_RST; // Invalid
+const TCP_SYN_FIN_RST: u16 = TCP_SYN | TCP_FIN | TCP_RST; // Invalid (XMAS variant)
+const TCP_NULL_FLAGS: u16 = 0; // NULL scan
+const TCP_XMAS_FLAGS: u16 = TCP_FIN | TCP_URG | TCP_PSH; // XMAS scan
 
 // State flags
 const FLAG_SYN_FLOOD: u32 = 0x0001;
@@ -255,22 +255,22 @@ const CONN_FLAG_SYN_COOKIE: u8 = 0x01;
 const CONN_FLAG_VALIDATED: u8 = 0x02;
 
 // Default configuration
-const DEFAULT_SYN_COOKIE_THRESHOLD: u64 = 10000;  // SYNs per second to trigger cookies
+const DEFAULT_SYN_COOKIE_THRESHOLD: u64 = 10000; // SYNs per second to trigger cookies
 const DEFAULT_MAX_SYN_PER_IP: u64 = 100;
 const DEFAULT_MAX_CONNECTIONS_PER_IP: u32 = 100;
 const DEFAULT_MAX_ACK_PER_IP: u64 = 1000;
 const DEFAULT_MAX_RST_PER_IP: u64 = 100;
-const DEFAULT_RATE_LIMIT_WINDOW_NS: u64 = 1_000_000_000;  // 1 second
-const DEFAULT_BLOCK_DURATION_NS: u64 = 60_000_000_000;    // 60 seconds
+const DEFAULT_RATE_LIMIT_WINDOW_NS: u64 = 1_000_000_000; // 1 second
+const DEFAULT_BLOCK_DURATION_NS: u64 = 60_000_000_000; // 60 seconds
 const DEFAULT_HANDSHAKE_TIMEOUT_NS: u64 = 30_000_000_000; // 30 seconds
 const DEFAULT_MAX_INCOMPLETE_HANDSHAKES_PER_IP: u32 = 10;
 
 // SYN cookie constants
-const SYN_COOKIE_TTL_NS: u64 = 60_000_000_000;  // 60 seconds
+const SYN_COOKIE_TTL_NS: u64 = 60_000_000_000; // 60 seconds
 const MSS_TABLE: [u16; 4] = [536, 1300, 1440, 1460];
 
 // IP fragmentation constants (frag_off field masks)
-const IP_MF: u16 = 0x2000;     // More Fragments flag
+const IP_MF: u16 = 0x2000; // More Fragments flag
 const IP_OFFSET: u16 = 0x1FFF; // Fragment offset mask
 
 // Default SYN cookie secrets - derived from boot time for uniqueness
@@ -289,18 +289,15 @@ static TCP_CONNECTIONS: LruHashMap<u64, TcpConnectionState> =
 
 /// Per-IP TCP state (IPv4)
 #[map]
-static TCP_IP_STATE_V4: LruHashMap<u32, TcpIpState> =
-    LruHashMap::with_max_entries(1_000_000, 0);
+static TCP_IP_STATE_V4: LruHashMap<u32, TcpIpState> = LruHashMap::with_max_entries(1_000_000, 0);
 
 /// Per-IP TCP state (IPv6)
 #[map]
-static TCP_IP_STATE_V6: LruHashMap<[u8; 16], TcpIpState> =
-    LruHashMap::with_max_entries(500_000, 0);
+static TCP_IP_STATE_V6: LruHashMap<[u8; 16], TcpIpState> = LruHashMap::with_max_entries(500_000, 0);
 
 /// SYN cookies (for validating SYN-ACK responses)
 #[map]
-static SYN_COOKIES: LruHashMap<u64, SynCookieEntry> =
-    LruHashMap::with_max_entries(1_000_000, 0);
+static SYN_COOKIES: LruHashMap<u64, SynCookieEntry> = LruHashMap::with_max_entries(1_000_000, 0);
 
 /// Incomplete handshake tracking per IP (for spoofed IP detection)
 #[map]
@@ -317,13 +314,11 @@ static SYN_COOKIE_SECRETS: PerCpuArray<[u32; 2]> = PerCpuArray::with_max_entries
 
 /// Protected ports (stricter filtering)
 #[map]
-static TCP_PROTECTED_PORTS: HashMap<u16, u32> =
-    HashMap::with_max_entries(1000, 0);
+static TCP_PROTECTED_PORTS: HashMap<u16, u32> = HashMap::with_max_entries(1000, 0);
 
 /// Whitelisted IPs
 #[map]
-static TCP_WHITELIST: HashMap<u32, u32> =
-    HashMap::with_max_entries(10_000, 0);
+static TCP_WHITELIST: HashMap<u32, u32> = HashMap::with_max_entries(10_000, 0);
 
 /// Configuration
 #[map]
@@ -510,7 +505,7 @@ fn process_tcp(
     let dst_port = u16::from_be(tcp.dest);
     let seq = u32::from_be(tcp.seq);
     let ack_seq = u32::from_be(tcp.ack_seq);
-    let flags = u16::from_be(tcp.doff_flags) & 0x01ff;  // Lower 9 bits
+    let flags = u16::from_be(tcp.doff_flags) & 0x01ff; // Lower 9 bits
     let window = u16::from_be(tcp.window);
 
     let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
@@ -533,7 +528,7 @@ fn process_tcp(
     }
 
     // Step 3: Handle specific TCP packet types
-    let tcp_flags = flags & 0x003f;  // Just the 6 main flags
+    let tcp_flags = flags & 0x003f; // Just the 6 main flags
 
     if tcp_flags == TCP_SYN {
         // Pure SYN packet - handle SYN flood protection
@@ -548,7 +543,9 @@ fn process_tcp(
 
     if tcp_flags & TCP_ACK != 0 && tcp_flags & TCP_SYN == 0 {
         // ACK packet (possibly with other flags)
-        return handle_ack_packet(ctx, src_ip, dst_ip, src_port, dst_port, seq, ack_seq, tcp_flags, window, now, config);
+        return handle_ack_packet(
+            ctx, src_ip, dst_ip, src_port, dst_port, seq, ack_seq, tcp_flags, window, now, config,
+        );
     }
 
     if tcp_flags == TCP_RST || tcp_flags == (TCP_RST | TCP_ACK) {
@@ -573,7 +570,7 @@ fn process_tcp(
 
 #[inline(always)]
 fn is_invalid_flag_combination(flags: u16) -> bool {
-    let tcp_flags = flags & 0x003f;  // Just the 6 main flags
+    let tcp_flags = flags & 0x003f; // Just the 6 main flags
 
     // NULL scan (no flags)
     if tcp_flags == TCP_NULL_FLAGS {
@@ -717,8 +714,16 @@ fn update_ip_state_and_check_floods(
         let state = TcpIpState {
             packets: 1,
             syn_packets: if tcp_flags == TCP_SYN { 1 } else { 0 },
-            ack_packets: if tcp_flags & TCP_ACK != 0 && tcp_flags & TCP_SYN == 0 { 1 } else { 0 },
-            rst_packets: if tcp_flags == TCP_RST || tcp_flags == (TCP_RST | TCP_ACK) { 1 } else { 0 },
+            ack_packets: if tcp_flags & TCP_ACK != 0 && tcp_flags & TCP_SYN == 0 {
+                1
+            } else {
+                0
+            },
+            rst_packets: if tcp_flags == TCP_RST || tcp_flags == (TCP_RST | TCP_ACK) {
+                1
+            } else {
+                0
+            },
             invalid_packets: 0,
             window_start: now,
             last_seen: now,
@@ -771,7 +776,7 @@ fn handle_syn_packet(
             created: now,
             src_port,
             dst_port,
-            mss_index: 3,  // Default to 1460
+            mss_index: 3, // Default to 1460
             valid: 1,
         };
 
@@ -803,7 +808,7 @@ fn handle_syn_packet(
     // Track the connection
     let conn_key = make_connection_key(src_ip, dst_ip, src_port, dst_port);
     let conn_state = TcpConnectionState {
-        state: 1,  // SYN received
+        state: 1, // SYN received
         flags: if use_cookies { CONN_FLAG_SYN_COOKIE } else { 0 },
         initial_seq: seq,
         expected_ack: seq.wrapping_add(1),
@@ -967,7 +972,7 @@ fn generate_syn_cookie(
     // Uses two secrets for better unpredictability
 
     let (secret1, secret2) = get_syn_cookie_secret(config);
-    let time_counter = (now / 60_000_000_000) as u32;  // 60 second granularity
+    let time_counter = (now / 60_000_000_000) as u32; // 60 second granularity
 
     // Mix all inputs using a simple but effective hash
     // This provides reasonable security for DDoS mitigation
@@ -1024,7 +1029,8 @@ fn handle_ack_packet(
         if let Some(cookie_entry) = unsafe { SYN_COOKIES.get(&conn_key) } {
             if cookie_entry.valid != 0 {
                 // Validate both the SYN cookie and the ACK sequence
-                let cookie_valid = validate_syn_cookie(ack_seq.wrapping_sub(1), cookie_entry.cookie, now, config);
+                let cookie_valid =
+                    validate_syn_cookie(ack_seq.wrapping_sub(1), cookie_entry.cookie, now, config);
 
                 if cookie_valid {
                     update_stats_syn_cookie_validated();
@@ -1033,7 +1039,7 @@ fn handle_ack_packet(
                     if let Some(conn) = unsafe { TCP_CONNECTIONS.get_ptr_mut(&conn_key) } {
                         let conn = unsafe { &mut *conn };
                         conn.flags |= CONN_FLAG_VALIDATED;
-                        conn.state = 3;  // Established
+                        conn.state = 3; // Established
                         conn.last_seen = now;
 
                         // Clear incomplete handshake tracking for this IP
@@ -1103,7 +1109,7 @@ fn handle_ack_packet(
                         }
                     }
                 }
-                conn.state = 3;  // Established
+                conn.state = 3; // Established
                 // Clear incomplete handshake tracking
                 clear_incomplete_handshake(src_ip, now, config);
             }
@@ -1118,7 +1124,7 @@ fn handle_ack_packet(
             4 => {
                 // FIN_WAIT - closing
                 if flags & TCP_FIN != 0 {
-                    conn.state = 6;  // CLOSING
+                    conn.state = 6; // CLOSING
                 }
             }
             _ => {}
@@ -1269,112 +1275,144 @@ fn get_config() -> TcpConfig {
 #[inline(always)]
 fn update_stats_total() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).total_packets += 1; }
+        unsafe {
+            (*stats).total_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_passed() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).passed_packets += 1; }
+        unsafe {
+            (*stats).passed_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_syn_flood() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_syn_flood += 1; }
+        unsafe {
+            (*stats).dropped_syn_flood += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_ack_flood() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_ack_flood += 1; }
+        unsafe {
+            (*stats).dropped_ack_flood += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_rst_flood() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_rst_flood += 1; }
+        unsafe {
+            (*stats).dropped_rst_flood += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_flags() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_flags += 1; }
+        unsafe {
+            (*stats).dropped_invalid_flags += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_blocked() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_blocked_ip += 1; }
+        unsafe {
+            (*stats).dropped_blocked_ip += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_connection_limit() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_connection_limit += 1; }
+        unsafe {
+            (*stats).dropped_connection_limit += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_syn_cookie_issued() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).syn_cookies_issued += 1; }
+        unsafe {
+            (*stats).syn_cookies_issued += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_syn_cookie_validated() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).syn_cookies_validated += 1; }
+        unsafe {
+            (*stats).syn_cookies_validated += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_syn_cookie_failed() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).syn_cookies_failed += 1; }
+        unsafe {
+            (*stats).syn_cookies_failed += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_window_probe() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).window_probe_detected += 1; }
+        unsafe {
+            (*stats).window_probe_detected += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_dropped_fragments() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_fragments += 1; }
+        unsafe {
+            (*stats).dropped_fragments += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_ack() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_ack += 1; }
+        unsafe {
+            (*stats).dropped_invalid_ack += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_handshake_timeout() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_handshake_timeout += 1; }
+        unsafe {
+            (*stats).dropped_handshake_timeout += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_incomplete_handshake() {
     if let Some(stats) = unsafe { TCP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).incomplete_handshakes_detected += 1; }
+        unsafe {
+            (*stats).incomplete_handshakes_detected += 1;
+        }
     }
 }
 

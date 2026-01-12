@@ -355,22 +355,37 @@ impl MetricsAggregator {
         // Aggregate metrics from this worker
         let metrics = &mut entry.metrics;
         metrics.requests_total = metrics.requests_total.saturating_add(raw.requests_total);
-        metrics.requests_per_second = metrics.requests_per_second.saturating_add(raw.requests_per_second);
+        metrics.requests_per_second = metrics
+            .requests_per_second
+            .saturating_add(raw.requests_per_second);
         metrics.bytes_in = metrics.bytes_in.saturating_add(raw.bytes_in);
         metrics.bytes_out = metrics.bytes_out.saturating_add(raw.bytes_out);
-        metrics.bytes_per_second_in = metrics.bytes_per_second_in.saturating_add(raw.bytes_per_second_in);
-        metrics.bytes_per_second_out = metrics.bytes_per_second_out.saturating_add(raw.bytes_per_second_out);
+        metrics.bytes_per_second_in = metrics
+            .bytes_per_second_in
+            .saturating_add(raw.bytes_per_second_in);
+        metrics.bytes_per_second_out = metrics
+            .bytes_per_second_out
+            .saturating_add(raw.bytes_per_second_out);
         metrics.packets_in = metrics.packets_in.saturating_add(raw.packets_in);
         metrics.packets_out = metrics.packets_out.saturating_add(raw.packets_out);
-        metrics.packets_per_second = metrics.packets_per_second.saturating_add(raw.packets_per_second);
-        metrics.active_connections = metrics.active_connections.saturating_add(raw.active_connections);
+        metrics.packets_per_second = metrics
+            .packets_per_second
+            .saturating_add(raw.packets_per_second);
+        metrics.active_connections = metrics
+            .active_connections
+            .saturating_add(raw.active_connections);
         metrics.new_connections = metrics.new_connections.saturating_add(raw.new_connections);
-        metrics.closed_connections = metrics.closed_connections.saturating_add(raw.closed_connections);
+        metrics.closed_connections = metrics
+            .closed_connections
+            .saturating_add(raw.closed_connections);
         metrics.timestamp = Some(Timestamp::from(raw.timestamp));
 
         // Merge protocol breakdown
         for (protocol, count) in &raw.requests_by_protocol {
-            *metrics.requests_by_protocol.entry(protocol.clone()).or_insert(0) += count;
+            *metrics
+                .requests_by_protocol
+                .entry(protocol.clone())
+                .or_insert(0) += count;
         }
 
         entry.timestamp = Utc::now();
@@ -384,7 +399,10 @@ impl MetricsAggregator {
         // Store in Redis
         if let Some(ref cache) = self.cache {
             let key = format!("traffic_metrics:{}", raw.backend_id);
-            if let Err(e) = cache.set(&key, &updated_metrics, self.config.cache_ttl).await {
+            if let Err(e) = cache
+                .set(&key, &updated_metrics, self.config.cache_ttl)
+                .await
+            {
                 warn!("Failed to cache traffic metrics: {}", e);
             }
         }
@@ -395,7 +413,11 @@ impl MetricsAggregator {
         }
 
         // Update attack detection baseline
-        self.update_attack_baseline(&raw.backend_id, raw.requests_per_second, raw.packets_per_second);
+        self.update_attack_baseline(
+            &raw.backend_id,
+            raw.requests_per_second,
+            raw.packets_per_second,
+        );
 
         debug!(backend_id = %raw.backend_id, worker_id = %raw.worker_id, "Ingested traffic metrics");
         Ok(())
@@ -491,10 +513,7 @@ impl MetricsAggregator {
 
     /// Update attack detection baseline
     fn update_attack_baseline(&self, backend_id: &str, rps: u64, pps: u64) {
-        let mut state = self
-            .attack_state
-            .entry(backend_id.to_string())
-            .or_default();
+        let mut state = self.attack_state.entry(backend_id.to_string()).or_default();
 
         // Only update baseline when not under attack
         if !state.under_attack {
@@ -523,10 +542,7 @@ impl MetricsAggregator {
 
     /// Detect attack based on metrics
     async fn detect_attack(&self, backend_id: &str, metrics: &AttackMetrics) {
-        let mut state = self
-            .attack_state
-            .entry(backend_id.to_string())
-            .or_default();
+        let mut state = self.attack_state.entry(backend_id.to_string()).or_default();
 
         let previous_under_attack = state.under_attack;
 
@@ -536,8 +552,8 @@ impl MetricsAggregator {
                 // Attack started
                 state.under_attack = true;
                 state.attack_start = Some(Utc::now());
-                state.severity = AttackSeverity::try_from(metrics.severity)
-                    .unwrap_or(AttackSeverity::Medium);
+                state.severity =
+                    AttackSeverity::try_from(metrics.severity).unwrap_or(AttackSeverity::Medium);
 
                 info!(
                     backend_id = %backend_id,
@@ -549,11 +565,7 @@ impl MetricsAggregator {
                 // Record attack event start
                 if let Err(e) = self
                     .storage
-                    .start_attack_event(
-                        backend_id,
-                        &metrics.attack_type,
-                        metrics.severity,
-                    )
+                    .start_attack_event(backend_id, &metrics.attack_type, metrics.severity)
                     .await
                 {
                     warn!("Failed to record attack event start: {}", e);
@@ -799,22 +811,14 @@ impl MetricsAggregator {
 
         // Flush traffic metrics
         for entry in self.traffic_metrics.iter() {
-            if let Err(e) = self
-                .storage
-                .store_traffic_snapshot(&entry.metrics)
-                .await
-            {
+            if let Err(e) = self.storage.store_traffic_snapshot(&entry.metrics).await {
                 warn!(backend_id = %entry.key(), "Failed to flush traffic metrics: {}", e);
             }
         }
 
         // Flush attack metrics
         for entry in self.attack_metrics.iter() {
-            if let Err(e) = self
-                .storage
-                .store_attack_snapshot(&entry.metrics)
-                .await
-            {
+            if let Err(e) = self.storage.store_attack_snapshot(&entry.metrics).await {
                 warn!(backend_id = %entry.key(), "Failed to flush attack metrics: {}", e);
             }
         }

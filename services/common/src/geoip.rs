@@ -140,9 +140,7 @@ impl GeoIpService {
     pub fn is_any_country(&self, ip: IpAddr, country_codes: &[&str]) -> bool {
         let info = self.lookup(ip);
         if let Some(code) = info.country_code {
-            country_codes
-                .iter()
-                .any(|c| c.eq_ignore_ascii_case(&code))
+            country_codes.iter().any(|c| c.eq_ignore_ascii_case(&code))
         } else {
             false
         }

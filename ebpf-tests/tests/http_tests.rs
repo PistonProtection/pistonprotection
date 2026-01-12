@@ -145,8 +145,8 @@ mod http2_tests {
         // SETTINGS frame (type 0x04)
         let settings_frame = [
             0x00, 0x00, 0x00, // Length: 0
-            0x04,             // Type: SETTINGS
-            0x00,             // Flags: none
+            0x04, // Type: SETTINGS
+            0x00, // Flags: none
             0x00, 0x00, 0x00, 0x00, // Stream ID: 0
         ];
 
@@ -171,12 +171,7 @@ mod http2_tests {
         ];
 
         for (type_id, name) in frame_types {
-            let frame = [
-                0x00, 0x00, 0x00,
-                type_id,
-                0x00,
-                0x00, 0x00, 0x00, 0x00,
-            ];
+            let frame = [0x00, 0x00, 0x00, type_id, 0x00, 0x00, 0x00, 0x00, 0x00];
 
             assert_eq!(frame[3], type_id, "{} type ID mismatch", name);
         }
@@ -190,10 +185,8 @@ mod http2_tests {
         let mut frames = Vec::new();
         for _ in 0..1000 {
             let settings = [
-                0x00, 0x00, 0x00,
-                0x04, // SETTINGS
-                0x00,
-                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x04, // SETTINGS
+                0x00, 0x00, 0x00, 0x00, 0x00,
             ];
             frames.push(settings);
         }
@@ -209,10 +202,11 @@ mod http2_tests {
 
         let ping = [
             0x00, 0x00, 0x08, // Length: 8
-            0x06,             // Type: PING
-            0x00,             // Flags
-            0x00, 0x00, 0x00, 0x00, // Stream ID: 0
-            // 8 bytes of opaque data would follow
+            0x06, // Type: PING
+            0x00, // Flags
+            0x00, 0x00, 0x00,
+            0x00, // Stream ID: 0
+                  // 8 bytes of opaque data would follow
         ];
 
         assert_eq!(ping[3], 0x06, "PING frame type");
@@ -226,15 +220,14 @@ mod http2_tests {
 
         let headers = [
             0x00, 0x01, 0x00, // Length: 256 (just the header length field)
-            0x01,             // Type: HEADERS
-            0x04,             // Flags: END_HEADERS
-            0x00, 0x00, 0x00, 0x01, // Stream ID: 1
-            // HPACK encoded headers would follow
+            0x01, // Type: HEADERS
+            0x04, // Flags: END_HEADERS
+            0x00, 0x00, 0x00,
+            0x01, // Stream ID: 1
+                  // HPACK encoded headers would follow
         ];
 
-        let length = ((headers[0] as u32) << 16)
-            | ((headers[1] as u32) << 8)
-            | (headers[2] as u32);
+        let length = ((headers[0] as u32) << 16) | ((headers[1] as u32) << 8) | (headers[2] as u32);
         assert_eq!(length, 256);
         // Filter should enforce max header size
     }
@@ -244,10 +237,8 @@ mod http2_tests {
     fn test_invalid_stream_0() {
         // DATA frames MUST NOT be on stream 0
         let invalid_data = [
-            0x00, 0x00, 0x05,
-            0x00, // Type: DATA
-            0x00,
-            0x00, 0x00, 0x00, 0x00, // Stream ID: 0 (INVALID for DATA)
+            0x00, 0x00, 0x05, 0x00, // Type: DATA
+            0x00, 0x00, 0x00, 0x00, 0x00, // Stream ID: 0 (INVALID for DATA)
         ];
 
         let stream_id = ((invalid_data[5] as u32) << 24)
@@ -277,13 +268,14 @@ mod quic_tests {
         // First byte: 1100 0000 = 0xC0 for Initial
         let initial = [
             0xC0, // Header: long, Initial
-            0x00, 0x00, 0x00, 0x01, // Version: 1
-            // DCID length + DCID
-            // SCID length + SCID
-            // Token length + Token
-            // Length
-            // Packet Number
-            // Payload
+            0x00, 0x00, 0x00,
+            0x01, // Version: 1
+                  // DCID length + DCID
+                  // SCID length + SCID
+                  // Token length + Token
+                  // Length
+                  // Packet Number
+                  // Payload
         ];
 
         // Verify long header form
@@ -324,9 +316,9 @@ mod quic_tests {
         // First byte: 0100 0000 = 0x40 minimum for short header
         let short = [
             0x40, // Header: short, min packet number
-            // Destination CID (based on connection)
-            // Packet Number (1-4 bytes)
-            // Payload (encrypted)
+                 // Destination CID (based on connection)
+                 // Packet Number (1-4 bytes)
+                 // Payload (encrypted)
         ];
 
         // Verify short header form
@@ -402,11 +394,12 @@ mod quic_tests {
 
         let retry = [
             0xF0, // Header: long, Retry (1111 0000)
-            0x00, 0x00, 0x00, 0x01, // Version
-            // DCID length + DCID
-            // SCID length + SCID
-            // Retry Token
-            // Retry Integrity Tag (16 bytes)
+            0x00, 0x00, 0x00,
+            0x01, // Version
+                  // DCID length + DCID
+                  // SCID length + SCID
+                  // Retry Token
+                  // Retry Integrity Tag (16 bytes)
         ];
 
         // Verify Retry type
@@ -458,10 +451,10 @@ mod http_full_packet_tests {
         quic.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]); // DCID
         quic.push(0x00); // SCID length (0)
         quic.push(0x00); // Token length (0)
-        // Variable length encoding for payload length
+                         // Variable length encoding for payload length
         quic.push(0x41); // 1 byte length indicator
         quic.push(0x00); // Length = 256
-        // Packet number and encrypted payload would follow
+                         // Packet number and encrypted payload would follow
         quic.resize(1200, 0x00); // Pad to minimum size
 
         let packet = create_udp_packet(

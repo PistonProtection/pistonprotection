@@ -2,10 +2,10 @@
 
 use super::test_utils::{constants, create_test_ddos_protection, create_test_filter_rule};
 use crate::crd::{
-    BackendSpec, Condition, DDoSProtection, DDoSProtectionSpec, DDoSProtectionStatus,
-    FilterAction, FilterRule, FilterRuleConfig, FilterRuleSpec, FilterRuleType,
-    GeoFilterMode, GeoFilterSpec, HealthCheckSpec, HealthState, LoadBalancingAlgorithm,
-    Phase, PortRange, Protocol, RateLimitSpec,
+    BackendSpec, Condition, DDoSProtection, DDoSProtectionSpec, DDoSProtectionStatus, FilterAction,
+    FilterRule, FilterRuleConfig, FilterRuleSpec, FilterRuleType, GeoFilterMode, GeoFilterSpec,
+    HealthCheckSpec, HealthState, LoadBalancingAlgorithm, Phase, PortRange, Protocol,
+    RateLimitSpec,
 };
 use std::collections::BTreeMap;
 
@@ -207,8 +207,14 @@ mod filter_rule_tests {
         let config = FilterRuleConfig {
             ports: vec![
                 PortRange { start: 80, end: 80 },
-                PortRange { start: 443, end: 443 },
-                PortRange { start: 8000, end: 9000 },
+                PortRange {
+                    start: 443,
+                    end: 443,
+                },
+                PortRange {
+                    start: 8000,
+                    end: 9000,
+                },
             ],
             ..Default::default()
         };
@@ -400,7 +406,10 @@ mod backend_crd_tests {
         ];
 
         assert_eq!(algorithms.len(), 5);
-        assert_eq!(LoadBalancingAlgorithm::default(), LoadBalancingAlgorithm::RoundRobin);
+        assert_eq!(
+            LoadBalancingAlgorithm::default(),
+            LoadBalancingAlgorithm::RoundRobin
+        );
     }
 }
 

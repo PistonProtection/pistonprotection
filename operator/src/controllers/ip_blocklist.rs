@@ -70,13 +70,13 @@ pub async fn reconcile(
     ctx: Arc<Context>,
 ) -> std::result::Result<Action, Error> {
     let name = blocklist.name_any();
-    let namespace = blocklist.namespace().unwrap_or_else(|| "default".to_string());
+    let namespace = blocklist
+        .namespace()
+        .unwrap_or_else(|| "default".to_string());
 
     info!(
         "Reconciling IPBlocklist {}/{} (generation: {:?})",
-        namespace,
-        name,
-        blocklist.metadata.generation
+        namespace, name, blocklist.metadata.generation
     );
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "IPBlocklist", &namespace);
@@ -239,8 +239,7 @@ async fn reconcile_apply(
     // Calculate next refresh time for external sources
     let (last_refreshed, next_refresh) = if refresh_needed {
         let now = chrono::Utc::now();
-        let next = now
-            + chrono::Duration::seconds(blocklist.spec.refresh_interval_seconds as i64);
+        let next = now + chrono::Duration::seconds(blocklist.spec.refresh_interval_seconds as i64);
         (Some(now.to_rfc3339()), Some(next.to_rfc3339()))
     } else {
         (None, None)
@@ -416,7 +415,10 @@ fn filter_active_entries(entries: &[BlocklistEntry]) -> Vec<BlocklistEntry> {
 /// Fetch blocklist from external URL
 async fn fetch_external_blocklist(blocklist: &IPBlocklist) -> Result<Vec<BlocklistEntry>> {
     let url = blocklist.spec.external_url.as_ref().ok_or_else(|| {
-        Error::validation("externalUrl", "external URL is required for external source")
+        Error::validation(
+            "externalUrl",
+            "external URL is required for external source",
+        )
     })?;
 
     debug!("Fetching external blocklist from: {}", url);
@@ -473,12 +475,7 @@ async fn find_matching_ddos_protections(
         .into_iter()
         .filter(|ddos| {
             for expr in &selector.match_expressions {
-                let labels = ddos
-                    .metadata
-                    .labels
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
+                let labels = ddos.metadata.labels.as_ref().cloned().unwrap_or_default();
 
                 let matches = match expr.operator.as_str() {
                     "In" => labels
@@ -651,11 +648,7 @@ fn build_status(
         entry_count,
         active_entries,
         gateway_synced,
-        last_synced: if gateway_synced {
-            Some(now)
-        } else {
-            None
-        },
+        last_synced: if gateway_synced { Some(now) } else { None },
         last_refreshed,
         next_refresh,
         observed_generation: blocklist.metadata.generation,
@@ -668,11 +661,7 @@ fn build_status(
 }
 
 /// Error policy for the controller
-pub fn error_policy(
-    blocklist: Arc<IPBlocklist>,
-    error: &Error,
-    _ctx: Arc<Context>,
-) -> Action {
+pub fn error_policy(blocklist: Arc<IPBlocklist>, error: &Error, _ctx: Arc<Context>) -> Action {
     let name = blocklist.name_any();
     let namespace = blocklist.namespace().unwrap_or_default();
 
@@ -816,16 +805,7 @@ mod tests {
     #[test]
     fn test_build_status() {
         let blocklist = create_test_blocklist();
-        let status = build_status(
-            &blocklist,
-            10,
-            8,
-            2,
-            true,
-            None,
-            None,
-            None,
-        );
+        let status = build_status(&blocklist, 10, 8, 2, true, None, None, None);
 
         assert_eq!(status.entry_count, 10);
         assert_eq!(status.active_entries, 8);

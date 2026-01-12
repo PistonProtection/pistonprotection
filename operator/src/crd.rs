@@ -415,15 +415,14 @@ pub struct Condition {
 
 impl Condition {
     /// Create a new condition
-    pub fn new(
-        condition_type: &str,
-        status: bool,
-        reason: &str,
-        message: &str,
-    ) -> Self {
+    pub fn new(condition_type: &str, status: bool, reason: &str, message: &str) -> Self {
         Self {
             condition_type: condition_type.to_string(),
-            status: if status { "True".to_string() } else { "False".to_string() },
+            status: if status {
+                "True".to_string()
+            } else {
+                "False".to_string()
+            },
             reason: reason.to_string(),
             message: message.to_string(),
             last_transition_time: chrono::Utc::now().to_rfc3339(),

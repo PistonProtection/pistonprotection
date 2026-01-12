@@ -151,8 +151,8 @@ impl InvitationTokenGenerator {
 /// Convert to proto Invitation
 impl Invitation {
     pub fn to_proto(&self) -> pistonprotection_proto::auth::Invitation {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::Invitation {
             id: self.id.clone(),
@@ -176,7 +176,10 @@ mod tests {
     fn test_invitation_status_conversion() {
         assert_eq!(i32::from(InvitationStatus::Pending), 1);
         assert_eq!(i32::from(InvitationStatus::Accepted), 2);
-        assert_eq!(InvitationStatus::try_from(1).unwrap(), InvitationStatus::Pending);
+        assert_eq!(
+            InvitationStatus::try_from(1).unwrap(),
+            InvitationStatus::Pending
+        );
     }
 
     #[test]

@@ -14,7 +14,9 @@ use aggregator::{AggregatorConfig, MetricsAggregator};
 use alerts::{AlertConfig, AlertManager};
 use clickhouse::{ClickHouseAnalytics, ClickHouseConfig};
 use handlers::MetricsGrpcService;
-use pistonprotection_common::{config::Config, geoip::GeoIpService, redis::CacheService, telemetry};
+use pistonprotection_common::{
+    config::Config, geoip::GeoIpService, redis::CacheService, telemetry,
+};
 use pistonprotection_proto::metrics::metrics_service_server::MetricsServiceServer;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -30,13 +32,7 @@ use tower_http::{
 };
 use tracing::{error, info, warn};
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use serde::{Deserialize, Serialize};
 
 const SERVICE_NAME: &str = "metrics";
@@ -73,7 +69,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(pool)
             }
             Err(e) => {
-                warn!("Failed to connect to database: {}. Running without persistence.", e);
+                warn!(
+                    "Failed to connect to database: {}. Running without persistence.",
+                    e
+                );
                 None
             }
         }
@@ -226,7 +225,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(ch)
             }
             Err(e) => {
-                warn!("Failed to initialize ClickHouse: {}. Running without event analytics.", e);
+                warn!(
+                    "Failed to initialize ClickHouse: {}. Running without event analytics.",
+                    e
+                );
                 None
             }
         }
@@ -368,12 +370,30 @@ fn create_http_router(state: AppState) -> Router {
         .route("/metrics", get(prometheus_metrics))
         .route("/api/v1/status", get(service_status))
         // ClickHouse analytics endpoints
-        .route("/api/v1/analytics/traffic/:backend_id", get(get_traffic_analytics))
-        .route("/api/v1/analytics/sources/:backend_id", get(get_top_sources))
-        .route("/api/v1/analytics/countries/:backend_id", get(get_traffic_by_country))
-        .route("/api/v1/analytics/timeseries/:backend_id", get(get_traffic_timeseries))
-        .route("/api/v1/analytics/attacks/:backend_id", get(get_attack_analytics))
-        .route("/api/v1/analytics/filters/:backend_id", get(get_filter_analytics))
+        .route(
+            "/api/v1/analytics/traffic/:backend_id",
+            get(get_traffic_analytics),
+        )
+        .route(
+            "/api/v1/analytics/sources/:backend_id",
+            get(get_top_sources),
+        )
+        .route(
+            "/api/v1/analytics/countries/:backend_id",
+            get(get_traffic_by_country),
+        )
+        .route(
+            "/api/v1/analytics/timeseries/:backend_id",
+            get(get_traffic_timeseries),
+        )
+        .route(
+            "/api/v1/analytics/attacks/:backend_id",
+            get(get_attack_analytics),
+        )
+        .route(
+            "/api/v1/analytics/filters/:backend_id",
+            get(get_filter_analytics),
+        )
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)
@@ -437,7 +457,7 @@ async fn service_status(State(state): State<AppState>) -> impl IntoResponse {
         status: "healthy",
         service: SERVICE_NAME,
         version: env!("CARGO_PKG_VERSION"),
-        uptime_seconds: 0, // Would need to track start time
+        uptime_seconds: 0,   // Would need to track start time
         backends_tracked: 0, // Would need to expose this from aggregator
         workers_tracked: workers.len(),
         alerts_active: 0, // Would need to expose this from alert manager
@@ -485,17 +505,26 @@ async fn get_traffic_analytics(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     match ch.get_traffic_stats(&backend_id, start, end).await {
-        Ok(stats) => (StatusCode::OK, Json(serde_json::to_value(stats).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+        Ok(stats) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(stats).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -505,18 +534,27 @@ async fn get_top_sources(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     let limit = query.limit.unwrap_or(100);
     match ch.get_top_sources(&backend_id, start, end, limit).await {
-        Ok(sources) => (StatusCode::OK, Json(serde_json::to_value(sources).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+        Ok(sources) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(sources).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -526,17 +564,26 @@ async fn get_traffic_by_country(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     match ch.get_traffic_by_country(&backend_id, start, end).await {
-        Ok(countries) => (StatusCode::OK, Json(serde_json::to_value(countries).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+        Ok(countries) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(countries).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -546,18 +593,30 @@ async fn get_traffic_timeseries(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     let interval = query.interval.unwrap_or(300); // 5 minutes default
-    match ch.get_traffic_time_series(&backend_id, start, end, interval).await {
-        Ok(series) => (StatusCode::OK, Json(serde_json::to_value(series).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+    match ch
+        .get_traffic_time_series(&backend_id, start, end, interval)
+        .await
+    {
+        Ok(series) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(series).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -567,18 +626,27 @@ async fn get_attack_analytics(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     let limit = query.limit.unwrap_or(50);
     match ch.get_attack_events(&backend_id, start, end, limit).await {
-        Ok(attacks) => (StatusCode::OK, Json(serde_json::to_value(attacks).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+        Ok(attacks) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(attacks).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 
@@ -588,17 +656,26 @@ async fn get_filter_analytics(
     axum::extract::Query(query): axum::extract::Query<AnalyticsQuery>,
 ) -> impl IntoResponse {
     let Some(ref ch) = state.clickhouse else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-            "error": "ClickHouse analytics not configured"
-        })));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "ClickHouse analytics not configured"
+            })),
+        );
     };
 
     let (start, end) = query.parse_times();
     match ch.get_filter_stats(&backend_id, start, end).await {
-        Ok(filters) => (StatusCode::OK, Json(serde_json::to_value(filters).unwrap_or_default())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))),
+        Ok(filters) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(filters).unwrap_or_default()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        ),
     }
 }
 

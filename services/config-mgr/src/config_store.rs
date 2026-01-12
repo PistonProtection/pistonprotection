@@ -75,9 +75,13 @@ impl ConfigStore {
         .await?;
 
         let max_version: i32 = row.get("max_version");
-        self.current_version.store(max_version as u32, Ordering::SeqCst);
+        self.current_version
+            .store(max_version as u32, Ordering::SeqCst);
 
-        info!(version = max_version, "Initialized config store with version");
+        info!(
+            version = max_version,
+            "Initialized config store with version"
+        );
 
         // Load recent version history
         self.load_version_history(10).await?;
@@ -354,7 +358,9 @@ impl ConfigStore {
         }
 
         // Cache validation results
-        self.validation_cache.write().insert(config.config_id.clone(), errors.clone());
+        self.validation_cache
+            .write()
+            .insert(config.config_id.clone(), errors.clone());
 
         errors
     }
@@ -376,10 +382,7 @@ impl ConfigStore {
             if protection.level > 5 {
                 errors.push(ValidationError {
                     field: format!("backends[{}].protection.level", backend.backend_id),
-                    message: format!(
-                        "Protection level {} exceeds maximum of 5",
-                        protection.level
-                    ),
+                    message: format!("Protection level {} exceeds maximum of 5", protection.level),
                     severity: ValidationSeverity::Error,
                 });
             }
@@ -493,7 +496,9 @@ impl ConfigStore {
     /// Check if a configuration has validation errors (excluding warnings)
     pub fn has_errors(&self, config: &FilterConfig) -> bool {
         let errors = self.validate_config(config);
-        errors.iter().any(|e| e.severity == ValidationSeverity::Error)
+        errors
+            .iter()
+            .any(|e| e.severity == ValidationSeverity::Error)
     }
 
     /// Get cached validation errors for a config

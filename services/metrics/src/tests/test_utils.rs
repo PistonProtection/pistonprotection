@@ -91,10 +91,7 @@ impl Default for TestAttackMetrics {
         Self {
             backend_id: constants::TEST_BACKEND_ID.to_string(),
             attack_type: "syn_flood".to_string(),
-            source_ips: vec![
-                "192.168.1.100".to_string(),
-                "192.168.1.101".to_string(),
-            ],
+            source_ips: vec!["192.168.1.100".to_string(), "192.168.1.101".to_string()],
             packets_dropped: 10000,
             bytes_dropped: 1_000_000,
             duration_seconds: 300,

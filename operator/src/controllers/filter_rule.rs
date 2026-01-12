@@ -74,9 +74,7 @@ pub async fn reconcile(
 
     info!(
         "Reconciling FilterRule {}/{} (generation: {:?})",
-        namespace,
-        name,
-        rule.metadata.generation
+        namespace, name, rule.metadata.generation
     );
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "FilterRule", &namespace);
@@ -147,7 +145,10 @@ async fn reconcile_apply(
 
     // Check if rule is expired
     if is_rule_expired(rule) {
-        info!("FilterRule {}/{} has expired, skipping sync", namespace, name);
+        info!(
+            "FilterRule {}/{} has expired, skipping sync",
+            namespace, name
+        );
         let status = build_status(rule, false, false, Some("Rule has expired".to_string()));
         update_status(&ctx.client, namespace, name, status).await?;
         return Ok(Action::await_change());
@@ -161,10 +162,7 @@ async fn reconcile_apply(
         .publish(Event {
             type_: EventType::Normal,
             reason: "Reconciling".to_string(),
-            note: Some(format!(
-                "Processing filter rule: {}",
-                rule.spec.name
-            )),
+            note: Some(format!("Processing filter rule: {}", rule.spec.name)),
             action: "Reconcile".to_string(),
             secondary: None,
         })
@@ -354,10 +352,7 @@ fn validate_filter_rule(rule: &FilterRule) -> Result<()> {
 
     // Validate priority
     if rule.spec.priority < 0 || rule.spec.priority > 100 {
-        return Err(Error::validation(
-            "priority",
-            "must be between 0 and 100",
-        ));
+        return Err(Error::validation("priority", "must be between 0 and 100"));
     }
 
     Ok(())
@@ -421,9 +416,7 @@ fn is_rule_scheduled_active(rule: &FilterRule) -> bool {
     }
 
     // Check time range
-    if let (Some(ref start_time), Some(ref end_time)) =
-        (&schedule.start_time, &schedule.end_time)
-    {
+    if let (Some(ref start_time), Some(ref end_time)) = (&schedule.start_time, &schedule.end_time) {
         let current_time = now.format("%H:%M").to_string();
 
         // Simple string comparison works for HH:MM format
@@ -485,18 +478,14 @@ async fn find_matching_ddos_protections(
                     .unwrap_or_default();
 
                 let matches = match expr.operator.as_str() {
-                    "In" => {
-                        labels
-                            .get(&expr.key)
-                            .map(|v| expr.values.contains(v))
-                            .unwrap_or(false)
-                    }
-                    "NotIn" => {
-                        labels
-                            .get(&expr.key)
-                            .map(|v| !expr.values.contains(v))
-                            .unwrap_or(true)
-                    }
+                    "In" => labels
+                        .get(&expr.key)
+                        .map(|v| expr.values.contains(v))
+                        .unwrap_or(false),
+                    "NotIn" => labels
+                        .get(&expr.key)
+                        .map(|v| !expr.values.contains(v))
+                        .unwrap_or(true),
                     "Exists" => labels.contains_key(&expr.key),
                     "DoesNotExist" => !labels.contains_key(&expr.key),
                     _ => true,
@@ -606,9 +595,7 @@ fn build_status_full(
         } else {
             "ValidationFailed"
         },
-        error_message
-            .as_deref()
-            .unwrap_or("Rule validation passed"),
+        error_message.as_deref().unwrap_or("Rule validation passed"),
     ));
 
     FilterRuleStatus {
@@ -629,11 +616,7 @@ fn build_status_full(
 }
 
 /// Error policy for the controller
-pub fn error_policy(
-    rule: Arc<FilterRule>,
-    error: &Error,
-    _ctx: Arc<Context>,
-) -> Action {
+pub fn error_policy(rule: Arc<FilterRule>, error: &Error, _ctx: Arc<Context>) -> Action {
     let name = rule.name_any();
     let namespace = rule.namespace().unwrap_or_default();
 
@@ -651,10 +634,7 @@ pub fn error_policy(
         );
         Action::await_change()
     } else {
-        info!(
-            "Requeuing FilterRule {}/{} in {:?}",
-            namespace, name, delay
-        );
+        info!("Requeuing FilterRule {}/{} in {:?}", namespace, name, delay);
         Action::requeue(delay)
     }
 }

@@ -7,7 +7,7 @@ use pistonprotection_common::{error::Result, redis::CacheService};
 use pistonprotection_proto::worker::FilterConfig;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 use tracing::{debug, info, warn};
 
 /// Worker registration info

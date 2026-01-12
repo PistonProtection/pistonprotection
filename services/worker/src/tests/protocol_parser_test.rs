@@ -1,12 +1,12 @@
 //! Protocol parser tests
 
 use super::test_utils::{
-    constants, create_ipv4_packet, create_minecraft_bedrock_ping, create_minecraft_java_handshake,
-    create_raknet_open_connection_request, TestPacketMeta,
+    TestPacketMeta, constants, create_ipv4_packet, create_minecraft_bedrock_ping,
+    create_minecraft_java_handshake, create_raknet_open_connection_request,
 };
 use crate::protocol::minecraft::{
-    is_minecraft_bedrock, is_minecraft_java, MinecraftBedrockAnalyzer, MinecraftBedrockPacket,
-    MinecraftJavaAnalyzer, RAKNET_MAGIC,
+    MinecraftBedrockAnalyzer, MinecraftBedrockPacket, MinecraftJavaAnalyzer, RAKNET_MAGIC,
+    is_minecraft_bedrock, is_minecraft_java,
 };
 use crate::protocol::{L7Protocol, PacketMeta, ProtocolAnalyzer, Verdict};
 use std::net::{IpAddr, Ipv4Addr};
@@ -304,13 +304,34 @@ mod minecraft_bedrock_tests {
     fn test_parse_packet_type() {
         let analyzer = MinecraftBedrockAnalyzer::new();
 
-        assert_eq!(analyzer.parse_packet_type(&[0x01]), MinecraftBedrockPacket::UnconnectedPing);
-        assert_eq!(analyzer.parse_packet_type(&[0x1c]), MinecraftBedrockPacket::UnconnectedPong);
-        assert_eq!(analyzer.parse_packet_type(&[0x05]), MinecraftBedrockPacket::OpenConnectionRequest1);
-        assert_eq!(analyzer.parse_packet_type(&[0x06]), MinecraftBedrockPacket::OpenConnectionReply1);
-        assert_eq!(analyzer.parse_packet_type(&[0x07]), MinecraftBedrockPacket::OpenConnectionRequest2);
-        assert_eq!(analyzer.parse_packet_type(&[0x08]), MinecraftBedrockPacket::OpenConnectionReply2);
-        assert_eq!(analyzer.parse_packet_type(&[0xFF]), MinecraftBedrockPacket::Unknown(0xFF));
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x01]),
+            MinecraftBedrockPacket::UnconnectedPing
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x1c]),
+            MinecraftBedrockPacket::UnconnectedPong
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x05]),
+            MinecraftBedrockPacket::OpenConnectionRequest1
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x06]),
+            MinecraftBedrockPacket::OpenConnectionReply1
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x07]),
+            MinecraftBedrockPacket::OpenConnectionRequest2
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0x08]),
+            MinecraftBedrockPacket::OpenConnectionReply2
+        );
+        assert_eq!(
+            analyzer.parse_packet_type(&[0xFF]),
+            MinecraftBedrockPacket::Unknown(0xFF)
+        );
     }
 }
 

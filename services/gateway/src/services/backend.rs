@@ -8,8 +8,8 @@ use pistonprotection_proto::common::HealthStatus;
 use sqlx::Row;
 use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::Stream;
+use tokio_stream::wrappers::BroadcastStream;
 use tracing::{info, instrument, warn};
 use uuid::Uuid;
 
@@ -255,7 +255,8 @@ impl BackendService {
         self.invalidate_backend_cache(backend_id).await;
 
         // Publish update event
-        self.publish_backend_update(backend_id, "origin_added").await;
+        self.publish_backend_update(backend_id, "origin_added")
+            .await;
 
         let mut created_origin = origin;
         created_origin.id = origin_id;
@@ -307,7 +308,8 @@ impl BackendService {
         self.invalidate_backend_cache(backend_id).await;
 
         // Publish update event
-        self.publish_backend_update(backend_id, "origin_updated").await;
+        self.publish_backend_update(backend_id, "origin_updated")
+            .await;
 
         Ok(origin)
     }
@@ -317,13 +319,11 @@ impl BackendService {
     pub async fn remove_origin(&self, backend_id: &str, origin_id: &str) -> Result<()> {
         let db = self.state.db()?;
 
-        let result = sqlx::query(
-            "DELETE FROM backend_origins WHERE id = $1 AND backend_id = $2",
-        )
-        .bind(origin_id)
-        .bind(backend_id)
-        .execute(db)
-        .await?;
+        let result = sqlx::query("DELETE FROM backend_origins WHERE id = $1 AND backend_id = $2")
+            .bind(origin_id)
+            .bind(backend_id)
+            .execute(db)
+            .await?;
 
         if result.rows_affected() == 0 {
             return Err(Error::not_found("Origin", origin_id));
@@ -335,7 +335,8 @@ impl BackendService {
         self.invalidate_backend_cache(backend_id).await;
 
         // Publish update event
-        self.publish_backend_update(backend_id, "origin_removed").await;
+        self.publish_backend_update(backend_id, "origin_removed")
+            .await;
 
         Ok(())
     }
@@ -363,8 +364,7 @@ impl BackendService {
                 let settings_json: serde_json::Value = row.get("settings");
                 let address_json: serde_json::Value = row.get("address");
 
-                let settings: Option<OriginSettings> =
-                    serde_json::from_value(settings_json).ok();
+                let settings: Option<OriginSettings> = serde_json::from_value(settings_json).ok();
                 let address: Option<pistonprotection_proto::common::IpAddress> =
                     serde_json::from_value(address_json).ok();
 
@@ -404,16 +404,18 @@ impl BackendService {
 
         // Validate domain format
         if !Self::is_valid_domain(domain) {
-            return Err(Error::validation(format!("Invalid domain format: {}", domain)));
+            return Err(Error::validation(format!(
+                "Invalid domain format: {}",
+                domain
+            )));
         }
 
         // Check if domain already exists
-        let existing: Option<(String,)> = sqlx::query_as(
-            "SELECT backend_id FROM backend_domains WHERE domain = $1",
-        )
-        .bind(domain)
-        .fetch_optional(db)
-        .await?;
+        let existing: Option<(String,)> =
+            sqlx::query_as("SELECT backend_id FROM backend_domains WHERE domain = $1")
+                .bind(domain)
+                .fetch_optional(db)
+                .await?;
 
         if existing.is_some() {
             return Err(Error::already_exists("Domain", "domain", domain));
@@ -456,13 +458,12 @@ impl BackendService {
     pub async fn remove_domain(&self, backend_id: &str, domain: &str) -> Result<()> {
         let db = self.state.db()?;
 
-        let result = sqlx::query(
-            "DELETE FROM backend_domains WHERE backend_id = $1 AND domain = $2",
-        )
-        .bind(backend_id)
-        .bind(domain)
-        .execute(db)
-        .await?;
+        let result =
+            sqlx::query("DELETE FROM backend_domains WHERE backend_id = $1 AND domain = $2")
+                .bind(backend_id)
+                .bind(domain)
+                .execute(db)
+                .await?;
 
         if result.rows_affected() == 0 {
             return Err(Error::not_found("Domain", domain));
@@ -613,8 +614,9 @@ impl BackendService {
         // Verify backend exists
         let _backend = self.get(backend_id).await?;
 
-        let protection_json = serde_json::to_value(&protection)
-            .map_err(|e| Error::Internal(format!("Failed to serialize protection settings: {}", e)))?;
+        let protection_json = serde_json::to_value(&protection).map_err(|e| {
+            Error::Internal(format!("Failed to serialize protection settings: {}", e))
+        })?;
 
         let now = chrono::Utc::now();
 
@@ -639,7 +641,8 @@ impl BackendService {
         self.invalidate_backend_cache(backend_id).await;
 
         // Publish update for workers
-        self.publish_backend_update(backend_id, "protection_updated").await;
+        self.publish_backend_update(backend_id, "protection_updated")
+            .await;
 
         Ok(protection)
     }
@@ -659,12 +662,11 @@ impl BackendService {
         let now = chrono::Utc::now();
 
         // Get current settings or create default
-        let row: Option<(serde_json::Value,)> = sqlx::query_as(
-            "SELECT settings FROM backend_protection WHERE backend_id = $1",
-        )
-        .bind(backend_id)
-        .fetch_optional(db)
-        .await?;
+        let row: Option<(serde_json::Value,)> =
+            sqlx::query_as("SELECT settings FROM backend_protection WHERE backend_id = $1")
+                .bind(backend_id)
+                .fetch_optional(db)
+                .await?;
 
         let mut protection: ProtectionSettings = if let Some((json,)) = row {
             serde_json::from_value(json).unwrap_or_default()
@@ -709,8 +711,9 @@ impl BackendService {
             _ => {}
         }
 
-        let protection_json = serde_json::to_value(&protection)
-            .map_err(|e| Error::Internal(format!("Failed to serialize protection settings: {}", e)))?;
+        let protection_json = serde_json::to_value(&protection).map_err(|e| {
+            Error::Internal(format!("Failed to serialize protection settings: {}", e))
+        })?;
 
         sqlx::query(
             r#"
@@ -732,7 +735,8 @@ impl BackendService {
         self.invalidate_backend_cache(backend_id).await;
 
         // Publish update for workers
-        self.publish_backend_update(backend_id, "protection_level_changed").await;
+        self.publish_backend_update(backend_id, "protection_level_changed")
+            .await;
 
         Ok(level)
     }
@@ -742,18 +746,15 @@ impl BackendService {
     pub async fn get_protection(&self, backend_id: &str) -> Result<ProtectionSettings> {
         let db = self.state.db()?;
 
-        let row: Option<(serde_json::Value,)> = sqlx::query_as(
-            "SELECT settings FROM backend_protection WHERE backend_id = $1",
-        )
-        .bind(backend_id)
-        .fetch_optional(db)
-        .await?;
+        let row: Option<(serde_json::Value,)> =
+            sqlx::query_as("SELECT settings FROM backend_protection WHERE backend_id = $1")
+                .bind(backend_id)
+                .fetch_optional(db)
+                .await?;
 
         match row {
-            Some((json,)) => {
-                serde_json::from_value(json)
-                    .map_err(|e| Error::Internal(format!("Failed to deserialize protection: {}", e)))
-            }
+            Some((json,)) => serde_json::from_value(json)
+                .map_err(|e| Error::Internal(format!("Failed to deserialize protection: {}", e))),
             None => Ok(ProtectionSettings::default()),
         }
     }
@@ -851,12 +852,10 @@ impl BackendService {
         });
 
         // Convert broadcast receiver to stream
-        let stream = BroadcastStream::new(rx).filter_map(|result| {
-            match result {
-                Ok(status) => Some(Ok(status)),
-                Err(broadcast::error::RecvError::Lagged(_)) => None,
-                Err(broadcast::error::RecvError::Closed) => None,
-            }
+        let stream = BroadcastStream::new(rx).filter_map(|result| match result {
+            Ok(status) => Some(Ok(status)),
+            Err(broadcast::error::RecvError::Lagged(_)) => None,
+            Err(broadcast::error::RecvError::Closed) => None,
         });
 
         Ok(stream)
@@ -870,8 +869,12 @@ impl BackendService {
     async fn invalidate_backend_cache(&self, backend_id: &str) {
         if let Some(cache) = &self.state.cache {
             let _ = cache.delete(&format!("backend:{}", backend_id)).await;
-            let _ = cache.delete(&format!("backend_status:{}", backend_id)).await;
-            let _ = cache.delete_pattern(&format!("backend:{}:*", backend_id)).await;
+            let _ = cache
+                .delete(&format!("backend_status:{}", backend_id))
+                .await;
+            let _ = cache
+                .delete_pattern(&format!("backend:{}:*", backend_id))
+                .await;
         }
     }
 

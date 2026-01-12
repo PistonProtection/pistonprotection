@@ -1,8 +1,8 @@
 //! Integration tests for gRPC services
 
-use super::mock_db::{create_test_backend, create_test_filter_rule, MockDatabase};
+use super::mock_db::{MockDatabase, create_test_backend, create_test_filter_rule};
 use super::test_utils::{
-    assert_grpc_status_code, constants, create_test_app_state, create_test_request, TestFixture,
+    TestFixture, assert_grpc_status_code, constants, create_test_app_state, create_test_request,
 };
 use pistonprotection_proto::backend::*;
 use pistonprotection_proto::filter::*;
@@ -358,7 +358,11 @@ mod filter_service_tests {
 
         let request = create_test_request(ReorderRulesRequest {
             backend_id: constants::TEST_BACKEND_ID.to_string(),
-            rule_ids: vec!["rule1".to_string(), "rule2".to_string(), "rule3".to_string()],
+            rule_ids: vec![
+                "rule1".to_string(),
+                "rule2".to_string(),
+                "rule3".to_string(),
+            ],
         });
 
         let result = service.reorder_rules(request).await;
@@ -525,6 +529,10 @@ mod grpc_server_tests {
         let state = create_test_app_state();
         let result = crate::handlers::grpc::create_server(state).await;
 
-        assert!(result.is_ok(), "Failed to create gRPC server: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to create gRPC server: {:?}",
+            result.err()
+        );
     }
 }

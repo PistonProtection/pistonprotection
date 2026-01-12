@@ -71,10 +71,7 @@ mod minecraft_java_tests {
     /// Test handshake with login request (next_state = 2)
     #[test]
     fn test_handshake_login_request() {
-        let handshake = MinecraftHandshake::new()
-            .with_protocol(765)
-            .login()
-            .build();
+        let handshake = MinecraftHandshake::new().with_protocol(765).login().build();
 
         // Find next_state in packet
         let (_, len_bytes) = decode_varint(&handshake).unwrap();
@@ -99,43 +96,36 @@ mod minecraft_java_tests {
     #[test]
     fn test_invalid_protocol_versions() {
         // Too old (before 1.7.2)
-        let old_proto = MinecraftHandshake::new()
-            .with_protocol(3)
-            .build();
+        let old_proto = MinecraftHandshake::new().with_protocol(3).build();
 
         // Verify we can still parse it (filter would reject)
         let (packet_len, _) = decode_varint(&old_proto).unwrap();
         assert!(packet_len > 0);
 
         // Negative protocol version (attack vector)
-        let negative_proto = MinecraftHandshake::new()
-            .with_protocol(-1)
-            .build();
+        let negative_proto = MinecraftHandshake::new().with_protocol(-1).build();
 
         let (_, len_bytes) = decode_varint(&negative_proto).unwrap();
         let packet_data = &negative_proto[len_bytes..];
         let (_, id_bytes) = decode_varint(packet_data).unwrap();
         let (proto, _) = decode_varint(&packet_data[id_bytes..]).unwrap();
-        assert!(proto < 0, "Negative protocol version should decode as negative");
+        assert!(
+            proto < 0,
+            "Negative protocol version should decode as negative"
+        );
     }
 
     /// Test invalid next_state values
     #[test]
     fn test_invalid_next_state() {
         // next_state = 0 (invalid)
-        let invalid_state_0 = MinecraftHandshake::new()
-            .with_next_state(0)
-            .build();
+        let invalid_state_0 = MinecraftHandshake::new().with_next_state(0).build();
 
         // next_state = 3 (invalid for handshake)
-        let invalid_state_3 = MinecraftHandshake::new()
-            .with_next_state(3)
-            .build();
+        let invalid_state_3 = MinecraftHandshake::new().with_next_state(3).build();
 
         // next_state = -1 (negative, attack vector)
-        let invalid_state_neg = MinecraftHandshake::new()
-            .with_next_state(-1)
-            .build();
+        let invalid_state_neg = MinecraftHandshake::new().with_next_state(-1).build();
 
         // All should build successfully (filter would reject)
         assert!(!invalid_state_0.is_empty());
@@ -188,14 +178,10 @@ mod minecraft_java_tests {
     #[test]
     fn test_port_edge_cases() {
         // Port 0 (invalid)
-        let port_0 = MinecraftHandshake::new()
-            .with_port(0)
-            .build();
+        let port_0 = MinecraftHandshake::new().with_port(0).build();
 
         // Max port
-        let port_max = MinecraftHandshake::new()
-            .with_port(65535)
-            .build();
+        let port_max = MinecraftHandshake::new().with_port(65535).build();
 
         // Both should build
         assert!(!port_0.is_empty());
@@ -301,8 +287,7 @@ mod minecraft_bedrock_tests {
 
         // Verify time bytes
         let time = u64::from_be_bytes([
-            ping[1], ping[2], ping[3], ping[4],
-            ping[5], ping[6], ping[7], ping[8],
+            ping[1], ping[2], ping[3], ping[4], ping[5], ping[6], ping[7], ping[8],
         ]);
         assert_eq!(time, 12345);
 
@@ -311,8 +296,7 @@ mod minecraft_bedrock_tests {
 
         // Verify GUID
         let guid = u64::from_be_bytes([
-            ping[25], ping[26], ping[27], ping[28],
-            ping[29], ping[30], ping[31], ping[32],
+            ping[25], ping[26], ping[27], ping[28], ping[29], ping[30], ping[31], ping[32],
         ]);
         assert_eq!(guid, 0xDEADBEEF);
     }
@@ -364,8 +348,7 @@ mod minecraft_bedrock_tests {
 
         // Verify GUID
         let guid = u64::from_be_bytes([
-            req[26], req[27], req[28], req[29],
-            req[30], req[31], req[32], req[33],
+            req[26], req[27], req[28], req[29], req[30], req[31], req[32], req[33],
         ]);
         assert_eq!(guid, 0x123456789ABCDEF0);
     }
@@ -374,15 +357,11 @@ mod minecraft_bedrock_tests {
     #[test]
     fn test_invalid_mtu_values() {
         // Too small (below 400)
-        let small_mtu = RakNetOpenConnReq1::new()
-            .with_mtu(300)
-            .build();
+        let small_mtu = RakNetOpenConnReq1::new().with_mtu(300).build();
         assert_eq!(small_mtu.len(), 300);
 
         // Too large (above 1500)
-        let large_mtu = RakNetOpenConnReq1::new()
-            .with_mtu(2000)
-            .build();
+        let large_mtu = RakNetOpenConnReq1::new().with_mtu(2000).build();
         assert_eq!(large_mtu.len(), 2000);
 
         // Filter should reject both
@@ -392,9 +371,7 @@ mod minecraft_bedrock_tests {
     #[test]
     fn test_invalid_raknet_protocol() {
         // Protocol versions > 11 are suspicious
-        let bad_proto = RakNetOpenConnReq1::new()
-            .with_protocol(50)
-            .build();
+        let bad_proto = RakNetOpenConnReq1::new().with_protocol(50).build();
 
         assert_eq!(bad_proto[17], 50);
     }
@@ -404,11 +381,11 @@ mod minecraft_bedrock_tests {
     fn test_server_to_client_packets() {
         // These packet types should be rejected when received by the server
         let server_packets = [
-            RAKNET_UNCONNECTED_PONG,     // 0x1c
-            0x06,                         // Open Connection Reply 1
-            0x08,                         // Open Connection Reply 2
-            0x10,                         // Connection Request Accepted
-            0x03,                         // Connected Pong
+            RAKNET_UNCONNECTED_PONG, // 0x1c
+            0x06,                    // Open Connection Reply 1
+            0x08,                    // Open Connection Reply 2
+            0x10,                    // Connection Request Accepted
+            0x03,                    // Connected Pong
         ];
 
         for &packet_id in &server_packets {
@@ -452,14 +429,12 @@ mod minecraft_bedrock_tests {
 
         // Extract GUID from ping
         let ping_guid = u64::from_be_bytes([
-            ping[25], ping[26], ping[27], ping[28],
-            ping[29], ping[30], ping[31], ping[32],
+            ping[25], ping[26], ping[27], ping[28], ping[29], ping[30], ping[31], ping[32],
         ]);
 
         // Extract GUID from req2
         let req2_guid = u64::from_be_bytes([
-            req2[26], req2[27], req2[28], req2[29],
-            req2[30], req2[31], req2[32], req2[33],
+            req2[26], req2[27], req2[28], req2[29], req2[30], req2[31], req2[32], req2[33],
         ]);
 
         assert_eq!(ping_guid, guid);
@@ -468,8 +443,14 @@ mod minecraft_bedrock_tests {
         // Test with mismatched GUID
         let mismatch_req2 = RakNetOpenConnReq2::new().with_guid(0xFFFFFFFF).build();
         let mismatch_guid = u64::from_be_bytes([
-            mismatch_req2[26], mismatch_req2[27], mismatch_req2[28], mismatch_req2[29],
-            mismatch_req2[30], mismatch_req2[31], mismatch_req2[32], mismatch_req2[33],
+            mismatch_req2[26],
+            mismatch_req2[27],
+            mismatch_req2[28],
+            mismatch_req2[29],
+            mismatch_req2[30],
+            mismatch_req2[31],
+            mismatch_req2[32],
+            mismatch_req2[33],
         ]);
         assert_ne!(mismatch_guid, guid);
     }
@@ -510,7 +491,10 @@ mod minecraft_bedrock_tests {
             // Minimal encapsulated data
             packet.extend_from_slice(&[0x60, 0x00, 0x00]); // Reliability + length
 
-            assert!(packet.len() >= 4, "Data packet should have at least 4 bytes");
+            assert!(
+                packet.len() >= 4,
+                "Data packet should have at least 4 bytes"
+            );
         }
     }
 

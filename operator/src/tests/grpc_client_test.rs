@@ -185,7 +185,10 @@ mod connection_tests {
     #[tokio::test]
     async fn test_disconnect() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let result = client.disconnect().await;
 
@@ -198,7 +201,10 @@ mod connection_tests {
     async fn test_reconnect() {
         let mut client = MockGatewayClient::new();
 
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
         client.disconnect().await.unwrap();
         let result = client.connect(constants::TEST_GATEWAY_ADDRESS).await;
 
@@ -210,7 +216,10 @@ mod connection_tests {
     #[tokio::test]
     async fn test_health_check() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let result = client.health_check().await;
 
@@ -241,7 +250,10 @@ mod backend_sync_tests {
     #[tokio::test]
     async fn test_sync_backend() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let backend = MockBackend {
             id: "backend-1".to_string(),
@@ -260,7 +272,10 @@ mod backend_sync_tests {
     #[tokio::test]
     async fn test_update_backend() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let backend = MockBackend {
             id: "backend-1".to_string(),
@@ -289,7 +304,10 @@ mod backend_sync_tests {
     #[tokio::test]
     async fn test_delete_backend() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let backend = MockBackend {
             id: "backend-1".to_string(),
@@ -326,7 +344,10 @@ mod backend_sync_tests {
     #[tokio::test]
     async fn test_sync_backend_failure() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
         client.set_fail_sync(true);
 
         let backend = MockBackend {
@@ -354,7 +375,10 @@ mod filter_rule_sync_tests {
     #[tokio::test]
     async fn test_sync_filter_rule() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let rule = MockFilterRule {
             id: "rule-1".to_string(),
@@ -374,7 +398,10 @@ mod filter_rule_sync_tests {
     #[tokio::test]
     async fn test_update_filter_rule() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let rule = MockFilterRule {
             id: "rule-1".to_string(),
@@ -394,7 +421,10 @@ mod filter_rule_sync_tests {
             enabled: true,
         };
 
-        client.sync_filter_rule("backend-1", &updated).await.unwrap();
+        client
+            .sync_filter_rule("backend-1", &updated)
+            .await
+            .unwrap();
 
         let rules = client.list_filter_rules("backend-1");
         assert_eq!(rules.len(), 1);
@@ -405,7 +435,10 @@ mod filter_rule_sync_tests {
     #[tokio::test]
     async fn test_delete_filter_rule() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let rule = MockFilterRule {
             id: "rule-1".to_string(),
@@ -426,7 +459,10 @@ mod filter_rule_sync_tests {
     #[tokio::test]
     async fn test_multiple_filter_rules() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         for i in 1..=5 {
             let rule = MockFilterRule {
@@ -447,7 +483,10 @@ mod filter_rule_sync_tests {
     #[tokio::test]
     async fn test_filter_rules_scoped() {
         let mut client = MockGatewayClient::new();
-        client.connect(constants::TEST_GATEWAY_ADDRESS).await.unwrap();
+        client
+            .connect(constants::TEST_GATEWAY_ADDRESS)
+            .await
+            .unwrap();
 
         let rule1 = MockFilterRule {
             id: "rule-1".to_string(),
@@ -492,7 +531,11 @@ mod conversion_tests {
         let grpc_backend = MockBackend {
             id: format!(
                 "{}/{}",
-                protection.metadata.namespace.as_deref().unwrap_or("default"),
+                protection
+                    .metadata
+                    .namespace
+                    .as_deref()
+                    .unwrap_or("default"),
                 protection.metadata.name.as_deref().unwrap_or("unknown")
             ),
             name: backend.name.clone(),
@@ -501,7 +544,10 @@ mod conversion_tests {
         };
 
         assert!(!grpc_backend.id.is_empty());
-        assert_eq!(grpc_backend.protocol, Protocol::MinecraftJava.to_grpc_protocol());
+        assert_eq!(
+            grpc_backend.protocol,
+            Protocol::MinecraftJava.to_grpc_protocol()
+        );
     }
 
     /// Test converting FilterRule to gRPC rule

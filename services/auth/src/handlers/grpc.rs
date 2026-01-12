@@ -132,7 +132,10 @@ impl ProtoAuthService for AuthServiceImpl {
             .map_err(|e| Status::from(e))?;
 
         Ok(Response::new(ListUserOrganizationsResponse {
-            organizations: orgs.into_iter().map(|o| o.to_proto(None, None, None)).collect(),
+            organizations: orgs
+                .into_iter()
+                .map(|o| o.to_proto(None, None, None))
+                .collect(),
         }))
     }
 
@@ -370,21 +373,24 @@ impl ProtoAuthService for AuthServiceImpl {
             .await;
 
         Ok(Response::new(CreateApiKeyResponse {
-            key: Some(crate::models::ApiKey {
-                id: result.key.id,
-                organization_id: result.key.organization_id,
-                created_by_user_id: String::new(),
-                name: result.key.name,
-                prefix: result.key.prefix,
-                key_hash: String::new(),
-                permissions: result.key.permissions,
-                allowed_ips: result.key.allowed_ips,
-                enabled: result.key.enabled,
-                expires_at: result.key.expires_at,
-                last_used_at: result.key.last_used_at,
-                created_at: result.key.created_at,
-                updated_at: result.key.created_at,
-            }.to_proto()),
+            key: Some(
+                crate::models::ApiKey {
+                    id: result.key.id,
+                    organization_id: result.key.organization_id,
+                    created_by_user_id: String::new(),
+                    name: result.key.name,
+                    prefix: result.key.prefix,
+                    key_hash: String::new(),
+                    permissions: result.key.permissions,
+                    allowed_ips: result.key.allowed_ips,
+                    enabled: result.key.enabled,
+                    expires_at: result.key.expires_at,
+                    last_used_at: result.key.last_used_at,
+                    created_at: result.key.created_at,
+                    updated_at: result.key.created_at,
+                }
+                .to_proto(),
+            ),
             secret: result.secret,
         }))
     }
@@ -409,21 +415,24 @@ impl ProtoAuthService for AuthServiceImpl {
         Ok(Response::new(ListApiKeysResponse {
             keys: keys
                 .into_iter()
-                .map(|k| crate::models::ApiKey {
-                    id: k.id,
-                    organization_id: k.organization_id,
-                    created_by_user_id: String::new(),
-                    name: k.name,
-                    prefix: k.prefix,
-                    key_hash: String::new(),
-                    permissions: k.permissions,
-                    allowed_ips: k.allowed_ips,
-                    enabled: k.enabled,
-                    expires_at: k.expires_at,
-                    last_used_at: k.last_used_at,
-                    created_at: k.created_at,
-                    updated_at: k.created_at,
-                }.to_proto())
+                .map(|k| {
+                    crate::models::ApiKey {
+                        id: k.id,
+                        organization_id: k.organization_id,
+                        created_by_user_id: String::new(),
+                        name: k.name,
+                        prefix: k.prefix,
+                        key_hash: String::new(),
+                        permissions: k.permissions,
+                        allowed_ips: k.allowed_ips,
+                        enabled: k.enabled,
+                        expires_at: k.expires_at,
+                        last_used_at: k.last_used_at,
+                        created_at: k.created_at,
+                        updated_at: k.created_at,
+                    }
+                    .to_proto()
+                })
                 .collect(),
             pagination: Some(PaginationInfo {
                 total_count: total,
@@ -461,7 +470,9 @@ impl ProtoAuthService for AuthServiceImpl {
     ) -> Result<Response<CreateAuditLogResponse>, Status> {
         let req = request.into_inner();
 
-        let entry = req.entry.ok_or_else(|| Status::invalid_argument("Entry required"))?;
+        let entry = req
+            .entry
+            .ok_or_else(|| Status::invalid_argument("Entry required"))?;
 
         let model_entry = crate::models::CreateAuditLogRequest {
             organization_id: entry.organization_id,
@@ -577,8 +588,7 @@ impl ProtoAuthService for AuthServiceImpl {
             .and_then(|v| v.to_str().ok())
             .ok_or_else(|| Status::unauthenticated("User ID required"))?;
 
-        let role = OrganizationRole::try_from(req.role)
-            .unwrap_or(OrganizationRole::Member);
+        let role = OrganizationRole::try_from(req.role).unwrap_or(OrganizationRole::Member);
 
         // Generate invitation token
         let token = InvitationTokenGenerator::generate();
@@ -662,7 +672,9 @@ impl ProtoAuthService for AuthServiceImpl {
 }
 
 /// Create the gRPC server
-pub async fn create_server(state: AppState) -> Result<tonic::transport::Server, Box<dyn std::error::Error>> {
+pub async fn create_server(
+    state: AppState,
+) -> Result<tonic::transport::Server, Box<dyn std::error::Error>> {
     let auth_service = AuthServiceImpl::new(state.clone());
 
     let reflection_service = tonic_reflection::server::Builder::configure()

@@ -11,13 +11,7 @@
 //! service via gRPC and manages worker deployments for traffic filtering.
 
 use anyhow::{Context as AnyhowContext, Result};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
 use futures::StreamExt;
 use kube::{
     api::Api,
@@ -491,10 +485,7 @@ async fn start_ipblocklist_controller(
 }
 
 /// Start the health and metrics HTTP server
-async fn start_health_server(
-    state: Arc<AppState>,
-    config: &OperatorConfig,
-) -> Result<()> {
+async fn start_health_server(state: Arc<AppState>, config: &OperatorConfig) -> Result<()> {
     let app = Router::new()
         .route("/healthz", get(health_handler))
         .route("/readyz", get(readiness_handler))
@@ -560,21 +551,9 @@ fn print_crd_info() {
         DDoSProtection::group(&()),
         DDoSProtection::kind(&())
     );
-    info!(
-        "  - {}/{}",
-        FilterRule::group(&()),
-        FilterRule::kind(&())
-    );
-    info!(
-        "  - {}/{}",
-        Backend::group(&()),
-        Backend::kind(&())
-    );
-    info!(
-        "  - {}/{}",
-        IPBlocklist::group(&()),
-        IPBlocklist::kind(&())
-    );
+    info!("  - {}/{}", FilterRule::group(&()), FilterRule::kind(&()));
+    info!("  - {}/{}", Backend::group(&()), Backend::kind(&()));
+    info!("  - {}/{}", IPBlocklist::group(&()), IPBlocklist::kind(&()));
 }
 
 /// Generate CRD YAML manifests (for installation)

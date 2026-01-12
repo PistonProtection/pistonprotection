@@ -4,8 +4,8 @@
 //! gateway service to sync protection rules and configurations.
 
 use crate::crd::{
-    BackendSpec, DDoSProtection, FilterAction, FilterRule, FilterRuleType,
-    GeoFilterMode, Protocol, RateLimitSpec,
+    BackendSpec, DDoSProtection, FilterAction, FilterRule, FilterRuleType, GeoFilterMode, Protocol,
+    RateLimitSpec,
 };
 use crate::error::{Error, Result};
 use backoff::{backoff::Backoff, ExponentialBackoff};
@@ -63,8 +63,8 @@ impl Default for GatewayClientConfig {
 impl GatewayClientConfig {
     /// Create config from environment variables
     pub fn from_env() -> Self {
-        let address = std::env::var("GATEWAY_ADDRESS")
-            .unwrap_or_else(|_| "http://gateway:50051".to_string());
+        let address =
+            std::env::var("GATEWAY_ADDRESS").unwrap_or_else(|_| "http://gateway:50051".to_string());
 
         let connect_timeout = std::env::var("GATEWAY_CONNECT_TIMEOUT")
             .ok()
@@ -131,10 +131,7 @@ impl GatewayClient {
         let mut guard = self.channel.write().await;
         *guard = Some(channel);
 
-        info!(
-            "Connected to gateway service at {}",
-            self.config.address
-        );
+        info!("Connected to gateway service at {}", self.config.address);
 
         Ok(())
     }
@@ -265,11 +262,7 @@ impl GatewayClient {
         );
 
         // Generate a deterministic backend ID based on resource and backend name
-        let backend_id = format!(
-            "{}:{}",
-            resource_key.replace('/', ":"),
-            backend.name
-        );
+        let backend_id = format!("{}:{}", resource_key.replace('/', ":"), backend.name);
 
         // Build backend configuration
         let backend_config = BackendConfig {
@@ -345,27 +338,28 @@ impl GatewayClient {
             let _channel = self.get_channel().await?;
 
             // Build filter rule configuration
-            let filter_config = FilterConfig {
-                id: resource_key.clone(),
-                name: rule.spec.name.clone(),
-                description: rule.spec.description.clone(),
-                rule_type: rule_type_to_string(&rule.spec.rule_type),
-                action: rule.spec.action.to_grpc_action(),
-                priority: rule.spec.priority,
-                enabled: rule.spec.enabled,
-                config: FilterRuleConfigDto {
-                    ip_ranges: rule.spec.config.ip_ranges.clone(),
-                    countries: rule.spec.config.countries.clone(),
-                    asns: rule.spec.config.asns.clone(),
-                    rate_limit: rule.spec.config.rate_limit.as_ref().map(|rl| {
-                        RateLimitConfig {
-                            pps_per_ip: rl.pps_per_ip,
-                            burst: rl.burst,
-                            global_pps: rl.global_pps,
-                        }
-                    }),
-                },
-            };
+            let filter_config =
+                FilterConfig {
+                    id: resource_key.clone(),
+                    name: rule.spec.name.clone(),
+                    description: rule.spec.description.clone(),
+                    rule_type: rule_type_to_string(&rule.spec.rule_type),
+                    action: rule.spec.action.to_grpc_action(),
+                    priority: rule.spec.priority,
+                    enabled: rule.spec.enabled,
+                    config: FilterRuleConfigDto {
+                        ip_ranges: rule.spec.config.ip_ranges.clone(),
+                        countries: rule.spec.config.countries.clone(),
+                        asns: rule.spec.config.asns.clone(),
+                        rate_limit: rule.spec.config.rate_limit.as_ref().map(|rl| {
+                            RateLimitConfig {
+                                pps_per_ip: rl.pps_per_ip,
+                                burst: rl.burst,
+                                global_pps: rl.global_pps,
+                            }
+                        }),
+                    },
+                };
 
             // In production, this would call the actual gRPC service
             // filter_client.create_or_update_rule(filter_config).await?;
@@ -461,10 +455,7 @@ impl GatewayClient {
     }
 
     /// Stream configuration updates to workers
-    pub async fn stream_config_updates(
-        &self,
-        _resource_key: &str,
-    ) -> Result<ConfigUpdateStream> {
+    pub async fn stream_config_updates(&self, _resource_key: &str) -> Result<ConfigUpdateStream> {
         let _channel = self.get_channel().await?;
 
         // In production, this would set up a streaming RPC
@@ -595,7 +586,10 @@ mod tests {
 
     #[test]
     fn test_rule_type_conversion() {
-        assert_eq!(rule_type_to_string(&FilterRuleType::IpBlocklist), "ip_blocklist");
+        assert_eq!(
+            rule_type_to_string(&FilterRuleType::IpBlocklist),
+            "ip_blocklist"
+        );
         assert_eq!(rule_type_to_string(&FilterRuleType::GeoBlock), "geo_block");
     }
 }

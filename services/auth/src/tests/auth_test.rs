@@ -1,6 +1,6 @@
 //! User authentication tests (registration, login)
 
-use super::test_utils::{constants, generate_test_id, hash_password, TestUser};
+use super::test_utils::{TestUser, constants, generate_test_id, hash_password};
 use crate::services::auth::{AuthService, LoginRequest, RegisterRequest};
 use std::time::Duration;
 
@@ -61,9 +61,11 @@ mod registration_tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().to_lowercase().contains("email")
-            || err.to_string().to_lowercase().contains("exist")
-            || err.to_string().to_lowercase().contains("duplicate"));
+        assert!(
+            err.to_string().to_lowercase().contains("email")
+                || err.to_string().to_lowercase().contains("exist")
+                || err.to_string().to_lowercase().contains("duplicate")
+        );
     }
 
     /// Test registration with invalid email fails
@@ -153,7 +155,10 @@ mod registration_tests {
         assert!(result.is_ok());
         let user = result.unwrap();
         // Email should be normalized (lowercase, trimmed)
-        assert!(user.email == "testuser@example.com" || user.email.to_lowercase() == "testuser@example.com");
+        assert!(
+            user.email == "testuser@example.com"
+                || user.email.to_lowercase() == "testuser@example.com"
+        );
     }
 }
 
@@ -213,9 +218,11 @@ mod login_tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().to_lowercase().contains("password")
-            || err.to_string().to_lowercase().contains("invalid")
-            || err.to_string().to_lowercase().contains("credential"));
+        assert!(
+            err.to_string().to_lowercase().contains("password")
+                || err.to_string().to_lowercase().contains("invalid")
+                || err.to_string().to_lowercase().contains("credential")
+        );
     }
 
     /// Test login with non-existent user fails
@@ -323,7 +330,9 @@ mod password_reset_tests {
     async fn test_request_reset_nonexistent() {
         let service = create_test_auth_service();
 
-        let result = service.request_password_reset("nonexistent@example.com").await;
+        let result = service
+            .request_password_reset("nonexistent@example.com")
+            .await;
 
         // Should succeed (or silently fail) to not reveal user existence
         assert!(result.is_ok());
@@ -343,7 +352,10 @@ mod password_reset_tests {
         service.register(register).await.unwrap();
 
         // Request reset
-        let token = service.request_password_reset("complete@example.com").await.unwrap();
+        let token = service
+            .request_password_reset("complete@example.com")
+            .await
+            .unwrap();
 
         // Complete reset
         let result = service.complete_password_reset(&token, "NewP@ss456!").await;
@@ -370,7 +382,9 @@ mod password_reset_tests {
     async fn test_reset_invalid_token() {
         let service = create_test_auth_service();
 
-        let result = service.complete_password_reset("invalid-token", "NewP@ss123!").await;
+        let result = service
+            .complete_password_reset("invalid-token", "NewP@ss123!")
+            .await;
 
         assert!(result.is_err());
     }

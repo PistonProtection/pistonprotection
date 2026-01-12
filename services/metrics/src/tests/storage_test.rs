@@ -1,8 +1,8 @@
 //! Time-series storage tests
 
-use super::test_utils::{constants, generate_time_series, TestTrafficMetrics};
+use super::test_utils::{TestTrafficMetrics, constants, generate_time_series};
 use crate::storage::{
-    MetricStorage, StorageConfig, StorageBackend, RetentionPolicy, TimeSeriesPoint,
+    MetricStorage, RetentionPolicy, StorageBackend, StorageConfig, TimeSeriesPoint,
 };
 use chrono::{Duration, Utc};
 use std::time::Duration as StdDuration;
@@ -12,9 +12,9 @@ fn create_test_storage() -> MetricStorage {
     let config = StorageConfig {
         backend: StorageBackend::Memory,
         retention: RetentionPolicy {
-            raw_retention: StdDuration::from_secs(3600),      // 1 hour
-            hourly_retention: StdDuration::from_secs(86400),  // 1 day
-            daily_retention: StdDuration::from_secs(604800),  // 1 week
+            raw_retention: StdDuration::from_secs(3600),     // 1 hour
+            hourly_retention: StdDuration::from_secs(86400), // 1 day
+            daily_retention: StdDuration::from_secs(604800), // 1 week
         },
         write_buffer_size: 1000,
         max_points_per_query: 10000,
@@ -80,12 +80,15 @@ mod write_tests {
 
         // Write more than buffer size
         for i in 0..50 {
-            storage.write(TimeSeriesPoint {
-                metric: "buffer_test".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "buffer_test".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
         // Should have flushed multiple times
@@ -109,7 +112,9 @@ mod write_tests {
                         value: j as f64,
                         timestamp: Utc::now(),
                         tags: vec![],
-                    }).await.unwrap();
+                    })
+                    .await
+                    .unwrap();
                 }
             }));
         }
@@ -121,7 +126,10 @@ mod write_tests {
         // Should have written all points
         let mut total = 0;
         for i in 0..10 {
-            total += storage.point_count(&format!("concurrent_{}", i)).await.unwrap();
+            total += storage
+                .point_count(&format!("concurrent_{}", i))
+                .await
+                .unwrap();
         }
         assert_eq!(total, 1000);
     }
@@ -143,21 +151,21 @@ mod read_tests {
 
         // Write points
         for i in 0..100 {
-            storage.write(TimeSeriesPoint {
-                metric: "read_test".to_string(),
-                value: i as f64,
-                timestamp: start + Duration::seconds(i * 6),
-                tags: vec![("backend".to_string(), "test".to_string())],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "read_test".to_string(),
+                    value: i as f64,
+                    timestamp: start + Duration::seconds(i * 6),
+                    tags: vec![("backend".to_string(), "test".to_string())],
+                })
+                .await
+                .unwrap();
         }
 
         // Read points
-        let result = storage.read(
-            "read_test",
-            &[("backend", "test")],
-            start,
-            Utc::now(),
-        ).await;
+        let result = storage
+            .read("read_test", &[("backend", "test")], start, Utc::now())
+            .await;
 
         assert!(result.is_ok());
         let points = result.unwrap();
@@ -172,21 +180,26 @@ mod read_tests {
 
         // Write points
         for i in 0..100 {
-            storage.write(TimeSeriesPoint {
-                metric: "range_test".to_string(),
-                value: i as f64,
-                timestamp: start + Duration::seconds(i * 6),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "range_test".to_string(),
+                    value: i as f64,
+                    timestamp: start + Duration::seconds(i * 6),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
         // Read only middle portion
-        let result = storage.read(
-            "range_test",
-            &[],
-            start + Duration::minutes(2),
-            start + Duration::minutes(5),
-        ).await;
+        let result = storage
+            .read(
+                "range_test",
+                &[],
+                start + Duration::minutes(2),
+                start + Duration::minutes(5),
+            )
+            .await;
 
         assert!(result.is_ok());
         let points = result.unwrap();
@@ -201,30 +214,38 @@ mod read_tests {
 
         // Write points with different tags
         for i in 0..50 {
-            storage.write(TimeSeriesPoint {
-                metric: "tag_test".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![("type".to_string(), "a".to_string())],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "tag_test".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![("type".to_string(), "a".to_string())],
+                })
+                .await
+                .unwrap();
         }
 
         for i in 0..30 {
-            storage.write(TimeSeriesPoint {
-                metric: "tag_test".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![("type".to_string(), "b".to_string())],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "tag_test".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![("type".to_string(), "b".to_string())],
+                })
+                .await
+                .unwrap();
         }
 
         // Read only type=a
-        let result = storage.read(
-            "tag_test",
-            &[("type", "a")],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .read(
+                "tag_test",
+                &[("type", "a")],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         let points = result.unwrap();
@@ -236,12 +257,14 @@ mod read_tests {
     async fn test_read_nonexistent() {
         let storage = create_test_storage();
 
-        let result = storage.read(
-            "nonexistent_metric",
-            &[],
-            Utc::now() - Duration::hours(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .read(
+                "nonexistent_metric",
+                &[],
+                Utc::now() - Duration::hours(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
@@ -260,21 +283,26 @@ mod read_tests {
 
         // Write many points
         for i in 0..100 {
-            storage.write(TimeSeriesPoint {
-                metric: "limit_test".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "limit_test".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
         // Read should be limited
-        let result = storage.read(
-            "limit_test",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .read(
+                "limit_test",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         let points = result.unwrap();
@@ -297,20 +325,25 @@ mod aggregation_query_tests {
 
         // Write known values
         for i in 1..=10 {
-            storage.write(TimeSeriesPoint {
-                metric: "sum_query".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "sum_query".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
-        let result = storage.sum(
-            "sum_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .sum(
+                "sum_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 55.0);
@@ -323,20 +356,25 @@ mod aggregation_query_tests {
 
         // Write known values
         for i in 1..=100 {
-            storage.write(TimeSeriesPoint {
-                metric: "avg_query".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "avg_query".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
-        let result = storage.avg(
-            "avg_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .avg(
+                "avg_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 50.5);
@@ -348,27 +386,36 @@ mod aggregation_query_tests {
         let storage = create_test_storage();
 
         for v in vec![50.0, 10.0, 100.0, 25.0, 75.0] {
-            storage.write(TimeSeriesPoint {
-                metric: "minmax_query".to_string(),
-                value: v,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "minmax_query".to_string(),
+                    value: v,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
-        let min = storage.min(
-            "minmax_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await.unwrap();
+        let min = storage
+            .min(
+                "minmax_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await
+            .unwrap();
 
-        let max = storage.max(
-            "minmax_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await.unwrap();
+        let max = storage
+            .max(
+                "minmax_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await
+            .unwrap();
 
         assert_eq!(min, 10.0);
         assert_eq!(max, 100.0);
@@ -380,20 +427,25 @@ mod aggregation_query_tests {
         let storage = create_test_storage();
 
         for i in 0..42 {
-            storage.write(TimeSeriesPoint {
-                metric: "count_query".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "count_query".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
-        let result = storage.count(
-            "count_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-        ).await;
+        let result = storage
+            .count(
+                "count_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+            )
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
@@ -405,29 +457,38 @@ mod aggregation_query_tests {
         let storage = create_test_storage();
 
         for i in 1..=100 {
-            storage.write(TimeSeriesPoint {
-                metric: "percentile_query".to_string(),
-                value: i as f64,
-                timestamp: Utc::now(),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "percentile_query".to_string(),
+                    value: i as f64,
+                    timestamp: Utc::now(),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
-        let p50 = storage.percentile(
-            "percentile_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-            0.5,
-        ).await.unwrap();
+        let p50 = storage
+            .percentile(
+                "percentile_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+                0.5,
+            )
+            .await
+            .unwrap();
 
-        let p99 = storage.percentile(
-            "percentile_query",
-            &[],
-            Utc::now() - Duration::minutes(1),
-            Utc::now(),
-            0.99,
-        ).await.unwrap();
+        let p99 = storage
+            .percentile(
+                "percentile_query",
+                &[],
+                Utc::now() - Duration::minutes(1),
+                Utc::now(),
+                0.99,
+            )
+            .await
+            .unwrap();
 
         assert!(p50 >= 49.0 && p50 <= 51.0);
         assert!(p99 >= 98.0);
@@ -458,31 +519,40 @@ mod retention_tests {
         let storage = MetricStorage::new(config);
 
         // Write old data
-        storage.write(TimeSeriesPoint {
-            metric: "retention_test".to_string(),
-            value: 1.0,
-            timestamp: Utc::now() - Duration::minutes(5), // Old
-            tags: vec![],
-        }).await.unwrap();
+        storage
+            .write(TimeSeriesPoint {
+                metric: "retention_test".to_string(),
+                value: 1.0,
+                timestamp: Utc::now() - Duration::minutes(5), // Old
+                tags: vec![],
+            })
+            .await
+            .unwrap();
 
         // Write recent data
-        storage.write(TimeSeriesPoint {
-            metric: "retention_test".to_string(),
-            value: 2.0,
-            timestamp: Utc::now(), // Recent
-            tags: vec![],
-        }).await.unwrap();
+        storage
+            .write(TimeSeriesPoint {
+                metric: "retention_test".to_string(),
+                value: 2.0,
+                timestamp: Utc::now(), // Recent
+                tags: vec![],
+            })
+            .await
+            .unwrap();
 
         // Run cleanup
         storage.cleanup().await.unwrap();
 
         // Old data should be removed
-        let points = storage.read(
-            "retention_test",
-            &[],
-            Utc::now() - Duration::hours(1),
-            Utc::now(),
-        ).await.unwrap();
+        let points = storage
+            .read(
+                "retention_test",
+                &[],
+                Utc::now() - Duration::hours(1),
+                Utc::now(),
+            )
+            .await
+            .unwrap();
 
         assert_eq!(points.len(), 1);
         assert_eq!(points[0].value, 2.0);
@@ -496,24 +566,30 @@ mod retention_tests {
 
         // Write high-resolution data
         for i in 0..7200 {
-            storage.write(TimeSeriesPoint {
-                metric: "downsample_retention".to_string(),
-                value: (i % 100) as f64,
-                timestamp: start + Duration::seconds(i),
-                tags: vec![],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "downsample_retention".to_string(),
+                    value: (i % 100) as f64,
+                    timestamp: start + Duration::seconds(i),
+                    tags: vec![],
+                })
+                .await
+                .unwrap();
         }
 
         // Trigger downsampling
         storage.downsample_old_data().await.unwrap();
 
         // Old data should be downsampled (fewer points)
-        let points = storage.read(
-            "downsample_retention",
-            &[],
-            start,
-            start + Duration::hours(1),
-        ).await.unwrap();
+        let points = storage
+            .read(
+                "downsample_retention",
+                &[],
+                start,
+                start + Duration::hours(1),
+            )
+            .await
+            .unwrap();
 
         // Should have fewer than 3600 points after downsampling
         assert!(points.len() < 3600);
@@ -533,19 +609,25 @@ mod listing_tests {
     async fn test_list_metrics() {
         let storage = create_test_storage();
 
-        storage.write(TimeSeriesPoint {
-            metric: "metric_a".to_string(),
-            value: 1.0,
-            timestamp: Utc::now(),
-            tags: vec![],
-        }).await.unwrap();
+        storage
+            .write(TimeSeriesPoint {
+                metric: "metric_a".to_string(),
+                value: 1.0,
+                timestamp: Utc::now(),
+                tags: vec![],
+            })
+            .await
+            .unwrap();
 
-        storage.write(TimeSeriesPoint {
-            metric: "metric_b".to_string(),
-            value: 2.0,
-            timestamp: Utc::now(),
-            tags: vec![],
-        }).await.unwrap();
+        storage
+            .write(TimeSeriesPoint {
+                metric: "metric_b".to_string(),
+                value: 2.0,
+                timestamp: Utc::now(),
+                tags: vec![],
+            })
+            .await
+            .unwrap();
 
         let metrics = storage.list_metrics().await.unwrap();
 
@@ -559,15 +641,21 @@ mod listing_tests {
         let storage = create_test_storage();
 
         for region in vec!["us-east", "us-west", "eu-central"] {
-            storage.write(TimeSeriesPoint {
-                metric: "tag_values_test".to_string(),
-                value: 1.0,
-                timestamp: Utc::now(),
-                tags: vec![("region".to_string(), region.to_string())],
-            }).await.unwrap();
+            storage
+                .write(TimeSeriesPoint {
+                    metric: "tag_values_test".to_string(),
+                    value: 1.0,
+                    timestamp: Utc::now(),
+                    tags: vec![("region".to_string(), region.to_string())],
+                })
+                .await
+                .unwrap();
         }
 
-        let values = storage.list_tag_values("tag_values_test", "region").await.unwrap();
+        let values = storage
+            .list_tag_values("tag_values_test", "region")
+            .await
+            .unwrap();
 
         assert!(values.contains(&"us-east".to_string()));
         assert!(values.contains(&"us-west".to_string()));

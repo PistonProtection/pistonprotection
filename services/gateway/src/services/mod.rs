@@ -1,7 +1,11 @@
 //! Service layer for the gateway
 
 use deadpool_redis::Pool as RedisPool;
-use pistonprotection_common::{config::Config, redis::CacheService, scoring::{ScoringConfig, ScoringEngine}};
+use pistonprotection_common::{
+    config::Config,
+    redis::CacheService,
+    scoring::{ScoringConfig, ScoringEngine},
+};
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -46,10 +50,8 @@ impl AppState {
 
         // Initialize connection pool manager
         let connection_pool_config = ConnectionPoolConfig::default();
-        let connection_pools = ConnectionPoolManager::new(
-            connection_pool_config,
-            Arc::clone(&circuit_breakers),
-        );
+        let connection_pools =
+            ConnectionPoolManager::new(connection_pool_config, Arc::clone(&circuit_breakers));
 
         // Initialize scoring engine with default config
         let scoring_engine = Arc::new(ScoringEngine::new(ScoringConfig::default()));
@@ -83,10 +85,8 @@ impl AppState {
             load_balancing_algorithm,
         ));
 
-        let connection_pools = ConnectionPoolManager::new(
-            connection_pool_config,
-            Arc::clone(&circuit_breakers),
-        );
+        let connection_pools =
+            ConnectionPoolManager::new(connection_pool_config, Arc::clone(&circuit_breakers));
 
         // Initialize scoring engine with default config
         let scoring_engine = Arc::new(ScoringEngine::new(ScoringConfig::default()));

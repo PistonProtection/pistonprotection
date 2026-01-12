@@ -9,17 +9,17 @@ use crate::ebpf::{interface::NetworkInterface, loader::EbpfLoader};
 use parking_lot::RwLock;
 use pistonprotection_common::error::{Error, Result};
 use pistonprotection_proto::worker::{
-    worker_service_client::WorkerServiceClient, BackendMetrics, DeregisterRequest,
-    FilterConfig, GetConfigRequest, HeartbeatRequest, HeartbeatResponse, InterfaceMetrics,
-    RegisterRequest, ReportAttackRequest, ReportMetricsRequest, StreamConfigRequest, Worker,
-    WorkerCapabilities, WorkerStatus,
+    BackendMetrics, DeregisterRequest, FilterConfig, GetConfigRequest, HeartbeatRequest,
+    HeartbeatResponse, InterfaceMetrics, RegisterRequest, ReportAttackRequest,
+    ReportMetricsRequest, StreamConfigRequest, Worker, WorkerCapabilities, WorkerStatus,
+    worker_service_client::WorkerServiceClient,
 };
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::time::Duration;
-use tokio::sync::{broadcast, mpsc, watch, Mutex};
-use tokio::time::{interval, sleep, timeout, Instant};
+use tokio::sync::{Mutex, broadcast, mpsc, watch};
+use tokio::time::{Instant, interval, sleep, timeout};
 use tonic::transport::{Channel, Endpoint};
 use tracing::{debug, error, info, warn};
 
@@ -132,7 +132,9 @@ impl ControlPlaneConfig {
         if let Ok(labels_str) = std::env::var("PISTON_WORKER_LABELS") {
             for pair in labels_str.split(',') {
                 if let Some((key, value)) = pair.split_once('=') {
-                    config.labels.insert(key.trim().to_string(), value.trim().to_string());
+                    config
+                        .labels
+                        .insert(key.trim().to_string(), value.trim().to_string());
                 }
             }
         }
@@ -316,10 +318,15 @@ impl ControlPlaneClient {
     /// - Configuration streaming (if enabled)
     pub async fn start(&self) -> Result<()> {
         if self.running.swap(true, Ordering::SeqCst) {
-            return Err(Error::Internal("Control plane client already running".to_string()));
+            return Err(Error::Internal(
+                "Control plane client already running".to_string(),
+            ));
         }
 
-        info!("Starting control plane client, connecting to {}", self.config.address);
+        info!(
+            "Starting control plane client, connecting to {}",
+            self.config.address
+        );
 
         // Initial connection
         self.connect_and_register().await?;
@@ -385,7 +392,10 @@ impl ControlPlaneClient {
         // Store worker ID
         *self.worker_id.write() = Some(response.worker_id.clone());
 
-        info!("Registered with control plane, worker_id: {}", response.worker_id);
+        info!(
+            "Registered with control plane, worker_id: {}",
+            response.worker_id
+        );
 
         // Apply initial configuration if provided
         if let Some(initial_config) = response.initial_config {
@@ -428,12 +438,15 @@ impl ControlPlaneClient {
                 .map(|iface| pistonprotection_proto::worker::NetworkInterface {
                     name: iface.name.clone(),
                     ip_address: iface.ip_address.map(|ip| ip.into()),
-                    mac_address: iface.mac_address.map(|mac| {
-                        mac.iter()
-                            .map(|b| format!("{:02x}", b))
-                            .collect::<Vec<_>>()
-                            .join(":")
-                    }).unwrap_or_default(),
+                    mac_address: iface
+                        .mac_address
+                        .map(|mac| {
+                            mac.iter()
+                                .map(|b| format!("{:02x}", b))
+                                .collect::<Vec<_>>()
+                                .join(":")
+                        })
+                        .unwrap_or_default(),
                     xdp_status: None,
                     rx_bytes: 0,
                     tx_bytes: 0,
@@ -851,7 +864,10 @@ impl ControlPlaneClient {
 
     /// Report an attack to the control plane
     pub async fn report_attack(&self, attack: AttackInfo) -> Result<()> {
-        let worker_id = self.worker_id.read().clone()
+        let worker_id = self
+            .worker_id
+            .read()
+            .clone()
             .ok_or_else(|| Error::Internal("Not registered".to_string()))?;
 
         let request = ReportAttackRequest {
@@ -873,10 +889,13 @@ impl ControlPlaneClient {
 
         let mut client_guard = self.client.lock().await;
         if let Some(ref mut grpc_client) = *client_guard {
-            let response = timeout(self.config.request_timeout, grpc_client.report_attack(request))
-                .await
-                .map_err(|_| Error::Internal("Attack report timeout".to_string()))?
-                .map_err(|e| Error::Internal(format!("Failed to report attack: {}", e)))?;
+            let response = timeout(
+                self.config.request_timeout,
+                grpc_client.report_attack(request),
+            )
+            .await
+            .map_err(|_| Error::Internal("Attack report timeout".to_string()))?
+            .map_err(|e| Error::Internal(format!("Failed to report attack: {}", e)))?;
 
             let response = response.into_inner();
 
@@ -886,7 +905,9 @@ impl ControlPlaneClient {
                     "Received {} block updates from control plane",
                     response.block_updates.len()
                 );
-                self.config_sync.apply_map_updates(&response.block_updates).await?;
+                self.config_sync
+                    .apply_map_updates(&response.block_updates)
+                    .await?;
             }
 
             if response.escalate_protection {
@@ -903,7 +924,10 @@ impl ControlPlaneClient {
 
     /// Fetch configuration on-demand
     pub async fn fetch_config(&self) -> Result<FilterConfig> {
-        let worker_id = self.worker_id.read().clone()
+        let worker_id = self
+            .worker_id
+            .read()
+            .clone()
             .ok_or_else(|| Error::Internal("Not registered".to_string()))?;
 
         let current_version = self.config_version.load(Ordering::SeqCst);
@@ -924,7 +948,9 @@ impl ControlPlaneClient {
 
             if response.up_to_date {
                 // Return current config from sync manager
-                return self.config_sync.current_config()
+                return self
+                    .config_sync
+                    .current_config()
                     .ok_or_else(|| Error::Internal("No configuration loaded".to_string()));
             }
 
@@ -953,11 +979,7 @@ impl ControlPlaneClient {
             let mut client_guard = self.client.lock().await;
             if let Some(ref mut grpc_client) = *client_guard {
                 let request = DeregisterRequest { worker_id };
-                let _ = timeout(
-                    Duration::from_secs(5),
-                    grpc_client.deregister(request),
-                )
-                .await;
+                let _ = timeout(Duration::from_secs(5), grpc_client.deregister(request)).await;
             }
         }
 
@@ -1007,12 +1029,15 @@ async fn reconnect(
             .map(|iface| pistonprotection_proto::worker::NetworkInterface {
                 name: iface.name.clone(),
                 ip_address: iface.ip_address.map(|ip| ip.into()),
-                mac_address: iface.mac_address.map(|mac| {
-                    mac.iter()
-                        .map(|b| format!("{:02x}", b))
-                        .collect::<Vec<_>>()
-                        .join(":")
-                }).unwrap_or_default(),
+                mac_address: iface
+                    .mac_address
+                    .map(|mac| {
+                        mac.iter()
+                            .map(|b| format!("{:02x}", b))
+                            .collect::<Vec<_>>()
+                            .join(":")
+                    })
+                    .unwrap_or_default(),
                 xdp_status: None,
                 rx_bytes: 0,
                 tx_bytes: 0,
@@ -1046,10 +1071,13 @@ async fn reconnect(
         worker: Some(worker_info),
     };
 
-    let response = timeout(config.request_timeout, new_client.register(register_request))
-        .await
-        .map_err(|_| Error::Internal("Registration timeout".to_string()))?
-        .map_err(|e| Error::Internal(format!("Registration failed: {}", e)))?;
+    let response = timeout(
+        config.request_timeout,
+        new_client.register(register_request),
+    )
+    .await
+    .map_err(|_| Error::Internal("Registration timeout".to_string()))?
+    .map_err(|e| Error::Internal(format!("Registration failed: {}", e)))?;
 
     let response = response.into_inner();
 

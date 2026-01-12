@@ -1,14 +1,14 @@
 //! Unit tests for HTTP handlers
 
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
 use tower::ServiceExt;
 
 use super::mock_db::{MockCache, MockDatabase};
-use super::test_utils::{constants, create_test_app_state, TestFixture};
+use super::test_utils::{TestFixture, constants, create_test_app_state};
 
 /// Test health check endpoint returns healthy status
 #[tokio::test]
@@ -94,12 +94,14 @@ async fn test_metrics_endpoint() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let headers = response.headers();
-    assert!(headers
-        .get("content-type")
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .contains("text/plain"));
+    assert!(
+        headers
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("text/plain")
+    );
 }
 
 /// Test version endpoint returns version info

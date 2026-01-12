@@ -70,16 +70,14 @@ pub fn discover_interfaces() -> Result<Vec<NetworkInterface>> {
         let is_loopback = flags.contains(nix::net::if_::InterfaceFlags::IFF_LOOPBACK);
 
         // Get IP address
-        let ip_address = ifaddr.address.and_then(|addr| {
-            match addr.family() {
-                Some(nix::sys::socket::AddressFamily::Inet) => {
-                    addr.as_sockaddr_in().map(|sin| IpAddr::V4(sin.ip()))
-                }
-                Some(nix::sys::socket::AddressFamily::Inet6) => {
-                    addr.as_sockaddr_in6().map(|sin6| IpAddr::V6(sin6.ip()))
-                }
-                _ => None,
+        let ip_address = ifaddr.address.and_then(|addr| match addr.family() {
+            Some(nix::sys::socket::AddressFamily::Inet) => {
+                addr.as_sockaddr_in().map(|sin| IpAddr::V4(sin.ip()))
             }
+            Some(nix::sys::socket::AddressFamily::Inet6) => {
+                addr.as_sockaddr_in6().map(|sin6| IpAddr::V6(sin6.ip()))
+            }
+            _ => None,
         });
 
         // Get MAC address (if available from link layer address)
@@ -128,7 +126,10 @@ pub fn get_interface(name: &str) -> Result<NetworkInterface> {
 /// Get all interfaces suitable for XDP
 pub fn get_xdp_interfaces() -> Result<Vec<NetworkInterface>> {
     let interfaces = discover_interfaces()?;
-    Ok(interfaces.into_iter().filter(|i| i.supports_xdp()).collect())
+    Ok(interfaces
+        .into_iter()
+        .filter(|i| i.supports_xdp())
+        .collect())
 }
 
 #[cfg(test)]

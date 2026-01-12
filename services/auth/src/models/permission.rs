@@ -87,7 +87,13 @@ impl Actions {
     pub const ADMIN: &'static str = "admin";
 
     pub fn all() -> Vec<&'static str> {
-        vec![Self::READ, Self::CREATE, Self::UPDATE, Self::DELETE, Self::ADMIN]
+        vec![
+            Self::READ,
+            Self::CREATE,
+            Self::UPDATE,
+            Self::DELETE,
+            Self::ADMIN,
+        ]
     }
 }
 
@@ -237,13 +243,23 @@ mod tests {
         perms.insert("backends:create".to_string());
         perms.insert("domains:*".to_string());
 
-        assert!(PermissionHelper::check_permission(&perms, "backends", "read"));
-        assert!(PermissionHelper::check_permission(&perms, "backends", "create"));
-        assert!(!PermissionHelper::check_permission(&perms, "backends", "delete"));
+        assert!(PermissionHelper::check_permission(
+            &perms, "backends", "read"
+        ));
+        assert!(PermissionHelper::check_permission(
+            &perms, "backends", "create"
+        ));
+        assert!(!PermissionHelper::check_permission(
+            &perms, "backends", "delete"
+        ));
 
         // Wildcard for domains
-        assert!(PermissionHelper::check_permission(&perms, "domains", "read"));
-        assert!(PermissionHelper::check_permission(&perms, "domains", "delete"));
+        assert!(PermissionHelper::check_permission(
+            &perms, "domains", "read"
+        ));
+        assert!(PermissionHelper::check_permission(
+            &perms, "domains", "delete"
+        ));
     }
 
     #[test]
@@ -251,7 +267,9 @@ mod tests {
         let mut perms = HashSet::new();
         perms.insert("*".to_string());
 
-        assert!(PermissionHelper::check_permission(&perms, "anything", "anything"));
+        assert!(PermissionHelper::check_permission(
+            &perms, "anything", "anything"
+        ));
     }
 
     #[test]

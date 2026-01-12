@@ -1,8 +1,8 @@
 //! Aggregator logic tests
 
-use super::test_utils::{constants, generate_time_series, TestTrafficMetrics};
+use super::test_utils::{TestTrafficMetrics, constants, generate_time_series};
 use crate::aggregator::{
-    Aggregator, AggregatorConfig, AggregationInterval, AggregationType, MetricPoint,
+    AggregationInterval, AggregationType, Aggregator, AggregatorConfig, MetricPoint,
 };
 use chrono::{Duration, Utc};
 use std::time::Duration as StdDuration;
@@ -34,9 +34,10 @@ mod recording_tests {
         let point = MetricPoint {
             name: "requests_total".to_string(),
             value: 100.0,
-            tags: vec![
-                ("backend_id".to_string(), constants::TEST_BACKEND_ID.to_string()),
-            ],
+            tags: vec![(
+                "backend_id".to_string(),
+                constants::TEST_BACKEND_ID.to_string(),
+            )],
             timestamp: Utc::now(),
         };
 
@@ -54,16 +55,20 @@ mod recording_tests {
             let point = MetricPoint {
                 name: "requests_total".to_string(),
                 value: i as f64,
-                tags: vec![
-                    ("backend_id".to_string(), constants::TEST_BACKEND_ID.to_string()),
-                ],
+                tags: vec![(
+                    "backend_id".to_string(),
+                    constants::TEST_BACKEND_ID.to_string(),
+                )],
                 timestamp: Utc::now(),
             };
             aggregator.record(point).unwrap();
         }
 
         // Should have aggregated the values
-        let stats = aggregator.get_stats("requests_total", &[("backend_id", constants::TEST_BACKEND_ID)]);
+        let stats = aggregator.get_stats(
+            "requests_total",
+            &[("backend_id", constants::TEST_BACKEND_ID)],
+        );
         assert!(stats.is_some());
     }
 
@@ -73,20 +78,24 @@ mod recording_tests {
         let aggregator = create_test_aggregator();
 
         // Record for backend 1
-        aggregator.record(MetricPoint {
-            name: "requests".to_string(),
-            value: 100.0,
-            tags: vec![("backend_id".to_string(), "backend-1".to_string())],
-            timestamp: Utc::now(),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "requests".to_string(),
+                value: 100.0,
+                tags: vec![("backend_id".to_string(), "backend-1".to_string())],
+                timestamp: Utc::now(),
+            })
+            .unwrap();
 
         // Record for backend 2
-        aggregator.record(MetricPoint {
-            name: "requests".to_string(),
-            value: 200.0,
-            tags: vec![("backend_id".to_string(), "backend-2".to_string())],
-            timestamp: Utc::now(),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "requests".to_string(),
+                value: 200.0,
+                tags: vec![("backend_id".to_string(), "backend-2".to_string())],
+                timestamp: Utc::now(),
+            })
+            .unwrap();
 
         // Each should be separate
         let stats1 = aggregator.get_stats("requests", &[("backend_id", "backend-1")]);
@@ -102,8 +111,12 @@ mod recording_tests {
     fn test_record_counter() {
         let aggregator = create_test_aggregator();
 
-        aggregator.increment_counter("errors_total", &[("type", "timeout")], 1.0).unwrap();
-        aggregator.increment_counter("errors_total", &[("type", "timeout")], 5.0).unwrap();
+        aggregator
+            .increment_counter("errors_total", &[("type", "timeout")], 1.0)
+            .unwrap();
+        aggregator
+            .increment_counter("errors_total", &[("type", "timeout")], 5.0)
+            .unwrap();
 
         let stats = aggregator.get_stats("errors_total", &[("type", "timeout")]);
         assert!(stats.is_some());
@@ -115,8 +128,12 @@ mod recording_tests {
     fn test_record_gauge() {
         let aggregator = create_test_aggregator();
 
-        aggregator.set_gauge("active_connections", &[("backend", "test")], 100.0).unwrap();
-        aggregator.set_gauge("active_connections", &[("backend", "test")], 150.0).unwrap();
+        aggregator
+            .set_gauge("active_connections", &[("backend", "test")], 100.0)
+            .unwrap();
+        aggregator
+            .set_gauge("active_connections", &[("backend", "test")], 150.0)
+            .unwrap();
 
         let stats = aggregator.get_stats("active_connections", &[("backend", "test")]);
         assert!(stats.is_some());
@@ -130,7 +147,9 @@ mod recording_tests {
         let aggregator = create_test_aggregator();
 
         for i in 1..=100 {
-            aggregator.record_histogram("latency_ms", &[("endpoint", "/api")], i as f64).unwrap();
+            aggregator
+                .record_histogram("latency_ms", &[("endpoint", "/api")], i as f64)
+                .unwrap();
         }
 
         let percentiles = aggregator.get_percentiles("latency_ms", &[("endpoint", "/api")]);
@@ -158,12 +177,14 @@ mod aggregation_tests {
         let aggregator = create_test_aggregator();
 
         for i in 1..=10 {
-            aggregator.record(MetricPoint {
-                name: "sum_test".to_string(),
-                value: i as f64,
-                tags: vec![],
-                timestamp: Utc::now(),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "sum_test".to_string(),
+                    value: i as f64,
+                    tags: vec![],
+                    timestamp: Utc::now(),
+                })
+                .unwrap();
         }
 
         let stats = aggregator.get_stats("sum_test", &[]).unwrap();
@@ -176,12 +197,14 @@ mod aggregation_tests {
         let aggregator = create_test_aggregator();
 
         for _ in 0..50 {
-            aggregator.record(MetricPoint {
-                name: "count_test".to_string(),
-                value: 1.0,
-                tags: vec![],
-                timestamp: Utc::now(),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "count_test".to_string(),
+                    value: 1.0,
+                    tags: vec![],
+                    timestamp: Utc::now(),
+                })
+                .unwrap();
         }
 
         let stats = aggregator.get_stats("count_test", &[]).unwrap();
@@ -194,12 +217,14 @@ mod aggregation_tests {
         let aggregator = create_test_aggregator();
 
         for i in 1..=100 {
-            aggregator.record(MetricPoint {
-                name: "avg_test".to_string(),
-                value: i as f64,
-                tags: vec![],
-                timestamp: Utc::now(),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "avg_test".to_string(),
+                    value: i as f64,
+                    tags: vec![],
+                    timestamp: Utc::now(),
+                })
+                .unwrap();
         }
 
         let stats = aggregator.get_stats("avg_test", &[]).unwrap();
@@ -213,12 +238,14 @@ mod aggregation_tests {
 
         let values = vec![10.0, 5.0, 100.0, 50.0, 1.0, 75.0];
         for v in values {
-            aggregator.record(MetricPoint {
-                name: "minmax_test".to_string(),
-                value: v,
-                tags: vec![],
-                timestamp: Utc::now(),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "minmax_test".to_string(),
+                    value: v,
+                    tags: vec![],
+                    timestamp: Utc::now(),
+                })
+                .unwrap();
         }
 
         let stats = aggregator.get_stats("minmax_test", &[]).unwrap();
@@ -233,19 +260,23 @@ mod aggregation_tests {
         let start = Utc::now();
 
         // Record increasing counter values
-        aggregator.record(MetricPoint {
-            name: "counter".to_string(),
-            value: 100.0,
-            tags: vec![],
-            timestamp: start,
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "counter".to_string(),
+                value: 100.0,
+                tags: vec![],
+                timestamp: start,
+            })
+            .unwrap();
 
-        aggregator.record(MetricPoint {
-            name: "counter".to_string(),
-            value: 200.0,
-            tags: vec![],
-            timestamp: start + Duration::seconds(10),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "counter".to_string(),
+                value: 200.0,
+                tags: vec![],
+                timestamp: start + Duration::seconds(10),
+            })
+            .unwrap();
 
         let rate = aggregator.get_rate("counter", &[], Duration::seconds(10));
         // Rate should be 10 per second (100 increase over 10 seconds)
@@ -260,27 +291,27 @@ mod aggregation_tests {
         let now = Utc::now();
 
         // Record values at different times
-        aggregator.record(MetricPoint {
-            name: "windowed".to_string(),
-            value: 100.0,
-            tags: vec![],
-            timestamp: now - Duration::minutes(5),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "windowed".to_string(),
+                value: 100.0,
+                tags: vec![],
+                timestamp: now - Duration::minutes(5),
+            })
+            .unwrap();
 
-        aggregator.record(MetricPoint {
-            name: "windowed".to_string(),
-            value: 200.0,
-            tags: vec![],
-            timestamp: now,
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "windowed".to_string(),
+                value: 200.0,
+                tags: vec![],
+                timestamp: now,
+            })
+            .unwrap();
 
         // Get stats for last minute only
-        let recent = aggregator.get_stats_in_window(
-            "windowed",
-            &[],
-            now - Duration::minutes(1),
-            now,
-        );
+        let recent =
+            aggregator.get_stats_in_window("windowed", &[], now - Duration::minutes(1), now);
 
         assert!(recent.is_some());
         assert_eq!(recent.unwrap().sum, 200.0);
@@ -301,20 +332,24 @@ mod bucket_tests {
         let aggregator = create_test_aggregator();
         let now = Utc::now();
 
-        aggregator.record(MetricPoint {
-            name: "bucket_test".to_string(),
-            value: 1.0,
-            tags: vec![],
-            timestamp: now,
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "bucket_test".to_string(),
+                value: 1.0,
+                tags: vec![],
+                timestamp: now,
+            })
+            .unwrap();
 
         // Record in next bucket (1 minute later)
-        aggregator.record(MetricPoint {
-            name: "bucket_test".to_string(),
-            value: 2.0,
-            tags: vec![],
-            timestamp: now + Duration::minutes(1),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "bucket_test".to_string(),
+                value: 2.0,
+                tags: vec![],
+                timestamp: now + Duration::minutes(1),
+            })
+            .unwrap();
 
         // Should have 2 buckets
         let buckets = aggregator.get_buckets("bucket_test", &[]);
@@ -335,12 +370,14 @@ mod bucket_tests {
 
         // Fill up buckets
         for i in 0..10 {
-            aggregator.record(MetricPoint {
-                name: "expiry_test".to_string(),
-                value: i as f64,
-                tags: vec![],
-                timestamp: now + Duration::minutes(i),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "expiry_test".to_string(),
+                    value: i as f64,
+                    tags: vec![],
+                    timestamp: now + Duration::minutes(i),
+                })
+                .unwrap();
         }
 
         // Should have at most max_buckets
@@ -356,12 +393,14 @@ mod bucket_tests {
 
         // Records at different seconds should fall into same minute bucket
         for i in 0..60 {
-            aggregator.record(MetricPoint {
-                name: "alignment_test".to_string(),
-                value: 1.0,
-                tags: vec![],
-                timestamp: base + Duration::seconds(i),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "alignment_test".to_string(),
+                    value: 1.0,
+                    tags: vec![],
+                    timestamp: base + Duration::seconds(i),
+                })
+                .unwrap();
         }
 
         // Should all be in one bucket
@@ -385,12 +424,14 @@ mod flush_tests {
         let aggregator = create_test_aggregator();
 
         for i in 0..100 {
-            aggregator.record(MetricPoint {
-                name: "flush_test".to_string(),
-                value: i as f64,
-                tags: vec![],
-                timestamp: Utc::now(),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "flush_test".to_string(),
+                    value: i as f64,
+                    tags: vec![],
+                    timestamp: Utc::now(),
+                })
+                .unwrap();
         }
 
         let result = aggregator.flush();
@@ -402,12 +443,14 @@ mod flush_tests {
     fn test_flush_returns_data() {
         let aggregator = create_test_aggregator();
 
-        aggregator.record(MetricPoint {
-            name: "return_test".to_string(),
-            value: 42.0,
-            tags: vec![("key".to_string(), "value".to_string())],
-            timestamp: Utc::now(),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "return_test".to_string(),
+                value: 42.0,
+                tags: vec![("key".to_string(), "value".to_string())],
+                timestamp: Utc::now(),
+            })
+            .unwrap();
 
         let flushed = aggregator.flush_and_get().unwrap();
         assert!(!flushed.is_empty());
@@ -418,12 +461,14 @@ mod flush_tests {
     fn test_flush_clears_pending() {
         let aggregator = create_test_aggregator();
 
-        aggregator.record(MetricPoint {
-            name: "clear_test".to_string(),
-            value: 1.0,
-            tags: vec![],
-            timestamp: Utc::now(),
-        }).unwrap();
+        aggregator
+            .record(MetricPoint {
+                name: "clear_test".to_string(),
+                value: 1.0,
+                tags: vec![],
+                timestamp: Utc::now(),
+            })
+            .unwrap();
 
         aggregator.flush().unwrap();
 
@@ -449,12 +494,14 @@ mod downsampling_tests {
 
         // Generate 1-second resolution data
         for i in 0..3600 {
-            aggregator.record(MetricPoint {
-                name: "downsample_test".to_string(),
-                value: i as f64 % 100.0,
-                tags: vec![],
-                timestamp: start + Duration::seconds(i),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "downsample_test".to_string(),
+                    value: i as f64 % 100.0,
+                    tags: vec![],
+                    timestamp: start + Duration::seconds(i),
+                })
+                .unwrap();
         }
 
         // Downsample to 1-minute resolution
@@ -481,34 +528,48 @@ mod downsampling_tests {
 
         // Record known values
         for i in 0..60 {
-            aggregator.record(MetricPoint {
-                name: "agg_type_test".to_string(),
-                value: (i + 1) as f64, // 1 to 60
-                tags: vec![],
-                timestamp: start + Duration::seconds(i),
-            }).unwrap();
+            aggregator
+                .record(MetricPoint {
+                    name: "agg_type_test".to_string(),
+                    value: (i + 1) as f64, // 1 to 60
+                    tags: vec![],
+                    timestamp: start + Duration::seconds(i),
+                })
+                .unwrap();
         }
 
-        let sum = aggregator.downsample(
-            "agg_type_test", &[],
-            start, start + Duration::minutes(1),
-            Duration::minutes(1),
-            AggregationType::Sum,
-        ).unwrap();
+        let sum = aggregator
+            .downsample(
+                "agg_type_test",
+                &[],
+                start,
+                start + Duration::minutes(1),
+                Duration::minutes(1),
+                AggregationType::Sum,
+            )
+            .unwrap();
 
-        let max = aggregator.downsample(
-            "agg_type_test", &[],
-            start, start + Duration::minutes(1),
-            Duration::minutes(1),
-            AggregationType::Max,
-        ).unwrap();
+        let max = aggregator
+            .downsample(
+                "agg_type_test",
+                &[],
+                start,
+                start + Duration::minutes(1),
+                Duration::minutes(1),
+                AggregationType::Max,
+            )
+            .unwrap();
 
-        let min = aggregator.downsample(
-            "agg_type_test", &[],
-            start, start + Duration::minutes(1),
-            Duration::minutes(1),
-            AggregationType::Min,
-        ).unwrap();
+        let min = aggregator
+            .downsample(
+                "agg_type_test",
+                &[],
+                start,
+                start + Duration::minutes(1),
+                Duration::minutes(1),
+                AggregationType::Min,
+            )
+            .unwrap();
 
         // Verify aggregation types
         assert_eq!(sum[0].value, 1830.0); // Sum of 1..60

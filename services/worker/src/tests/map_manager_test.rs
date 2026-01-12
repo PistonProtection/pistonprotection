@@ -6,8 +6,8 @@ use std::net::{IpAddr, Ipv4Addr};
 
 /// Mock map manager for testing without eBPF
 struct MockMapManager {
-    blocklist: HashMap<u32, u64>,         // IP -> timestamp
-    allowlist: HashMap<u32, u64>,         // IP -> timestamp
+    blocklist: HashMap<u32, u64>, // IP -> timestamp
+    allowlist: HashMap<u32, u64>, // IP -> timestamp
     rate_limits: HashMap<u32, RateLimitEntry>,
     connection_stats: HashMap<u32, ConnectionStats>,
 }
@@ -79,11 +79,14 @@ impl MockMapManager {
     // Rate limit operations
     fn set_rate_limit(&mut self, ip: Ipv4Addr, limit: u64) {
         let ip_u32 = u32::from_be_bytes(ip.octets());
-        self.rate_limits.insert(ip_u32, RateLimitEntry {
-            tokens: limit,
-            last_update: 0,
-            limit,
-        });
+        self.rate_limits.insert(
+            ip_u32,
+            RateLimitEntry {
+                tokens: limit,
+                last_update: 0,
+                limit,
+            },
+        );
     }
 
     fn check_rate_limit(&self, ip: Ipv4Addr) -> bool {
@@ -110,7 +113,14 @@ impl MockMapManager {
     }
 
     // Stats operations
-    fn increment_stats(&mut self, ip: Ipv4Addr, packets: u64, bytes: u64, dropped_packets: u64, dropped_bytes: u64) {
+    fn increment_stats(
+        &mut self,
+        ip: Ipv4Addr,
+        packets: u64,
+        bytes: u64,
+        dropped_packets: u64,
+        dropped_bytes: u64,
+    ) {
         let ip_u32 = u32::from_be_bytes(ip.octets());
         let stats = self.connection_stats.entry(ip_u32).or_default();
         stats.packets_total += packets;
@@ -130,8 +140,10 @@ impl MockMapManager {
 
     // Cleanup operations
     fn cleanup_expired(&mut self, current_time: u64) {
-        self.blocklist.retain(|_, &mut expires| expires > current_time || expires == 0);
-        self.allowlist.retain(|_, &mut expires| expires > current_time || expires == 0);
+        self.blocklist
+            .retain(|_, &mut expires| expires > current_time || expires == 0);
+        self.allowlist
+            .retain(|_, &mut expires| expires > current_time || expires == 0);
     }
 }
 
@@ -183,9 +195,7 @@ mod blocklist_tests {
     fn test_multiple_blocked() {
         let mut manager = MockMapManager::new();
 
-        let ips: Vec<Ipv4Addr> = (1..=10)
-            .map(|i| Ipv4Addr::new(192, 168, 1, i))
-            .collect();
+        let ips: Vec<Ipv4Addr> = (1..=10).map(|i| Ipv4Addr::new(192, 168, 1, i)).collect();
 
         for ip in &ips {
             manager.add_to_blocklist(*ip, 0);
@@ -445,9 +455,7 @@ mod batch_tests {
     fn test_batch_block() {
         let mut manager = MockMapManager::new();
 
-        let ips: Vec<Ipv4Addr> = (1..=100)
-            .map(|i| Ipv4Addr::new(10, 0, 0, i))
-            .collect();
+        let ips: Vec<Ipv4Addr> = (1..=100).map(|i| Ipv4Addr::new(10, 0, 0, i)).collect();
 
         for ip in &ips {
             manager.add_to_blocklist(*ip, 0);
@@ -461,9 +469,7 @@ mod batch_tests {
     fn test_batch_unblock() {
         let mut manager = MockMapManager::new();
 
-        let ips: Vec<Ipv4Addr> = (1..=100)
-            .map(|i| Ipv4Addr::new(10, 0, 0, i))
-            .collect();
+        let ips: Vec<Ipv4Addr> = (1..=100).map(|i| Ipv4Addr::new(10, 0, 0, i)).collect();
 
         for ip in &ips {
             manager.add_to_blocklist(*ip, 0);

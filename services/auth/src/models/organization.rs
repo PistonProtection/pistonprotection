@@ -266,12 +266,19 @@ pub struct UpdateOrganizationRequest {
 /// Validate slug format
 fn validate_slug(slug: &str) -> Result<(), validator::ValidationError> {
     // Slug must start with a letter
-    if !slug.chars().next().map_or(false, |c| c.is_ascii_lowercase()) {
+    if !slug
+        .chars()
+        .next()
+        .map_or(false, |c| c.is_ascii_lowercase())
+    {
         return Err(validator::ValidationError::new("slug_start_letter"));
     }
 
     // Slug can only contain lowercase letters, numbers, and hyphens
-    if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+    if !slug
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    {
         return Err(validator::ValidationError::new("slug_invalid_chars"));
     }
 
@@ -296,8 +303,8 @@ impl Organization {
         limits: Option<&OrganizationLimits>,
         usage: Option<&OrganizationUsage>,
     ) -> pistonprotection_proto::auth::Organization {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::Organization {
             id: self.id.clone(),
@@ -350,8 +357,8 @@ impl OrganizationMember {
         &self,
         user: Option<&super::User>,
     ) -> pistonprotection_proto::auth::OrganizationMember {
-        use pistonprotection_proto::auth;
         use pistonprotection_proto::Timestamp;
+        use pistonprotection_proto::auth;
 
         auth::OrganizationMember {
             id: self.id.clone(),

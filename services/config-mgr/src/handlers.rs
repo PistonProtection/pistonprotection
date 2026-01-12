@@ -1,13 +1,7 @@
 //! HTTP and gRPC handlers for config-mgr
 
 use crate::{config_store::ConfigStore, distributor::ConfigDistributor};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use pistonprotection_common::config::Config;
 use pistonprotection_proto::worker::{
     worker_service_server::{WorkerService, WorkerServiceServer},
@@ -17,7 +11,7 @@ use serde::Serialize;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::Stream;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status, transport::Server};
 use tonic_health::server::health_reporter;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -141,7 +135,9 @@ impl WorkerService for WorkerGrpcService {
         request: Request<RegisterRequest>,
     ) -> Result<Response<RegisterResponse>, Status> {
         let req = request.into_inner();
-        let worker = req.worker.ok_or_else(|| Status::invalid_argument("Worker info required"))?;
+        let worker = req
+            .worker
+            .ok_or_else(|| Status::invalid_argument("Worker info required"))?;
 
         let worker_id = uuid::Uuid::new_v4().to_string();
 
@@ -206,7 +202,9 @@ impl WorkerService for WorkerGrpcService {
             .await
             .map_err(|e| Status::internal(format!("Failed to get config: {}", e)))?;
 
-        let up_to_date = !self.distributor.needs_update(&req.worker_id, req.current_version);
+        let up_to_date = !self
+            .distributor
+            .needs_update(&req.worker_id, req.current_version);
 
         Ok(Response::new(GetConfigResponse {
             config: Some(config),
@@ -221,7 +219,9 @@ impl WorkerService for WorkerGrpcService {
         _request: Request<StreamConfigRequest>,
     ) -> Result<Response<Self::StreamConfigStream>, Status> {
         // TODO: Implement streaming config updates
-        Err(Status::unimplemented("Config streaming not implemented yet"))
+        Err(Status::unimplemented(
+            "Config streaming not implemented yet",
+        ))
     }
 
     async fn apply_map_updates(

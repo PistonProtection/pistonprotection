@@ -100,7 +100,7 @@ pub fn default_filter_config() -> ProgramConfig {
             MapConfig {
                 name: "blocked_ips".to_string(),
                 map_type: MapType::LruHash,
-                key_size: 16, // IPv6 address size
+                key_size: 16,   // IPv6 address size
                 value_size: 32, // BlockedIpEntry
                 max_entries: 1_000_000,
             },
@@ -138,7 +138,7 @@ pub fn minecraft_filter_config() -> ProgramConfig {
             MapConfig {
                 name: "mc_connections".to_string(),
                 map_type: MapType::LruHash,
-                key_size: 20, // IP + port
+                key_size: 20,   // IP + port
                 value_size: 48, // Connection state
                 max_entries: 500_000,
             },

@@ -2,13 +2,13 @@
 
 use super::interface::NetworkInterface;
 use super::maps::MapManager;
-use aya::programs::{Xdp, XdpFlags};
 use aya::Ebpf;
+use aya::programs::{Xdp, XdpFlags};
+use parking_lot::RwLock;
 use pistonprotection_common::error::{Error, Result};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use parking_lot::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// XDP attachment mode
@@ -94,14 +94,17 @@ impl EbpfLoader {
             program_name, interface.name, preferred_mode
         );
 
-        let ebpf = self.objects.get_mut(program_name).ok_or_else(|| {
-            Error::not_found("eBPF program", program_name)
-        })?;
+        let ebpf = self
+            .objects
+            .get_mut(program_name)
+            .ok_or_else(|| Error::not_found("eBPF program", program_name))?;
 
         // Get the XDP program
         let program: &mut Xdp = ebpf
             .program_mut(program_name)
-            .ok_or_else(|| Error::Internal(format!("Program {} not found in object", program_name)))?
+            .ok_or_else(|| {
+                Error::Internal(format!("Program {} not found in object", program_name))
+            })?
             .try_into()
             .map_err(|e| Error::Internal(format!("Not an XDP program: {}", e)))?;
 
@@ -195,9 +198,10 @@ impl EbpfLoader {
         key: &K,
         value: &V,
     ) -> Result<()> {
-        let ebpf = self.objects.get_mut(program_name).ok_or_else(|| {
-            Error::not_found("eBPF program", program_name)
-        })?;
+        let ebpf = self
+            .objects
+            .get_mut(program_name)
+            .ok_or_else(|| Error::not_found("eBPF program", program_name))?;
 
         let mut map: aya::maps::HashMap<_, K, V> = ebpf
             .map_mut(map_name)

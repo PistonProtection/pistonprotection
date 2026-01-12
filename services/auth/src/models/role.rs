@@ -155,7 +155,10 @@ impl SystemRoles {
 
     /// Check if a role name is a system role
     pub fn is_system_role(name: &str) -> bool {
-        matches!(name, Self::OWNER | Self::ADMIN | Self::MEMBER | Self::VIEWER)
+        matches!(
+            name,
+            Self::OWNER | Self::ADMIN | Self::MEMBER | Self::VIEWER
+        )
     }
 
     /// Get all system role names

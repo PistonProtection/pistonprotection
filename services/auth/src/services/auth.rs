@@ -1,8 +1,8 @@
 //! Authentication service for login, logout, and token management
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -63,8 +63,8 @@ impl AuthService {
 
     /// Verify a password against a hash
     pub fn verify_password(&self, password: &str, hash: &str) -> Result<bool, AuthError> {
-        let parsed_hash = PasswordHash::new(hash)
-            .map_err(|e| AuthError::PasswordHashError(e.to_string()))?;
+        let parsed_hash =
+            PasswordHash::new(hash).map_err(|e| AuthError::PasswordHashError(e.to_string()))?;
 
         let argon2 = Argon2::default();
 
@@ -146,8 +146,12 @@ impl AuthService {
         }
 
         // Check session limit
-        if !self.session_service.check_session_limit(&user.id).await
-            .map_err(|e| AuthError::SessionError(e.to_string()))? {
+        if !self
+            .session_service
+            .check_session_limit(&user.id)
+            .await
+            .map_err(|e| AuthError::SessionError(e.to_string()))?
+        {
             return Err(AuthError::MaxSessionsExceeded);
         }
 
@@ -157,9 +161,9 @@ impl AuthService {
         let session_id = uuid::Uuid::new_v4().to_string();
         let expires_at = self.session_service.get_expiration();
 
-        let device_type = self.session_service.detect_device_type(
-            session_info.user_agent.as_deref(),
-        );
+        let device_type = self
+            .session_service
+            .detect_device_type(session_info.user_agent.as_deref());
 
         let session = db::create_session(
             &self.db,
@@ -197,7 +201,13 @@ impl AuthService {
         // Generate tokens
         let access_token = self
             .jwt_service
-            .generate_access_token(&user.id, &user.email, user.role, orgs.clone(), Some(&session_id))
+            .generate_access_token(
+                &user.id,
+                &user.email,
+                user.role,
+                orgs.clone(),
+                Some(&session_id),
+            )
             .map_err(|e| AuthError::TokenError(e.to_string()))?;
 
         let refresh_token = self
@@ -295,12 +305,24 @@ impl AuthService {
         // Generate new tokens
         let access_token = self
             .jwt_service
-            .generate_access_token(&user.id, &user.email, user.role, orgs.clone(), claims.sid.as_deref())
+            .generate_access_token(
+                &user.id,
+                &user.email,
+                user.role,
+                orgs.clone(),
+                claims.sid.as_deref(),
+            )
             .map_err(|e| AuthError::TokenError(e.to_string()))?;
 
         let new_refresh_token = self
             .jwt_service
-            .generate_refresh_token(&user.id, &user.email, user.role, orgs, claims.sid.as_deref())
+            .generate_refresh_token(
+                &user.id,
+                &user.email,
+                user.role,
+                orgs,
+                claims.sid.as_deref(),
+            )
             .map_err(|e| AuthError::TokenError(e.to_string()))?;
 
         let token_pair = TokenPair::new(
@@ -459,9 +481,9 @@ impl From<AuthError> for tonic::Status {
             }
             AuthError::UserNotFound => tonic::Status::not_found("User not found"),
             AuthError::SessionExpired => tonic::Status::unauthenticated("Session expired"),
-            AuthError::MaxSessionsExceeded => {
-                tonic::Status::resource_exhausted("Maximum sessions exceeded. Please logout from another device.")
-            }
+            AuthError::MaxSessionsExceeded => tonic::Status::resource_exhausted(
+                "Maximum sessions exceeded. Please logout from another device.",
+            ),
             AuthError::WeakPassword(msg) => tonic::Status::invalid_argument(msg),
             AuthError::PasswordHashError(msg) => {
                 tonic::Status::internal(format!("Password processing error: {}", msg))

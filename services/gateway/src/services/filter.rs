@@ -8,8 +8,8 @@ use pistonprotection_proto::filter::*;
 use sqlx::Row;
 use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::Stream;
+use tokio_stream::wrappers::BroadcastStream;
 use tracing::{info, instrument, warn};
 use uuid::Uuid;
 
@@ -275,7 +275,9 @@ impl FilterService {
     /// Invalidate cache for a backend's filter rules
     async fn invalidate_cache(&self, backend_id: &str) {
         if let Some(cache) = &self.state.cache {
-            let _ = cache.delete_pattern(&format!("filters:{}:*", backend_id)).await;
+            let _ = cache
+                .delete_pattern(&format!("filters:{}:*", backend_id))
+                .await;
             // Also publish update event for workers
             let _ = cache
                 .publish("filter_updates", &format!("backend:{}", backend_id))
@@ -396,7 +398,8 @@ impl FilterService {
 
         // Publish updates for each created rule
         for rule in &created_rules {
-            self.publish_rule_update(backend_id, &rule.id, rule_update::UpdateType::Created).await;
+            self.publish_rule_update(backend_id, &rule.id, rule_update::UpdateType::Created)
+                .await;
         }
 
         Ok((created_rules, errors))
@@ -413,12 +416,11 @@ impl FilterService {
 
         for rule_id in &rule_ids {
             // First get the backend_id
-            let row: Option<(String,)> = sqlx::query_as(
-                "SELECT backend_id FROM filter_rules WHERE id = $1",
-            )
-            .bind(rule_id)
-            .fetch_optional(db)
-            .await?;
+            let row: Option<(String,)> =
+                sqlx::query_as("SELECT backend_id FROM filter_rules WHERE id = $1")
+                    .bind(rule_id)
+                    .fetch_optional(db)
+                    .await?;
 
             match row {
                 Some((backend_id,)) => {
@@ -437,7 +439,8 @@ impl FilterService {
                                 &backend_id,
                                 rule_id,
                                 rule_update::UpdateType::Deleted,
-                            ).await;
+                            )
+                            .await;
                         }
                         Ok(_) => {
                             errors.push(common::Error {
@@ -465,7 +468,11 @@ impl FilterService {
             }
         }
 
-        info!(deleted = deleted_count, errors = errors.len(), "Bulk deleted filter rules");
+        info!(
+            deleted = deleted_count,
+            errors = errors.len(),
+            "Bulk deleted filter rules"
+        );
 
         // Invalidate cache for all affected backends
         for backend_id in affected_backends {
@@ -602,12 +609,10 @@ impl FilterService {
         });
 
         // Convert broadcast receiver to stream
-        let stream = BroadcastStream::new(rx).filter_map(|result| {
-            match result {
-                Ok(update) => Some(Ok(update)),
-                Err(broadcast::error::RecvError::Lagged(_)) => None,
-                Err(broadcast::error::RecvError::Closed) => None,
-            }
+        let stream = BroadcastStream::new(rx).filter_map(|result| match result {
+            Ok(update) => Some(Ok(update)),
+            Err(broadcast::error::RecvError::Lagged(_)) => None,
+            Err(broadcast::error::RecvError::Closed) => None,
         });
 
         Ok(stream)

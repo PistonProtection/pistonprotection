@@ -8,6 +8,8 @@ You might be tempted to only make changes on the frontend, but the filters also 
 
 Make frequent git commit and git pushes, so code stays up-to-date and properly segregated. e.g. one commit per major feature
 
+Make sure you use latest version of all dependencies and resolve any conflicts/issues so that the latest version can be used.
+
 - ddos protection management panel written with:
   - shadcn/ui (baseui theme, not radix theme)
   - shadcn/ui used idiomatically, use components where possible. always consider all available shadcn components for a design
@@ -24,7 +26,7 @@ Make frequent git commit and git pushes, so code stays up-to-date and properly s
   - redis cache
   - resend for emails
   - frontend and website backend in the same repository (so it's typesafe via trpc)
-  - fumadocs
+  - fumadocs (built into the tanstack start frontend, not in a separate app)
   - drizzle orm
   - users should be able to sign up, subscribe and configure ddos protection for them
   - the dashboard will provide them with live metrics that are fetched and also setup instructions to configure their domains and endpoints
@@ -38,6 +40,9 @@ Make frequent git commit and git pushes, so code stays up-to-date and properly s
   - the frontend backen should be writte in typescript + tanstack starts primitives
   - make sure you use pnpm, not any other package manager
   - biome for code style on strict "all" config
+  - ensure there is a full-fledged frontpage for this dashboard which talks about the product, has navbar/etc. with login button
+  - make it all one big webapp for both getting customers and for customers to log into the dashboard at.
+  - make sure it looks pretty and SEO is good
 - Advanced eBPF and XDP filter stacks on the worker nodes
 - Build it all based on kubernetes with ciliumm, operators, etc.
 - allow self hosting it
@@ -65,6 +70,8 @@ Make frequent git commit and git pushes, so code stays up-to-date and properly s
   - It should have made the packet filter as a standalone thing for testing. Testing the entire thing at once and fixing every problem will probably take months
   - Does the packet filter even check for fragmentation? What happens if a packets is split between multiple calls?
   - You can take inspiration from https://github.com/Outfluencer/Minecraft-XDP-eBPF
+  - add support for newer mc packet changes such as the TRANSFER state intent
+  - make sure there is no super dumb play state packet id check
 - grafana in the stack
 - prometheus in the stack
 - loki in the stack

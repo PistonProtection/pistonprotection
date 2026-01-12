@@ -8,7 +8,9 @@ use tracing::{info, warn};
 
 use crate::config::AuthConfig;
 use crate::db;
-use crate::models::{ApiKey, ApiKeyGenerator, ApiKeyResponse, CreateApiKeyRequest, CreateApiKeyResponse};
+use crate::models::{
+    ApiKey, ApiKeyGenerator, ApiKeyResponse, CreateApiKeyRequest, CreateApiKeyResponse,
+};
 
 /// Cached API key data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -51,7 +53,8 @@ impl ApiKeyService {
         request: CreateApiKeyRequest,
     ) -> Result<CreateApiKeyResponse, ApiKeyError> {
         // Check if organization has reached max API keys
-        let (existing_keys, _) = db::list_api_keys(&self.db, organization_id, 1, 1).await
+        let (existing_keys, _) = db::list_api_keys(&self.db, organization_id, 1, 1)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?;
 
         // This is a simple count check - in production you'd want a proper count query
@@ -61,10 +64,8 @@ impl ApiKeyService {
         }
 
         // Generate key
-        let (secret, prefix) = ApiKeyGenerator::generate(
-            &self.config.api_key.prefix,
-            self.config.api_key.key_length,
-        );
+        let (secret, prefix) =
+            ApiKeyGenerator::generate(&self.config.api_key.prefix, self.config.api_key.key_length);
 
         // Hash the key for storage
         let key_hash = ApiKeyGenerator::hash_key(&secret);
@@ -105,9 +106,12 @@ impl ApiKeyService {
 
         // Check cache first
         let cache_key = format!("apikey:{}", key_hash);
-        if let Some(cached) = self.cache.get::<CachedApiKey>(&cache_key).await
-            .map_err(|e| ApiKeyError::CacheError(e.to_string()))? {
-
+        if let Some(cached) = self
+            .cache
+            .get::<CachedApiKey>(&cache_key)
+            .await
+            .map_err(|e| ApiKeyError::CacheError(e.to_string()))?
+        {
             // Validate IP if restrictions exist
             if !cached.allowed_ips.is_empty() {
                 if let Some(ip) = client_ip {
@@ -122,7 +126,8 @@ impl ApiKeyService {
             }
 
             // Get full key from database for complete validation
-            let key = db::get_api_key_by_id(&self.db, &cached.id).await
+            let key = db::get_api_key_by_id(&self.db, &cached.id)
+                .await
                 .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?
                 .ok_or(ApiKeyError::InvalidKey)?;
 
@@ -133,7 +138,8 @@ impl ApiKeyService {
         }
 
         // Not in cache, query database
-        let key = db::get_api_key_by_hash(&self.db, &key_hash).await
+        let key = db::get_api_key_by_hash(&self.db, &key_hash)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?
             .ok_or(ApiKeyError::InvalidKey)?;
 
@@ -163,7 +169,10 @@ impl ApiKeyService {
 
         // Cache the key
         let cached = CachedApiKey::from(&key);
-        let _ = self.cache.set(&cache_key, &cached, Duration::from_secs(300)).await;
+        let _ = self
+            .cache
+            .set(&cache_key, &cached, Duration::from_secs(300))
+            .await;
 
         // Update last used
         let _ = db::update_api_key_last_used(&self.db, &key.id).await;
@@ -217,7 +226,8 @@ impl ApiKeyService {
     /// Revoke an API key
     pub async fn revoke_key(&self, key_id: &str) -> Result<bool, ApiKeyError> {
         // Get key to find hash for cache invalidation
-        let key = db::get_api_key_by_id(&self.db, key_id).await
+        let key = db::get_api_key_by_id(&self.db, key_id)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?;
 
         if let Some(k) = key {
@@ -227,7 +237,8 @@ impl ApiKeyService {
         }
 
         // Revoke in database
-        let revoked = db::revoke_api_key(&self.db, key_id).await
+        let revoked = db::revoke_api_key(&self.db, key_id)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?;
 
         if revoked {
@@ -244,18 +255,17 @@ impl ApiKeyService {
         page: u32,
         page_size: u32,
     ) -> Result<(Vec<ApiKeyResponse>, u32), ApiKeyError> {
-        let (keys, total) = db::list_api_keys(&self.db, organization_id, page, page_size).await
+        let (keys, total) = db::list_api_keys(&self.db, organization_id, page, page_size)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?;
 
-        Ok((
-            keys.into_iter().map(ApiKeyResponse::from).collect(),
-            total,
-        ))
+        Ok((keys.into_iter().map(ApiKeyResponse::from).collect(), total))
     }
 
     /// Get an API key by ID
     pub async fn get_key(&self, key_id: &str) -> Result<Option<ApiKeyResponse>, ApiKeyError> {
-        let key = db::get_api_key_by_id(&self.db, key_id).await
+        let key = db::get_api_key_by_id(&self.db, key_id)
+            .await
             .map_err(|e| ApiKeyError::DatabaseError(e.to_string()))?;
 
         Ok(key.map(ApiKeyResponse::from))

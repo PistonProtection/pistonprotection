@@ -100,18 +100,14 @@ mod raknet_ping_tests {
         let time: u64 = 0x123456789ABCDEF0;
         let guid: u64 = 0xFEDCBA9876543210;
 
-        let ping = RakNetPing::new()
-            .with_time(time)
-            .with_guid(guid)
-            .build();
+        let ping = RakNetPing::new().with_time(time).with_guid(guid).build();
 
         // Verify packet ID
         assert_eq!(ping[0], RAKNET_UNCONNECTED_PING);
 
         // Verify time (big-endian)
         let extracted_time = u64::from_be_bytes([
-            ping[1], ping[2], ping[3], ping[4],
-            ping[5], ping[6], ping[7], ping[8],
+            ping[1], ping[2], ping[3], ping[4], ping[5], ping[6], ping[7], ping[8],
         ]);
         assert_eq!(extracted_time, time);
 
@@ -120,8 +116,7 @@ mod raknet_ping_tests {
 
         // Verify GUID (big-endian)
         let extracted_guid = u64::from_be_bytes([
-            ping[25], ping[26], ping[27], ping[28],
-            ping[29], ping[30], ping[31], ping[32],
+            ping[25], ping[26], ping[27], ping[28], ping[29], ping[30], ping[31], ping[32],
         ]);
         assert_eq!(extracted_guid, guid);
     }
@@ -129,9 +124,7 @@ mod raknet_ping_tests {
     /// Test ping open connections variant
     #[test]
     fn test_ping_open_connections() {
-        let ping = RakNetPing::new()
-            .open_connections()
-            .build();
+        let ping = RakNetPing::new().open_connections().build();
 
         assert_eq!(ping[0], RAKNET_UNCONNECTED_PING_OPEN);
     }
@@ -199,8 +192,7 @@ mod raknet_connection_tests {
 
         // GUID at offset 26-33
         let guid = u64::from_be_bytes([
-            req[26], req[27], req[28], req[29],
-            req[30], req[31], req[32], req[33],
+            req[26], req[27], req[28], req[29], req[30], req[31], req[32], req[33],
         ]);
         assert_eq!(guid, 0xDEADBEEF12345678);
     }
@@ -209,24 +201,18 @@ mod raknet_connection_tests {
     #[test]
     fn test_mtu_validation() {
         // Too small (below 400)
-        let small_req = RakNetOpenConnReq1::new()
-            .with_mtu(300)
-            .build();
+        let small_req = RakNetOpenConnReq1::new().with_mtu(300).build();
         assert_eq!(small_req.len(), 300);
         // Filter should reject MTU < 400
 
         // Too large (above 1500)
-        let large_req = RakNetOpenConnReq1::new()
-            .with_mtu(2000)
-            .build();
+        let large_req = RakNetOpenConnReq1::new().with_mtu(2000).build();
         assert_eq!(large_req.len(), 2000);
         // Filter should reject MTU > 1500
 
         // Valid range
         for mtu in [400, 576, 1200, 1400, 1492, 1500] {
-            let req = RakNetOpenConnReq1::new()
-                .with_mtu(mtu)
-                .build();
+            let req = RakNetOpenConnReq1::new().with_mtu(mtu).build();
             assert_eq!(req.len(), mtu as usize);
         }
     }
@@ -236,16 +222,12 @@ mod raknet_connection_tests {
     fn test_protocol_version_validation() {
         // Valid versions (typically <= 11)
         for version in 1..=11 {
-            let req = RakNetOpenConnReq1::new()
-                .with_protocol(version)
-                .build();
+            let req = RakNetOpenConnReq1::new().with_protocol(version).build();
             assert_eq!(req[17], version);
         }
 
         // Invalid (too high)
-        let invalid_req = RakNetOpenConnReq1::new()
-            .with_protocol(50)
-            .build();
+        let invalid_req = RakNetOpenConnReq1::new().with_protocol(50).build();
         assert_eq!(invalid_req[17], 50);
         // Filter should reject protocol > 11
     }
@@ -266,10 +248,7 @@ mod raknet_amplification_tests {
 
         for &pong_size in &pong_sizes {
             let factor = pong_size / ping_size;
-            println!(
-                "Pong size {}: amplification factor {}x",
-                pong_size, factor
-            );
+            println!("Pong size {}: amplification factor {}x", pong_size, factor);
             // Factors > 10 should trigger protection
         }
     }
@@ -285,12 +264,8 @@ mod raknet_amplification_tests {
 
         let mut packets = Vec::new();
         for i in 0..(threshold + 20) {
-            let packet = create_raknet_ping_packet(
-                src_ip,
-                dst_ip,
-                10000 + i as u16,
-                0x12345678 + i as u64,
-            );
+            let packet =
+                create_raknet_ping_packet(src_ip, dst_ip, 10000 + i as u16, 0x12345678 + i as u64);
             packets.push(packet);
         }
 
@@ -308,9 +283,7 @@ mod raknet_amplification_tests {
 
         let mut packets = Vec::new();
         for _ in 0..(threshold + 10) {
-            let req = RakNetOpenConnReq1::new()
-                .with_mtu(1400)
-                .build();
+            let req = RakNetOpenConnReq1::new().with_mtu(1400).build();
             packets.push(req);
         }
 
@@ -398,23 +371,17 @@ mod raknet_state_machine_tests {
     fn test_guid_consistency() {
         let client_guid: u64 = 0x123456789ABCDEF0;
 
-        let ping = RakNetPing::new()
-            .with_guid(client_guid)
-            .build();
+        let ping = RakNetPing::new().with_guid(client_guid).build();
 
-        let req2 = RakNetOpenConnReq2::new()
-            .with_guid(client_guid)
-            .build();
+        let req2 = RakNetOpenConnReq2::new().with_guid(client_guid).build();
 
         // Extract GUIDs
         let ping_guid = u64::from_be_bytes([
-            ping[25], ping[26], ping[27], ping[28],
-            ping[29], ping[30], ping[31], ping[32],
+            ping[25], ping[26], ping[27], ping[28], ping[29], ping[30], ping[31], ping[32],
         ]);
 
         let req2_guid = u64::from_be_bytes([
-            req2[26], req2[27], req2[28], req2[29],
-            req2[30], req2[31], req2[32], req2[33],
+            req2[26], req2[27], req2[28], req2[29], req2[30], req2[31], req2[32], req2[33],
         ]);
 
         assert_eq!(ping_guid, client_guid);
@@ -428,23 +395,17 @@ mod raknet_state_machine_tests {
         let ping_guid: u64 = 0x1111111111111111;
         let req2_guid: u64 = 0x2222222222222222;
 
-        let ping = RakNetPing::new()
-            .with_guid(ping_guid)
-            .build();
+        let ping = RakNetPing::new().with_guid(ping_guid).build();
 
-        let req2 = RakNetOpenConnReq2::new()
-            .with_guid(req2_guid)
-            .build();
+        let req2 = RakNetOpenConnReq2::new().with_guid(req2_guid).build();
 
         // Extract and compare
         let extracted_ping_guid = u64::from_be_bytes([
-            ping[25], ping[26], ping[27], ping[28],
-            ping[29], ping[30], ping[31], ping[32],
+            ping[25], ping[26], ping[27], ping[28], ping[29], ping[30], ping[31], ping[32],
         ]);
 
         let extracted_req2_guid = u64::from_be_bytes([
-            req2[26], req2[27], req2[28], req2[29],
-            req2[30], req2[31], req2[32], req2[33],
+            req2[26], req2[27], req2[28], req2[29], req2[30], req2[31], req2[32], req2[33],
         ]);
 
         assert_ne!(
@@ -477,7 +438,7 @@ mod raknet_data_packet_tests {
     #[test]
     fn test_ack_packet() {
         let mut ack = vec![0xc0]; // ACK packet ID
-        // Record count (2 bytes, little-endian)
+                                  // Record count (2 bytes, little-endian)
         ack.extend_from_slice(&[0x01, 0x00]);
         // Single record flag
         ack.push(0x01);
@@ -492,7 +453,7 @@ mod raknet_data_packet_tests {
     #[test]
     fn test_nack_packet() {
         let mut nack = vec![0xa0]; // NACK packet ID
-        // Record count
+                                   // Record count
         nack.extend_from_slice(&[0x01, 0x00]);
         // Single record flag
         nack.push(0x01);
@@ -539,9 +500,7 @@ mod raknet_full_packet_tests {
     /// Test complete Open Connection Request 1
     #[test]
     fn test_complete_open_conn_req1() {
-        let raknet = RakNetOpenConnReq1::new()
-            .with_mtu(1400)
-            .build();
+        let raknet = RakNetOpenConnReq1::new().with_mtu(1400).build();
 
         let udp = UdpDatagram::new()
             .with_dst_port(19132)
@@ -553,9 +512,7 @@ mod raknet_full_packet_tests {
             .with_payload(udp)
             .build();
 
-        let frame = EthernetFrame::new()
-            .with_payload(ip)
-            .build();
+        let frame = EthernetFrame::new().with_payload(ip).build();
 
         // Size: Eth (14) + IP (20) + UDP (8) + RakNet (1400) = 1442
         assert_eq!(frame.len(), 1442);
@@ -597,9 +554,7 @@ mod raknet_attack_simulation_tests {
         // Attacker requests old protocol version which may have vulnerabilities
 
         for version in [1, 2, 3, 4, 5] {
-            let req = RakNetOpenConnReq1::new()
-                .with_protocol(version)
-                .build();
+            let req = RakNetOpenConnReq1::new().with_protocol(version).build();
 
             assert_eq!(req[17], version);
             // Old versions should be allowed but flagged for monitoring

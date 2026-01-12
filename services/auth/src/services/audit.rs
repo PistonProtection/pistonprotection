@@ -58,7 +58,8 @@ impl AuditService {
         page: u32,
         page_size: u32,
     ) -> Result<(Vec<AuditLogEntry>, u32), AuditError> {
-        db::list_audit_logs(&self.db, filter, page, page_size).await
+        db::list_audit_logs(&self.db, filter, page, page_size)
+            .await
             .map_err(|e| AuditError::DatabaseError(e.to_string()))
     }
 

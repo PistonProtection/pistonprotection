@@ -213,38 +213,31 @@ const DEFAULT_PORTSCAN_THRESHOLD: u32 = 50;
 
 /// Per-IP UDP state (IPv4)
 #[map]
-static UDP_IP_STATE_V4: LruHashMap<u32, UdpIpState> =
-    LruHashMap::with_max_entries(1_000_000, 0);
+static UDP_IP_STATE_V4: LruHashMap<u32, UdpIpState> = LruHashMap::with_max_entries(1_000_000, 0);
 
 /// Per-IP UDP state (IPv6)
 #[map]
-static UDP_IP_STATE_V6: LruHashMap<[u8; 16], UdpIpState> =
-    LruHashMap::with_max_entries(500_000, 0);
+static UDP_IP_STATE_V6: LruHashMap<[u8; 16], UdpIpState> = LruHashMap::with_max_entries(500_000, 0);
 
 /// Per-port state (destination ports)
 #[map]
-static UDP_PORT_STATE: LruHashMap<u16, UdpPortState> =
-    LruHashMap::with_max_entries(65536, 0);
+static UDP_PORT_STATE: LruHashMap<u16, UdpPortState> = LruHashMap::with_max_entries(65536, 0);
 
 /// Amplification source tracking (by source IP + source port)
 #[map]
-static AMP_SOURCES: LruHashMap<u64, AmpSourceEntry> =
-    LruHashMap::with_max_entries(100_000, 0);
+static AMP_SOURCES: LruHashMap<u64, AmpSourceEntry> = LruHashMap::with_max_entries(100_000, 0);
 
 /// Blocked destination ports
 #[map]
-static BLOCKED_PORTS: HashMap<u16, u32> =
-    HashMap::with_max_entries(1000, 0);
+static BLOCKED_PORTS: HashMap<u16, u32> = HashMap::with_max_entries(1000, 0);
 
 /// Whitelisted source IPs
 #[map]
-static UDP_WHITELIST: HashMap<u32, u32> =
-    HashMap::with_max_entries(10_000, 0);
+static UDP_WHITELIST: HashMap<u32, u32> = HashMap::with_max_entries(10_000, 0);
 
 /// Protected destination ports (stricter filtering)
 #[map]
-static PROTECTED_PORTS: HashMap<u16, u32> =
-    HashMap::with_max_entries(1000, 0);
+static PROTECTED_PORTS: HashMap<u16, u32> = HashMap::with_max_entries(1000, 0);
 
 /// Configuration
 #[map]
@@ -430,7 +423,16 @@ fn process_udp(
 
     // Amplification attack detection
     if config.amp_detection_enabled != 0 {
-        if let Some(action) = check_amplification_attack(ctx, data, data_end, src_ip, src_port, dst_port, payload_len, config) {
+        if let Some(action) = check_amplification_attack(
+            ctx,
+            data,
+            data_end,
+            src_ip,
+            src_port,
+            dst_port,
+            payload_len,
+            config,
+        ) {
             return Ok(action);
         }
     }
@@ -471,9 +473,20 @@ fn check_amplification_attack(
     // Check if source port is a known amplification vector
     let is_amp_source = matches!(
         src_port,
-        PORT_DNS | PORT_NTP | PORT_SSDP | PORT_SNMP | PORT_MEMCACHED |
-        PORT_CHARGEN | PORT_QOTD | PORT_LDAP | PORT_MSSQL | PORT_RIP |
-        PORT_PORTMAP | PORT_NETBIOS | PORT_CLDAP | PORT_TFTP
+        PORT_DNS
+            | PORT_NTP
+            | PORT_SSDP
+            | PORT_SNMP
+            | PORT_MEMCACHED
+            | PORT_CHARGEN
+            | PORT_QOTD
+            | PORT_LDAP
+            | PORT_MSSQL
+            | PORT_RIP
+            | PORT_PORTMAP
+            | PORT_NETBIOS
+            | PORT_CLDAP
+            | PORT_TFTP
     );
 
     if !is_amp_source {
@@ -784,7 +797,12 @@ fn is_ip_blocked_v6(src_ip: &[u8; 16]) -> bool {
 #[inline(always)]
 fn block_ip_v4(src_ip: u32, duration_ns: u64) {
     let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
-    let block_until = now + if duration_ns != 0 { duration_ns } else { DEFAULT_BLOCK_DURATION_NS };
+    let block_until = now
+        + if duration_ns != 0 {
+            duration_ns
+        } else {
+            DEFAULT_BLOCK_DURATION_NS
+        };
 
     if let Some(state) = unsafe { UDP_IP_STATE_V4.get_ptr_mut(&src_ip) } {
         let state = unsafe { &mut *state };
@@ -865,56 +883,72 @@ fn get_config() -> UdpConfig {
 #[inline(always)]
 fn update_stats_total() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).total_packets += 1; }
+        unsafe {
+            (*stats).total_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_passed() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).passed_packets += 1; }
+        unsafe {
+            (*stats).passed_packets += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_rate_limited() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_rate_limited += 1; }
+        unsafe {
+            (*stats).dropped_rate_limited += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_invalid_size() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_invalid_size += 1; }
+        unsafe {
+            (*stats).dropped_invalid_size += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_amplification() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_amplification += 1; }
+        unsafe {
+            (*stats).dropped_amplification += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_port_scan() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_port_scan += 1; }
+        unsafe {
+            (*stats).dropped_port_scan += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_blocked() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_blocked_ip += 1; }
+        unsafe {
+            (*stats).dropped_blocked_ip += 1;
+        }
     }
 }
 
 #[inline(always)]
 fn update_stats_blocked_port() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
-        unsafe { (*stats).dropped_blocked_port += 1; }
+        unsafe {
+            (*stats).dropped_blocked_port += 1;
+        }
     }
 }
 

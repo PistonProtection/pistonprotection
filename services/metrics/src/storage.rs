@@ -12,8 +12,8 @@ use pistonprotection_proto::{
 };
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPool;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -102,10 +102,10 @@ pub struct RetentionConfig {
 impl Default for RetentionConfig {
     fn default() -> Self {
         Self {
-            raw_retention: Duration::from_secs(24 * 60 * 60),        // 24 hours
+            raw_retention: Duration::from_secs(24 * 60 * 60), // 24 hours
             five_min_retention: Duration::from_secs(7 * 24 * 60 * 60), // 7 days
-            hourly_retention: Duration::from_secs(30 * 24 * 60 * 60),  // 30 days
-            daily_retention: Duration::from_secs(365 * 24 * 60 * 60),  // 1 year
+            hourly_retention: Duration::from_secs(30 * 24 * 60 * 60), // 30 days
+            daily_retention: Duration::from_secs(365 * 24 * 60 * 60), // 1 year
         }
     }
 }
@@ -175,7 +175,11 @@ impl TimeSeriesStorage {
             // Store XDP packets processed
             let xdp_key = self.redis_key(&["worker", &raw.worker_id, "xdp_processed"]);
             let _: () = conn
-                .zadd(&xdp_key, timestamp.to_string(), raw.xdp_packets_processed as f64)
+                .zadd(
+                    &xdp_key,
+                    timestamp.to_string(),
+                    raw.xdp_packets_processed as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&xdp_key, self.retention.raw_retention.as_secs() as i64)
@@ -233,7 +237,11 @@ impl TimeSeriesStorage {
             // Store requests per second
             let rps_key = self.redis_key(&["traffic", &raw.backend_id, "rps"]);
             let _: () = conn
-                .zadd(&rps_key, timestamp.to_string(), raw.requests_per_second as f64)
+                .zadd(
+                    &rps_key,
+                    timestamp.to_string(),
+                    raw.requests_per_second as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&rps_key, self.retention.raw_retention.as_secs() as i64)
@@ -242,7 +250,11 @@ impl TimeSeriesStorage {
             // Store bytes in
             let bytes_in_key = self.redis_key(&["traffic", &raw.backend_id, "bytes_in"]);
             let _: () = conn
-                .zadd(&bytes_in_key, timestamp.to_string(), raw.bytes_per_second_in as f64)
+                .zadd(
+                    &bytes_in_key,
+                    timestamp.to_string(),
+                    raw.bytes_per_second_in as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&bytes_in_key, self.retention.raw_retention.as_secs() as i64)
@@ -251,16 +263,27 @@ impl TimeSeriesStorage {
             // Store bytes out
             let bytes_out_key = self.redis_key(&["traffic", &raw.backend_id, "bytes_out"]);
             let _: () = conn
-                .zadd(&bytes_out_key, timestamp.to_string(), raw.bytes_per_second_out as f64)
+                .zadd(
+                    &bytes_out_key,
+                    timestamp.to_string(),
+                    raw.bytes_per_second_out as f64,
+                )
                 .await?;
             let _: () = conn
-                .expire(&bytes_out_key, self.retention.raw_retention.as_secs() as i64)
+                .expire(
+                    &bytes_out_key,
+                    self.retention.raw_retention.as_secs() as i64,
+                )
                 .await?;
 
             // Store active connections
             let conn_key = self.redis_key(&["traffic", &raw.backend_id, "connections"]);
             let _: () = conn
-                .zadd(&conn_key, timestamp.to_string(), raw.active_connections as f64)
+                .zadd(
+                    &conn_key,
+                    timestamp.to_string(),
+                    raw.active_connections as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&conn_key, self.retention.raw_retention.as_secs() as i64)
@@ -269,7 +292,11 @@ impl TimeSeriesStorage {
             // Store packets per second
             let pps_key = self.redis_key(&["traffic", &raw.backend_id, "pps"]);
             let _: () = conn
-                .zadd(&pps_key, timestamp.to_string(), raw.packets_per_second as f64)
+                .zadd(
+                    &pps_key,
+                    timestamp.to_string(),
+                    raw.packets_per_second as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&pps_key, self.retention.raw_retention.as_secs() as i64)
@@ -349,7 +376,11 @@ impl TimeSeriesStorage {
             // Store dropped requests
             let dropped_key = self.redis_key(&["attack", &raw.backend_id, "dropped"]);
             let _: () = conn
-                .zadd(&dropped_key, timestamp.to_string(), raw.requests_dropped as f64)
+                .zadd(
+                    &dropped_key,
+                    timestamp.to_string(),
+                    raw.requests_dropped as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&dropped_key, self.retention.raw_retention.as_secs() as i64)
@@ -358,7 +389,11 @@ impl TimeSeriesStorage {
             // Store unique attack IPs
             let ips_key = self.redis_key(&["attack", &raw.backend_id, "unique_ips"]);
             let _: () = conn
-                .zadd(&ips_key, timestamp.to_string(), raw.unique_attack_ips as f64)
+                .zadd(
+                    &ips_key,
+                    timestamp.to_string(),
+                    raw.unique_attack_ips as f64,
+                )
                 .await?;
             let _: () = conn
                 .expire(&ips_key, self.retention.raw_retention.as_secs() as i64)
@@ -416,7 +451,10 @@ impl TimeSeriesStorage {
     }
 
     /// Store traffic snapshot (aggregated)
-    pub async fn store_traffic_snapshot(&self, metrics: &TrafficMetrics) -> Result<(), StorageError> {
+    pub async fn store_traffic_snapshot(
+        &self,
+        metrics: &TrafficMetrics,
+    ) -> Result<(), StorageError> {
         if let Some(ref pool) = self.db_pool {
             let protocols_json = serde_json::to_value(&metrics.requests_by_protocol)
                 .map_err(|e| StorageError::Serialization(e.to_string()))?;
@@ -513,9 +551,13 @@ impl TimeSeriesStorage {
     }
 
     /// Query time-series data for traffic metrics
-    pub async fn query_time_series(&self, query: &TimeSeriesQuery) -> Result<Vec<TimeSeries>, StorageError> {
+    pub async fn query_time_series(
+        &self,
+        query: &TimeSeriesQuery,
+    ) -> Result<Vec<TimeSeries>, StorageError> {
         let backend_id = &query.backend_id;
-        let granularity = TimeGranularity::try_from(query.granularity).unwrap_or(TimeGranularity::Minute);
+        let granularity =
+            TimeGranularity::try_from(query.granularity).unwrap_or(TimeGranularity::Minute);
 
         let start_time = query
             .start_time
@@ -530,7 +572,11 @@ impl TimeSeriesStorage {
             .unwrap_or_else(Utc::now);
 
         let metrics_to_fetch = if query.metrics.is_empty() {
-            vec!["rps".to_string(), "bytes_in".to_string(), "connections".to_string()]
+            vec![
+                "rps".to_string(),
+                "bytes_in".to_string(),
+                "connections".to_string(),
+            ]
         } else {
             query.metrics.clone()
         };
@@ -564,7 +610,8 @@ impl TimeSeriesStorage {
         query: &TimeSeriesQuery,
     ) -> Result<Vec<TimeSeries>, StorageError> {
         let backend_id = &query.backend_id;
-        let granularity = TimeGranularity::try_from(query.granularity).unwrap_or(TimeGranularity::Minute);
+        let granularity =
+            TimeGranularity::try_from(query.granularity).unwrap_or(TimeGranularity::Minute);
 
         let start_time = query
             .start_time
@@ -644,7 +691,12 @@ impl TimeSeriesStorage {
                 "traffic" => "traffic_metrics_ts",
                 "attack" => "attack_metrics_ts",
                 "worker" => "worker_metrics_ts",
-                _ => return Err(StorageError::Internal(format!("Unknown category: {}", category))),
+                _ => {
+                    return Err(StorageError::Internal(format!(
+                        "Unknown category: {}",
+                        category
+                    )));
+                }
             };
 
             let column = self.metric_name_to_column(metric_name);
@@ -1079,31 +1131,42 @@ impl TimeSeriesStorage {
 
         // Clean up PostgreSQL
         if let Some(ref pool) = self.db_pool {
-            let raw_cutoff = Utc::now() - ChronoDuration::from_std(self.retention.raw_retention).unwrap();
+            let raw_cutoff =
+                Utc::now() - ChronoDuration::from_std(self.retention.raw_retention).unwrap();
 
             // Clean traffic metrics
             let result = sqlx::query("DELETE FROM traffic_metrics_ts WHERE timestamp < $1")
                 .bind(raw_cutoff)
                 .execute(pool)
                 .await?;
-            debug!("Cleaned {} rows from traffic_metrics_ts", result.rows_affected());
+            debug!(
+                "Cleaned {} rows from traffic_metrics_ts",
+                result.rows_affected()
+            );
 
             // Clean attack metrics
             let result = sqlx::query("DELETE FROM attack_metrics_ts WHERE timestamp < $1")
                 .bind(raw_cutoff)
                 .execute(pool)
                 .await?;
-            debug!("Cleaned {} rows from attack_metrics_ts", result.rows_affected());
+            debug!(
+                "Cleaned {} rows from attack_metrics_ts",
+                result.rows_affected()
+            );
 
             // Clean worker metrics
             let result = sqlx::query("DELETE FROM worker_metrics_ts WHERE timestamp < $1")
                 .bind(raw_cutoff)
                 .execute(pool)
                 .await?;
-            debug!("Cleaned {} rows from worker_metrics_ts", result.rows_affected());
+            debug!(
+                "Cleaned {} rows from worker_metrics_ts",
+                result.rows_affected()
+            );
 
             // Clean geo traffic (keep longer)
-            let geo_cutoff = Utc::now() - ChronoDuration::from_std(self.retention.daily_retention).unwrap();
+            let geo_cutoff =
+                Utc::now() - ChronoDuration::from_std(self.retention.daily_retention).unwrap();
             let result = sqlx::query("DELETE FROM geo_traffic WHERE timestamp < $1")
                 .bind(geo_cutoff)
                 .execute(pool)

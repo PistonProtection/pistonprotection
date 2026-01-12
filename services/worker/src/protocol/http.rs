@@ -147,7 +147,9 @@ pub fn get_header<'a>(payload: &'a [u8], header_name: &[u8]) -> Option<&'a [u8]>
             if name_lower == header_name_lower {
                 // Skip colon and optional whitespace
                 let mut value_start = colon_pos + 1;
-                while value_start < line.len() && (line[value_start] == b' ' || line[value_start] == b'\t') {
+                while value_start < line.len()
+                    && (line[value_start] == b' ' || line[value_start] == b'\t')
+                {
                     value_start += 1;
                 }
                 return Some(&line[value_start..]);

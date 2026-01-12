@@ -234,7 +234,13 @@ mod tests {
         let ack = TcpFlags::from_byte(0x10);
 
         // Normal connection establishment
-        assert_eq!(tcp_state_transition(TcpState::Listen, syn), TcpState::SynReceived);
-        assert_eq!(tcp_state_transition(TcpState::SynReceived, ack), TcpState::Established);
+        assert_eq!(
+            tcp_state_transition(TcpState::Listen, syn),
+            TcpState::SynReceived
+        );
+        assert_eq!(
+            tcp_state_transition(TcpState::SynReceived, ack),
+            TcpState::Established
+        );
     }
 }
