@@ -57,6 +57,7 @@ You can make breaking changes and drop legacy systems. This app isn't launched y
 - clickhouse for event storage
 - show fallback on minecraft if endpoint server backend is offline
 - allow custom filters/configurations in the dashboard
+- add github ci to all repositories
 
 All modules except the frontend must be written in rust.
 Use protobufs AND gRPC for inter-components communication. json/superjson is okay for browser <-> frontend communication.
