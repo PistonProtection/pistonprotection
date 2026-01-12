@@ -302,7 +302,7 @@ impl WorkerService for WorkerGrpcService {
 
 pub async fn create_grpc_server(
     state: AppState,
-) -> Result<tonic::transport::server::Router, Box<dyn std::error::Error>> {
+) -> Result<tonic::transport::server::Router, Box<dyn std::error::Error + Send + Sync>> {
     let (mut health_reporter, health_service) = health_reporter();
     health_reporter
         .set_serving::<WorkerServiceServer<WorkerGrpcService>>()

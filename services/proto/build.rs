@@ -27,6 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .out_dir(&out_dir)
         .file_descriptor_set_path(out_dir.join("descriptor.bin"))
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .compile_protos(
             &proto_files
                 .iter()

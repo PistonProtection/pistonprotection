@@ -2958,6 +2958,7 @@ dependencies = [
  "chrono",
  "prost",
  "prost-types",
+ "serde",
  "tonic",
  "tonic-build",
  "uuid 1.19.0",

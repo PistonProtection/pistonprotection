@@ -16,13 +16,15 @@ mod handlers;
 
 const SERVICE_NAME: &str = "config-mgr";
 
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), BoxError> {
     // Load configuration
-    let config = Config::load(SERVICE_NAME)?;
+    let config = Config::load(SERVICE_NAME).map_err(|e| Box::new(e) as BoxError)?;
 
     // Initialize telemetry
-    telemetry::init(SERVICE_NAME, &config.telemetry)?;
+    telemetry::init(SERVICE_NAME, &config.telemetry).map_err(|e| Box::new(e) as BoxError)?;
 
     info!(
         service = SERVICE_NAME,
@@ -34,13 +36,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_pool = match &config.database {
         Some(db_config) => {
             info!("Initializing database connection pool");
-            pistonprotection_common::db::create_pool(db_config).await?
+            pistonprotection_common::db::create_pool(db_config)
+                .await
+                .map_err(|e| Box::new(e) as BoxError)?
         }
         None => {
             error!("Database configuration is required for config-mgr");
             return Err(Box::new(Error::Internal(
                 "Database configuration is required for config-mgr".to_string(),
-            )));
+            )) as BoxError);
         }
     };
 
@@ -88,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     // Start HTTP server
-    let http_addr: SocketAddr = config.http_addr().parse()?;
+    let http_addr: SocketAddr = config.http_addr().parse().map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
     let http_server = handlers::create_router(state.clone());
     let http_shutdown_rx = shutdown_rx.clone();
     let http_handle = tokio::spawn(async move {
@@ -118,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Start gRPC server
-    let grpc_addr: SocketAddr = config.grpc_addr().parse()?;
+    let grpc_addr: SocketAddr = config.grpc_addr().parse().map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
     let grpc_server = handlers::create_grpc_server(state.clone()).await?;
     let grpc_shutdown_rx = shutdown_rx.clone();
     let grpc_handle = tokio::spawn(async move {

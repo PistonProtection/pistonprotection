@@ -10,6 +10,8 @@ Make frequent git commit and git pushes, so code stays up-to-date and properly s
 
 Make sure you use latest version of all dependencies and resolve any conflicts/issues so that the latest version can be used.
 
+Also don't use any old or unsupported or deprecated dependencies such as otel instead of tempo or promtail instead of grafanas promtail replacement because promtail is being dropped support for.
+
 - ddos protection management panel written with:
   - shadcn/ui (baseui theme, not radix theme)
   - shadcn/ui used idiomatically, use components where possible. always consider all available shadcn components for a design
