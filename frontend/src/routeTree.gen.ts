@@ -9,8 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
@@ -19,17 +17,10 @@ import { Route as DashboardFiltersRouteImport } from './routes/dashboard/filters
 import { Route as DashboardBillingRouteImport } from './routes/dashboard/billing'
 import { Route as DashboardBackendsRouteImport } from './routes/dashboard/backends'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard/analytics'
+import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -70,12 +61,28 @@ const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/auth/register',
+  path: '/auth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
@@ -85,8 +92,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
@@ -98,8 +106,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/backends': typeof DashboardBackendsRoute
   '/dashboard/billing': typeof DashboardBillingRoute
@@ -112,8 +121,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/login'
-    | '/register'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
@@ -123,8 +133,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/login'
-    | '/register'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
@@ -135,8 +146,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/login'
-    | '/register'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/dashboard/analytics'
     | '/dashboard/backends'
     | '/dashboard/billing'
@@ -148,26 +160,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
-  LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -224,6 +223,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAnalyticsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -252,8 +272,9 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
-  LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthRegisterRoute: AuthRegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

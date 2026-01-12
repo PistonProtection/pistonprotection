@@ -1,19 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
-import {
-  Check,
-  CreditCard,
-  Download,
-  ExternalLink,
-  Sparkles,
-  Zap,
-} from "lucide-react"
-import { format } from "date-fns"
-
-import { cn } from "@/lib/utils"
-import { billingOptions, type BillingInfo } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -22,7 +7,10 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -31,95 +19,83 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
+import {
+  CreditCard,
+  Download,
+  Check,
+  Zap,
+  Shield,
+  Server,
+  Activity,
+  ArrowRight,
+} from "lucide-react"
 
 export const Route = createFileRoute("/dashboard/billing")({
   component: BillingPage,
 })
 
-function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024 * 1024) {
-    return (bytes / (1024 * 1024 * 1024)).toFixed(0) + " GB"
-  }
-  if (bytes >= 1024 * 1024) {
-    return (bytes / (1024 * 1024)).toFixed(0) + " MB"
-  }
-  return (bytes / 1024).toFixed(0) + " KB"
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return (num / 1_000_000).toFixed(1) + "M"
-  }
-  if (num >= 1_000) {
-    return (num / 1_000).toFixed(0) + "K"
-  }
-  return num.toString()
-}
+const invoices = [
+  { id: "INV-001", date: "Jan 1, 2025", amount: "$299.00", status: "paid" },
+  { id: "INV-002", date: "Dec 1, 2024", amount: "$299.00", status: "paid" },
+  { id: "INV-003", date: "Nov 1, 2024", amount: "$299.00", status: "paid" },
+  { id: "INV-004", date: "Oct 1, 2024", amount: "$199.00", status: "paid" },
+  { id: "INV-005", date: "Sep 1, 2024", amount: "$199.00", status: "paid" },
+]
 
 const plans = [
   {
-    name: "Free",
-    price: 0,
+    name: "Basic",
+    price: "$99",
     description: "For small projects and testing",
     features: [
-      "1 Million requests/month",
-      "10 GB bandwidth/month",
-      "2 Backends",
-      "5 Filter rules",
-      "Community support",
-      "Basic analytics",
+      "Up to 5 backends",
+      "1M requests/month",
+      "Basic DDoS protection",
+      "Email support",
+      "1 user",
     ],
-    highlighted: false,
+    current: false,
   },
   {
-    name: "Pro",
-    price: 99,
+    name: "Standard",
+    price: "$199",
     description: "For growing businesses",
     features: [
-      "10 Million requests/month",
-      "500 GB bandwidth/month",
-      "10 Backends",
-      "50 Filter rules",
-      "Priority support",
-      "Advanced analytics",
-      "Custom rules",
-      "API access",
+      "Up to 15 backends",
+      "10M requests/month",
+      "Advanced DDoS protection",
+      "Priority email support",
+      "5 users",
+      "Analytics dashboard",
     ],
-    highlighted: true,
+    current: false,
   },
   {
     name: "Enterprise",
-    price: 499,
+    price: "$299",
     description: "For large-scale operations",
     features: [
-      "Unlimited requests",
-      "Unlimited bandwidth",
       "Unlimited backends",
-      "Unlimited filter rules",
-      "24/7 dedicated support",
-      "Real-time analytics",
-      "Custom integrations",
-      "SLA guarantee",
-      "On-premise option",
+      "Unlimited requests",
+      "Enterprise DDoS protection",
+      "24/7 phone support",
+      "Unlimited users",
+      "Advanced analytics",
+      "Custom filters",
+      "Dedicated account manager",
     ],
-    highlighted: false,
+    current: true,
   },
 ]
 
 function BillingPage() {
-  const { data: billing, isLoading } = useQuery(billingOptions)
-
   return (
-    <div className="flex-1 space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-          <p className="text-muted-foreground">
-            Manage your subscription and view usage.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+        <p className="text-muted-foreground">
+          Manage your subscription and billing information.
+        </p>
       </div>
 
       {/* Current Plan */}
@@ -127,316 +103,230 @@ function BillingPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Current Plan</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                Current Plan
+              </CardTitle>
               <CardDescription>
-                Your current subscription and billing cycle
+                Your subscription renews on February 1, 2025
               </CardDescription>
             </div>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <Badge
-                variant={billing?.status === "active" ? "default" : "destructive"}
-                className={
-                  billing?.status === "active" ? "bg-green-600" : undefined
-                }
-              >
-                {billing?.status === "active"
-                  ? "Active"
-                  : billing?.status === "past_due"
-                    ? "Past Due"
-                    : "Canceled"}
-              </Badge>
-            )}
+            <Badge className="text-lg px-4 py-1">Enterprise</Badge>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-4 w-64" />
+          <div className="grid gap-6 md:grid-cols-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Backends Used</p>
+              <div className="flex items-center gap-2">
+                <Server className="h-4 w-4" />
+                <span className="text-2xl font-bold">12</span>
+                <span className="text-muted-foreground">/ Unlimited</span>
+              </div>
             </div>
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold">
-                {billing?.plan === "free"
-                  ? "Free"
-                  : billing?.plan === "pro"
-                    ? "$99"
-                    : "$499"}
-              </span>
-              {billing?.plan !== "free" && (
-                <span className="text-muted-foreground">/month</span>
-              )}
-              <Badge variant="secondary" className="ml-2">
-                {billing?.plan?.toUpperCase()}
-              </Badge>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Requests This Month</p>
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="text-2xl font-bold">45.2M</span>
+                <span className="text-muted-foreground">/ Unlimited</span>
+              </div>
             </div>
-          )}
-          {!isLoading && billing && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Current billing period:{" "}
-              {format(new Date(billing.currentPeriodStart), "MMM d, yyyy")} -{" "}
-              {format(new Date(billing.currentPeriodEnd), "MMM d, yyyy")}
-            </p>
-          )}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Users</p>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold">8</span>
+                <span className="text-muted-foreground">/ Unlimited</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Protection Level</p>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-green-500" />
+                <span className="text-2xl font-bold">Enterprise</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
-        <CardFooter className="border-t">
-          <Button variant="outline" size="sm">
-            <CreditCard className="mr-2 size-4" />
-            Update Payment Method
-          </Button>
-        </CardFooter>
       </Card>
 
       {/* Usage */}
       <Card>
         <CardHeader>
-          <CardTitle>Usage This Period</CardTitle>
+          <CardTitle>Usage This Month</CardTitle>
           <CardDescription>
-            Your resource consumption in the current billing cycle
+            Your resource consumption for the current billing period.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>Protected Traffic</span>
+              <span>45.2M / Unlimited requests</span>
             </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Requests</span>
-                  <span className="text-muted-foreground">
-                    {formatNumber(billing?.usage.requests || 0)} /{" "}
-                    {formatNumber(billing?.usage.requestsLimit || 0)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    billing
-                      ? (billing.usage.requests / billing.usage.requestsLimit) *
-                        100
-                      : 0
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Bandwidth</span>
-                  <span className="text-muted-foreground">
-                    {formatBytes(billing?.usage.bandwidth || 0)} /{" "}
-                    {formatBytes(billing?.usage.bandwidthLimit || 0)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    billing
-                      ? (billing.usage.bandwidth / billing.usage.bandwidthLimit) *
-                        100
-                      : 0
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Backends</span>
-                  <span className="text-muted-foreground">
-                    {billing?.usage.backends || 0} /{" "}
-                    {billing?.usage.backendsLimit || 0}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    billing
-                      ? (billing.usage.backends / billing.usage.backendsLimit) *
-                        100
-                      : 0
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Filter Rules</span>
-                  <span className="text-muted-foreground">
-                    {billing?.usage.filters || 0} /{" "}
-                    {billing?.usage.filtersLimit || 0}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    billing
-                      ? (billing.usage.filters / billing.usage.filtersLimit) * 100
-                      : 0
-                  }
-                />
-              </div>
+            <Progress value={45} />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>Blocked Attacks</span>
+              <span>1.28M attacks blocked</span>
             </div>
-          )}
+            <Progress value={100} className="bg-red-100" />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>API Calls</span>
+              <span>234,567 / Unlimited calls</span>
+            </div>
+            <Progress value={23} />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Plans */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Available Plans
-        </h2>
-        <div className="grid gap-6 md:grid-cols-3">
+      {/* Available Plans */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Available Plans</h2>
+        <div className="grid gap-4 md:grid-cols-3">
           {plans.map((plan) => (
             <Card
               key={plan.name}
-              className={cn(
-                plan.highlighted &&
-                  "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background"
-              )}
+              className={plan.current ? "border-primary" : ""}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  {plan.highlighted && (
-                    <Badge className="bg-primary">
-                      <Sparkles className="mr-1 size-3" />
-                      Popular
-                    </Badge>
-                  )}
+                  <CardTitle>{plan.name}</CardTitle>
+                  {plan.current && <Badge>Current Plan</Badge>}
                 </div>
                 <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold">
-                    {plan.price === 0 ? "Free" : `$${plan.price}`}
-                  </span>
-                  {plan.price > 0 && (
-                    <span className="text-muted-foreground ml-1">/month</span>
-                  )}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-muted-foreground">/month</span>
                 </div>
-
                 <Separator />
-
                 <ul className="space-y-2">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm">
-                      <Check className="size-4 text-green-500 shrink-0" />
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-500" />
                       {feature}
                     </li>
                   ))}
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={
-                    billing?.plan === plan.name.toLowerCase()
-                      ? "secondary"
-                      : plan.highlighted
-                        ? "default"
-                        : "outline"
-                  }
-                  disabled={billing?.plan === plan.name.toLowerCase()}
-                >
-                  {billing?.plan === plan.name.toLowerCase() ? (
-                    "Current Plan"
-                  ) : billing?.plan === "enterprise" ? (
-                    "Downgrade"
-                  ) : (
-                    <>
-                      <Zap className="mr-2 size-4" />
-                      {billing?.plan === "free" ||
-                      (billing?.plan === "pro" &&
-                        plan.name.toLowerCase() === "enterprise")
-                        ? "Upgrade"
-                        : "Switch"}
-                    </>
-                  )}
-                </Button>
+                {plan.current ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    Current Plan
+                  </Button>
+                ) : (
+                  <Button className="w-full" variant="outline">
+                    {plan.price === "$299" ? "Downgrade" : "Upgrade"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
         </div>
       </div>
 
+      {/* Payment Method */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Method
+          </CardTitle>
+          <CardDescription>
+            Manage your payment information.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center text-white text-xs font-bold">
+                VISA
+              </div>
+              <div>
+                <p className="font-medium">Visa ending in 4242</p>
+                <p className="text-sm text-muted-foreground">Expires 12/2026</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm">
+              Update
+            </Button>
+          </div>
+          <Button variant="outline">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Add Payment Method
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Invoices */}
       <Card>
         <CardHeader>
           <CardTitle>Invoice History</CardTitle>
           <CardDescription>
-            Download invoices for your records
+            Download invoices for your records.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-12"></TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell className="font-medium">{invoice.id}</TableCell>
+                  <TableCell>{invoice.date}</TableCell>
+                  <TableCell>{invoice.amount}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={invoice.status === "paid" ? "default" : "secondary"}
+                      className={invoice.status === "paid" ? "bg-green-500" : ""}
+                    >
+                      {invoice.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {billing?.invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>${invoice.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          invoice.status === "paid"
-                            ? "default"
-                            : invoice.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                        className={
-                          invoice.status === "paid" ? "bg-green-600" : undefined
-                        }
-                      >
-                        {invoice.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon-sm">
-                        <Download className="size-4" />
-                        <span className="sr-only">Download</span>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {/* Help */}
+      {/* Billing Address */}
       <Card>
-        <CardContent className="flex items-center justify-between py-6">
-          <div>
-            <h3 className="font-medium">Need help with billing?</h3>
-            <p className="text-sm text-muted-foreground">
-              Contact our support team for billing inquiries and payment issues.
-            </p>
-          </div>
-          <Button variant="outline">
-            <ExternalLink className="mr-2 size-4" />
-            Contact Support
+        <CardHeader>
+          <CardTitle>Billing Address</CardTitle>
+          <CardDescription>
+            This address will appear on your invoices.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="font-medium">Acme Corporation</p>
+          <p className="text-muted-foreground">
+            123 Main Street<br />
+            Suite 400<br />
+            San Francisco, CA 94102<br />
+            United States
+          </p>
+          <Button variant="outline" className="mt-4">
+            Update Address
           </Button>
         </CardContent>
       </Card>
