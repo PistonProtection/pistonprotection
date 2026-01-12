@@ -17,9 +17,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
-        {{- if .Values.observability.loki.enabled }}
-        promtail.io/collect: "true"
-        {{- end }}
+        {{- include "pistonprotection.lokiAnnotations" . | nindent 8 }}
         {{- with .Values.auth.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

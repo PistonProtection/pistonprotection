@@ -180,19 +180,19 @@ Image tag
 {{- end }}
 
 {{/*
-Loki annotations for log collection
+Loki/Alloy annotations for log collection
+Uses Grafana Alloy (promtail replacement) annotation patterns
 */}}
 {{- define "pistonprotection.lokiAnnotations" -}}
 {{- if .Values.observability.loki.enabled }}
-promtail.io/collect: "true"
-{{- if .Values.observability.loki.url }}
-promtail.io/endpoint: {{ .Values.observability.loki.url | quote }}
-{{- end }}
+# Grafana Alloy log collection annotations (replaces deprecated promtail.io)
+alloy.grafana.com/logs.enabled: "true"
+alloy.grafana.com/logs.job: "pistonprotection"
 {{- if .Values.observability.loki.tenantId }}
-promtail.io/tenant-id: {{ .Values.observability.loki.tenantId | quote }}
+alloy.grafana.com/logs.tenant: {{ .Values.observability.loki.tenantId | quote }}
 {{- end }}
 {{- range $key, $value := .Values.observability.loki.labels }}
-promtail.io/{{ $key }}: {{ $value | quote }}
+alloy.grafana.com/logs.{{ $key }}: {{ $value | quote }}
 {{- end }}
 {{- end }}
 {{- end }}
