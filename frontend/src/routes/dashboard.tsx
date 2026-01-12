@@ -3,9 +3,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 
-export const Route = createFileRoute("/dashboard")({
-  component: DashboardLayout,
-})
+export const Route = createFileRoute("/dashboard")({ component: DashboardLayout })
 
 function DashboardLayout() {
   return (
@@ -15,13 +13,9 @@ function DashboardLayout() {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex items-center gap-2">
-            <span className="font-medium">PistonProtection</span>
-          </div>
+          <span className="font-medium">PistonProtection</span>
         </header>
-        <main className="flex-1 overflow-auto p-4">
-          <Outlet />
-        </main>
+        <main className="flex-1 overflow-auto p-4"><Outlet /></main>
       </SidebarInset>
     </SidebarProvider>
   )

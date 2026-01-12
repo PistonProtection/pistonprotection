@@ -1,120 +1,79 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CreditCard, Download, Check, Zap, Shield, Server, Activity, ArrowRight } from "lucide-react"
+import { CreditCard, Download, Zap, Shield, Server, ArrowUpRight } from "lucide-react"
 
 export const Route = createFileRoute("/dashboard/billing")({ component: BillingPage })
 
-const invoices = [
-  { id: "INV-001", date: "Jan 1, 2025", amount: "$299.00", status: "paid" },
-  { id: "INV-002", date: "Dec 1, 2024", amount: "$299.00", status: "paid" },
-  { id: "INV-003", date: "Nov 1, 2024", amount: "$299.00", status: "paid" },
-  { id: "INV-004", date: "Oct 1, 2024", amount: "$199.00", status: "paid" },
-]
-
-const plans = [
-  { name: "Basic", price: "$99", description: "For small projects", features: ["5 backends", "1M requests/month", "Basic protection", "Email support"], current: false },
-  { name: "Standard", price: "$199", description: "For growing businesses", features: ["15 backends", "10M requests/month", "Advanced protection", "Priority support", "Analytics"], current: false },
-  { name: "Enterprise", price: "$299", description: "For large operations", features: ["Unlimited backends", "Unlimited requests", "Enterprise protection", "24/7 support", "Custom filters", "Dedicated manager"], current: true },
-]
-
 function BillingPage() {
+  const currentPlan = { name: "Enterprise", price: 499, billingCycle: "monthly", renewalDate: "Feb 15, 2025" }
+  const usage = { bandwidth: { used: 8.2, limit: 10, unit: "TB" }, requests: { used: 158, limit: 200, unit: "M" }, backends: { used: 12, limit: 25, unit: "" } }
+  const invoices = [
+    { id: "INV-2025-001", date: "Jan 15, 2025", amount: 499, status: "paid" },
+    { id: "INV-2024-012", date: "Dec 15, 2024", amount: 499, status: "paid" },
+    { id: "INV-2024-011", date: "Nov 15, 2024", amount: 499, status: "paid" },
+    { id: "INV-2024-010", date: "Oct 15, 2024", amount: 399, status: "paid" },
+  ]
+  const plans = [
+    { name: "Starter", price: 49, features: ["1 TB Bandwidth", "10M Requests", "5 Backends", "Email Support"] },
+    { name: "Professional", price: 199, features: ["5 TB Bandwidth", "100M Requests", "15 Backends", "Priority Support", "Custom Filters"] },
+    { name: "Enterprise", price: 499, features: ["10 TB Bandwidth", "200M Requests", "25 Backends", "24/7 Support", "Custom Filters", "Dedicated IP", "SLA 99.99%"], current: true },
+  ]
   return (
     <div className="space-y-6">
       <div><h1 className="text-2xl font-bold tracking-tight">Billing</h1><p className="text-muted-foreground">Manage your subscription and billing information.</p></div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-yellow-500" />Current Plan</CardTitle><CardDescription>Your subscription renews on February 1, 2025</CardDescription></div>
-            <Badge className="text-lg px-4 py-1">Enterprise</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-4">
-            <div className="space-y-2"><p className="text-sm text-muted-foreground">Backends Used</p><div className="flex items-center gap-2"><Server className="h-4 w-4" /><span className="text-2xl font-bold">12</span><span className="text-muted-foreground">/ Unlimited</span></div></div>
-            <div className="space-y-2"><p className="text-sm text-muted-foreground">Requests This Month</p><div className="flex items-center gap-2"><Activity className="h-4 w-4" /><span className="text-2xl font-bold">45.2M</span><span className="text-muted-foreground">/ Unlimited</span></div></div>
-            <div className="space-y-2"><p className="text-sm text-muted-foreground">Users</p><div className="flex items-center gap-2"><span className="text-2xl font-bold">8</span><span className="text-muted-foreground">/ Unlimited</span></div></div>
-            <div className="space-y-2"><p className="text-sm text-muted-foreground">Protection Level</p><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-green-500" /><span className="text-2xl font-bold">Enterprise</span></div></div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Usage This Month</CardTitle><CardDescription>Your resource consumption for the current billing period.</CardDescription></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2"><div className="flex items-center justify-between text-sm"><span>Protected Traffic</span><span>45.2M / Unlimited requests</span></div><Progress value={45} /></div>
-          <div className="space-y-2"><div className="flex items-center justify-between text-sm"><span>Blocked Attacks</span><span>1.28M attacks blocked</span></div><Progress value={100} className="bg-red-100" /></div>
-          <div className="space-y-2"><div className="flex items-center justify-between text-sm"><span>API Calls</span><span>234,567 / Unlimited calls</span></div><Progress value={23} /></div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Available Plans</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          {plans.map((plan) => (
-            <Card key={plan.name} className={plan.current ? "border-primary" : ""}>
-              <CardHeader>
-                <div className="flex items-center justify-between"><CardTitle>{plan.name}</CardTitle>{plan.current && <Badge>Current Plan</Badge>}</div>
-                <CardDescription>{plan.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-baseline gap-1"><span className="text-4xl font-bold">{plan.price}</span><span className="text-muted-foreground">/month</span></div>
-                <Separator />
-                <ul className="space-y-2">{plan.features.map((feature, i) => (<li key={i} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-green-500" />{feature}</li>))}</ul>
-              </CardContent>
-              <CardFooter>
-                {plan.current ? <Button className="w-full" variant="outline" disabled>Current Plan</Button> : <Button className="w-full" variant="outline">{plan.price === "$299" ? "Downgrade" : "Upgrade"}<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Current Plan</CardTitle><Shield className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{currentPlan.name}</div><p className="text-xs text-muted-foreground">${currentPlan.price}/{currentPlan.billingCycle}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Next Billing</CardTitle><CreditCard className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${currentPlan.price}</div><p className="text-xs text-muted-foreground">{currentPlan.renewalDate}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Payment Method</CardTitle><CreditCard className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">•••• 4242</div><p className="text-xs text-muted-foreground">Visa - Expires 12/26</p></CardContent></Card>
       </div>
-
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Payment Method</CardTitle><CardDescription>Manage your payment information.</CardDescription></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center text-white text-xs font-bold">VISA</div>
-              <div><p className="font-medium">Visa ending in 4242</p><p className="text-sm text-muted-foreground">Expires 12/2026</p></div>
-            </div>
-            <Button variant="outline" size="sm">Update</Button>
-          </div>
-          <Button variant="outline"><CreditCard className="mr-2 h-4 w-4" />Add Payment Method</Button>
+        <CardHeader><CardTitle>Usage This Period</CardTitle><CardDescription>Your resource consumption for the current billing cycle.</CardDescription></CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-medium">Bandwidth</span></div><span className="text-sm text-muted-foreground">{usage.bandwidth.used} / {usage.bandwidth.limit} {usage.bandwidth.unit}</span></div><Progress value={(usage.bandwidth.used / usage.bandwidth.limit) * 100} className="h-2" /></div>
+          <div className="space-y-2"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-medium">Requests</span></div><span className="text-sm text-muted-foreground">{usage.requests.used} / {usage.requests.limit} {usage.requests.unit}</span></div><Progress value={(usage.requests.used / usage.requests.limit) * 100} className="h-2" /></div>
+          <div className="space-y-2"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Server className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-medium">Protected Backends</span></div><span className="text-sm text-muted-foreground">{usage.backends.used} / {usage.backends.limit}</span></div><Progress value={(usage.backends.used / usage.backends.limit) * 100} className="h-2" /></div>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader><CardTitle>Invoice History</CardTitle><CardDescription>Download invoices for your records.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Available Plans</CardTitle><CardDescription>Upgrade or downgrade your subscription.</CardDescription></CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {plans.map((p, i) => (
+              <Card key={i} className={p.current ? "border-primary" : ""}>
+                <CardHeader>
+                  <div className="flex items-center justify-between"><CardTitle>{p.name}</CardTitle>{p.current && <Badge>Current</Badge>}</div>
+                  <CardDescription><span className="text-3xl font-bold">${p.price}</span><span className="text-muted-foreground">/month</span></CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm">{p.features.map((f, j) => (<li key={j} className="flex items-center gap-2"><ArrowUpRight className="h-4 w-4 text-green-500" />{f}</li>))}</ul>
+                  <Button className="w-full mt-4" variant={p.current ? "outline" : "default"} disabled={p.current}>{p.current ? "Current Plan" : "Upgrade"}</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Billing History</CardTitle><CardDescription>View and download past invoices.</CardDescription></CardHeader>
         <CardContent>
           <Table>
             <TableHeader><TableRow><TableHead>Invoice</TableHead><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.id}</TableCell>
-                  <TableCell>{invoice.date}</TableCell>
-                  <TableCell>{invoice.amount}</TableCell>
-                  <TableCell><Badge variant={invoice.status === "paid" ? "default" : "secondary"} className={invoice.status === "paid" ? "bg-green-500" : ""}>{invoice.status}</Badge></TableCell>
-                  <TableCell className="text-right"><Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button></TableCell>
+              {invoices.map(inv => (
+                <TableRow key={inv.id}>
+                  <TableCell className="font-medium">{inv.id}</TableCell>
+                  <TableCell>{inv.date}</TableCell>
+                  <TableCell>${inv.amount}</TableCell>
+                  <TableCell><Badge variant="secondary" className="bg-green-500/10 text-green-500">Paid</Badge></TableCell>
+                  <TableCell className="text-right"><Button variant="ghost" size="sm"><Download className="mr-2 h-4 w-4" />PDF</Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Billing Address</CardTitle><CardDescription>This address will appear on your invoices.</CardDescription></CardHeader>
-        <CardContent className="space-y-2">
-          <p className="font-medium">Acme Corporation</p>
-          <p className="text-muted-foreground">123 Main Street<br />Suite 400<br />San Francisco, CA 94102<br />United States</p>
-          <Button variant="outline" className="mt-4">Update Address</Button>
         </CardContent>
       </Card>
     </div>
