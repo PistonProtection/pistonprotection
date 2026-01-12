@@ -2,7 +2,10 @@
 
 use std::task::{Context, Poll};
 use std::time::Instant;
-use tonic::body::BoxBody;
+use bytes::Bytes;
+use http_body_util::combinators::UnsyncBoxBody;
+
+type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
 use tower::{Layer, Service};
 use tracing::{Instrument, info, info_span};
 
@@ -18,11 +21,12 @@ impl<S> LoggingMiddleware<S> {
     }
 }
 
-impl<S, ReqBody> Service<http::Request<ReqBody>> for LoggingMiddleware<S>
+impl<S, ReqBody, E> Service<http::Request<ReqBody>> for LoggingMiddleware<S>
 where
-    S: Service<http::Request<ReqBody>, Response = http::Response<BoxBody>> + Clone + Send + 'static,
+    S: Service<http::Request<ReqBody>, Response = http::Response<BoxBody>, Error = E> + Clone + Send + 'static,
     S::Future: Send + 'static,
     ReqBody: Send + 'static,
+    E: Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -46,34 +50,35 @@ where
 
         Box::pin(
             async move {
-                let response = inner.call(req).await;
+                let fut = inner.call(req);
+                let response: Result<http::Response<BoxBody>, E> = fut.await;
                 let elapsed = start.elapsed();
 
-                match &response {
-                    Ok(resp) => {
-                        let status = resp.status();
-                        info!(
-                            status = %status,
-                            duration_ms = elapsed.as_millis() as u64,
-                            "Request completed"
-                        );
+                let is_ok = response.is_ok();
+                let status_str: String = if let Ok(ref resp) = response {
+                    let resp: &http::Response<BoxBody> = resp;
+                    resp.status().as_str().to_string()
+                } else {
+                    "error".to_string()
+                };
 
-                        // Record metrics
-                        pistonprotection_common::metrics::GRPC_REQUESTS_TOTAL
-                            .with_label_values(&["gateway", uri.path(), status.as_str()])
-                            .inc();
-                        pistonprotection_common::metrics::GRPC_REQUEST_DURATION_SECONDS
-                            .with_label_values(&["gateway", uri.path()])
-                            .observe(elapsed.as_secs_f64());
-                    }
-                    Err(_) => {
-                        info!(duration_ms = elapsed.as_millis() as u64, "Request failed");
-
-                        pistonprotection_common::metrics::GRPC_REQUESTS_TOTAL
-                            .with_label_values(&["gateway", uri.path(), "error"])
-                            .inc();
-                    }
+                if is_ok {
+                    info!(
+                        status = %status_str,
+                        duration_ms = elapsed.as_millis() as u64,
+                        "Request completed"
+                    );
+                } else {
+                    info!(duration_ms = elapsed.as_millis() as u64, "Request failed");
                 }
+
+                // Record metrics
+                pistonprotection_common::metrics::GRPC_REQUESTS_TOTAL
+                    .with_label_values(&["gateway", uri.path(), &status_str])
+                    .inc();
+                pistonprotection_common::metrics::GRPC_REQUEST_DURATION_SECONDS
+                    .with_label_values(&["gateway", uri.path()])
+                    .observe(elapsed.as_secs_f64());
 
                 response
             }

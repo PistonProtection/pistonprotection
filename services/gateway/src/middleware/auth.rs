@@ -1,7 +1,10 @@
 //! Authentication middleware for gRPC
 
 use std::task::{Context, Poll};
-use tonic::{Status, body::BoxBody};
+use bytes::Bytes;
+use http_body_util::combinators::UnsyncBoxBody;
+
+type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
 use tower::{Layer, Service};
 use tracing::warn;
 

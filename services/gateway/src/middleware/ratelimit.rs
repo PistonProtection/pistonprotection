@@ -3,8 +3,11 @@
 use pistonprotection_common::ratelimit::{GlobalRateLimiter, RateLimitConfig};
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use tonic::Status;
-use tonic::body::BoxBody;
+use bytes::Bytes;
+use http_body_util::combinators::UnsyncBoxBody;
+
+type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
+use http_body_util::BodyExt;
 use tower::{Layer, Service};
 use tracing::warn;
 
@@ -49,10 +52,13 @@ where
             // Check rate limit
             if !limiter.check() {
                 warn!(path = %path, "Rate limit exceeded");
-                // Create a rate limited response
+                // Create a rate limited response with empty body
+                let empty_body = http_body_util::Empty::<Bytes>::new()
+                    .map_err(|_| tonic::Status::internal("body error"))
+                    .boxed_unsync();
                 let response = http::Response::builder()
                     .status(http::StatusCode::TOO_MANY_REQUESTS)
-                    .body(tonic::body::empty_body())
+                    .body(empty_body)
                     .unwrap();
                 return Ok(response);
             }

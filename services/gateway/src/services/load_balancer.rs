@@ -207,10 +207,11 @@ impl LoadBalancer {
         let tracked = Arc::clone(selected);
         tracked.increment_connections();
 
+        let origin_id = tracked.origin.id.clone();
         Ok(SelectedOrigin {
             origin: tracked.origin.clone(),
             tracker: tracked,
-            circuit_breaker: self.circuit_breakers.get_or_create(&tracked.origin.id),
+            circuit_breaker: self.circuit_breakers.get_or_create(&origin_id),
         })
     }
 

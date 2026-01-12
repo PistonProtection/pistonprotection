@@ -276,10 +276,11 @@ impl BackendServiceTrait for BackendGrpcService {
         request: Request<WatchBackendStatusRequest>,
     ) -> Result<Response<Self::WatchBackendStatusStream>, Status> {
         let req = request.into_inner();
+        let backend_id = req.backend_id;
 
         let stream = self
             .service
-            .watch_status(&req.backend_id)
+            .watch_status(&backend_id)
             .await
             .map_err(Status::from)?;
 
@@ -587,10 +588,11 @@ impl FilterServiceTrait for FilterGrpcService {
         request: Request<WatchRulesRequest>,
     ) -> Result<Response<Self::WatchRulesStream>, Status> {
         let req = request.into_inner();
+        let backend_id = req.backend_id;
 
         let stream = self
             .service
-            .watch_rules(&req.backend_id)
+            .watch_rules(&backend_id)
             .await
             .map_err(Status::from)?;
 
@@ -767,7 +769,7 @@ impl MetricsServiceTrait for MetricsGrpcService {
 /// Create the gRPC server
 pub async fn create_server(
     state: AppState,
-) -> Result<tonic::transport::server::Router, Box<dyn std::error::Error>> {
+) -> Result<tonic::transport::server::Router, Box<dyn std::error::Error + Send + Sync>> {
     // Health service
     let (mut health_reporter, health_service) = health_reporter();
     health_reporter

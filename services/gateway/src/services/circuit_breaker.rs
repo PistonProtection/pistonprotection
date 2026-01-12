@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
 /// Circuit breaker state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CircuitState {
     /// Circuit is closed, requests flow normally
     Closed,

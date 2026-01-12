@@ -68,6 +68,9 @@ http-body-util = { workspace = true }
 # Lazy static
 lazy_static = "1.4"
 
+# HTTP body utils
+bytes = "1"
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 mockall = { workspace = true }

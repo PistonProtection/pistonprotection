@@ -822,7 +822,7 @@ impl BackendService {
     pub async fn watch_status(
         &self,
         backend_id: &str,
-    ) -> Result<impl Stream<Item = Result<BackendStatus>> + Send> {
+    ) -> Result<impl Stream<Item = Result<BackendStatus>> + Send + 'static> {
         // Create a broadcast channel for status updates
         let (tx, rx) = broadcast::channel::<BackendStatus>(32);
 
@@ -852,10 +852,11 @@ impl BackendService {
         });
 
         // Convert broadcast receiver to stream
-        let stream = BroadcastStream::new(rx).filter_map(|result| match result {
-            Ok(status) => Some(Ok(status)),
-            Err(broadcast::error::RecvError::Lagged(_)) => None,
-            Err(broadcast::error::RecvError::Closed) => None,
+        let stream = BroadcastStream::new(rx).filter_map(|result| async move {
+            match result {
+                Ok(status) => Some(Ok(status)),
+                Err(_) => None, // BroadcastStreamRecvError (lagged or closed)
+            }
         });
 
         Ok(stream)

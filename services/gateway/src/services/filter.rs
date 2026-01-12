@@ -575,7 +575,7 @@ impl FilterService {
     pub async fn watch_rules(
         &self,
         backend_id: &str,
-    ) -> Result<impl Stream<Item = Result<RuleUpdate>> + Send> {
+    ) -> Result<impl Stream<Item = Result<RuleUpdate>> + Send + 'static> {
         // Create a broadcast channel for rule updates
         let (tx, rx) = broadcast::channel::<RuleUpdate>(64);
 
@@ -609,10 +609,11 @@ impl FilterService {
         });
 
         // Convert broadcast receiver to stream
-        let stream = BroadcastStream::new(rx).filter_map(|result| match result {
-            Ok(update) => Some(Ok(update)),
-            Err(broadcast::error::RecvError::Lagged(_)) => None,
-            Err(broadcast::error::RecvError::Closed) => None,
+        let stream = BroadcastStream::new(rx).filter_map(|result| async move {
+            match result {
+                Ok(update) => Some(Ok(update)),
+                Err(_) => None, // BroadcastStreamRecvError (lagged or closed)
+            }
         });
 
         Ok(stream)

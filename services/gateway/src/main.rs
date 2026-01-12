@@ -68,7 +68,7 @@ async fn main() -> Result<(), AppError> {
                 }
                 Err(e) => {
                     error!(error = %e, "Failed to initialize database connection pool");
-                    return Err(AppError::Database(e));
+                    return Err(AppError::Init(e));
                 }
             }
         }

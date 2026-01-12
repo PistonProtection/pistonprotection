@@ -95,7 +95,7 @@ impl MetricsService {
                 country_name: row.get("country_name"),
                 requests: row.get::<i64, _>("requests") as u64,
                 bytes: row.get::<i64, _>("bytes") as u64,
-                unique_ips: row.get::<i64, _>("unique_ips") as u32,
+                unique_ips: row.get::<i64, _>("unique_ips") as u64,
                 blocked: false,
             })
             .collect();
