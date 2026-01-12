@@ -91,7 +91,7 @@ function formatNumber(num: number): string {
 }
 
 function AnalyticsPage() {
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [ipLookup, setIpLookup] = useState("");
 

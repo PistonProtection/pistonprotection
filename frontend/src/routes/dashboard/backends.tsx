@@ -105,7 +105,7 @@ type Protocol =
   | "minecraft_bedrock";
 
 function BackendsPage() {
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deleteBackendId, setDeleteBackendId] = useState<string | null>(null);
 
