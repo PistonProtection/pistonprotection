@@ -5,6 +5,7 @@ import {
   Filter,
   LayoutDashboard,
   LogOut,
+  Search,
   Server,
   Settings,
   Shield,
@@ -27,6 +28,7 @@ const menuItems = [
   { title: "Backends", url: "/dashboard/backends", icon: Server },
   { title: "Filters", url: "/dashboard/filters", icon: Filter },
   { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
+  { title: "IP Lookup", url: "/dashboard/ip-lookup", icon: Search },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
   { title: "Billing", url: "/dashboard/billing", icon: CreditCard },
 ];
