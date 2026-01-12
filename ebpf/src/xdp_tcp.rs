@@ -274,6 +274,11 @@ const MSS_TABLE: [u16; 4] = [536, 1300, 1440, 1460];
 const IP_MF: u16 = 0x2000; // More Fragments flag
 const IP_OFFSET: u16 = 0x1FFF; // Fragment offset mask
 
+// IPv6 fragmentation constants
+const IPPROTO_FRAGMENT: u8 = 44; // IPv6 Fragment extension header
+const IPV6_FRAG_OFFSET_MASK: u16 = 0xFFF8; // Upper 13 bits (fragment offset in 8-byte units)
+const IPV6_FRAG_M_FLAG: u16 = 0x0001; // More fragments flag (lowest bit)
+
 // Default SYN cookie secrets - derived from boot time for uniqueness
 // These should be overwritten by userspace with cryptographically random values
 const DEFAULT_SYN_COOKIE_SECRET: u32 = 0xDEADBEEF;
@@ -449,6 +454,15 @@ fn process_ipv4(
 // IPv6 Processing
 // ============================================================================
 
+/// IPv6 Fragment Header structure
+#[repr(C)]
+struct Ipv6FragHdr {
+    nexthdr: u8,
+    reserved: u8,
+    frag_off_m: u16, // Fragment offset (13 bits) + Reserved (2 bits) + M flag (1 bit)
+    identification: u32,
+}
+
 #[inline(always)]
 fn process_ipv6(
     ctx: &XdpContext,
@@ -461,10 +475,94 @@ fn process_ipv6(
     }
 
     let ip6 = unsafe { &*(data as *const Ipv6Hdr) };
+    let mut next_header = ip6.nexthdr;
+    let mut header_offset = data + mem::size_of::<Ipv6Hdr>();
+    let mut is_fragmented = false;
+    let mut is_first_fragment = true;
 
-    // Only process TCP
-    if ip6.nexthdr != IPPROTO_TCP {
+    // ========================================================================
+    // IPv6 EXTENSION HEADER PARSING
+    // ========================================================================
+    // IPv6 can have extension headers between the main header and TCP.
+    // We need to check for the Fragment extension header (protocol 44).
+    // For simplicity, we only handle: Hop-by-Hop (0), Routing (43), Fragment (44), Dest Options (60)
+    // ========================================================================
+
+    // Bounded loop for eBPF verifier - max 3 extension headers is reasonable
+    for _ in 0..3 {
+        match next_header {
+            IPPROTO_TCP => {
+                // Found TCP, done parsing extension headers
+                break;
+            }
+            IPPROTO_FRAGMENT => {
+                // Fragment extension header
+                if header_offset + mem::size_of::<Ipv6FragHdr>() > data_end {
+                    return Ok(xdp_action::XDP_PASS);
+                }
+
+                let frag_hdr = unsafe { &*(header_offset as *const Ipv6FragHdr) };
+                let frag_off_m = u16::from_be(frag_hdr.frag_off_m);
+
+                // Check fragment offset (bits 3-15) and M flag (bit 0)
+                let frag_offset = frag_off_m & IPV6_FRAG_OFFSET_MASK;
+                let more_fragments = (frag_off_m & IPV6_FRAG_M_FLAG) != 0;
+
+                is_fragmented = more_fragments || frag_offset != 0;
+                is_first_fragment = frag_offset == 0;
+
+                next_header = frag_hdr.nexthdr;
+                header_offset += mem::size_of::<Ipv6FragHdr>();
+            }
+            0 | 43 | 60 => {
+                // Hop-by-Hop (0), Routing (43), Destination Options (60)
+                // These have a common format: next_header, length, data
+                if header_offset + 2 > data_end {
+                    return Ok(xdp_action::XDP_PASS);
+                }
+
+                let ext_next = unsafe { *(header_offset as *const u8) };
+                let ext_len = unsafe { *((header_offset + 1) as *const u8) };
+                // Length is in 8-byte units, not including first 8 bytes
+                let total_len = ((ext_len as usize) + 1) * 8;
+
+                next_header = ext_next;
+                header_offset += total_len;
+            }
+            _ => {
+                // Unknown or unsupported extension header
+                // If it's not TCP, we can't process it
+                return Ok(xdp_action::XDP_PASS);
+            }
+        }
+    }
+
+    // After parsing, check if we found TCP
+    if next_header != IPPROTO_TCP {
         return Ok(xdp_action::XDP_PASS);
+    }
+
+    // ========================================================================
+    // IPv6 FRAGMENTATION HANDLING
+    // ========================================================================
+    // Same strategy as IPv4: drop non-first fragments, be suspicious of first fragments
+    // ========================================================================
+    if is_fragmented {
+        if !is_first_fragment {
+            // Non-first fragment - has no TCP header, can't inspect
+            // Drop at protection level 2+ (like UDP does)
+            if config.protection_level >= 2 {
+                update_stats_dropped_fragments();
+                return Ok(xdp_action::XDP_DROP);
+            }
+            return Ok(xdp_action::XDP_PASS);
+        }
+
+        // First fragment with more fragments
+        if config.protection_level >= 3 {
+            update_stats_dropped_fragments();
+            return Ok(xdp_action::XDP_DROP);
+        }
     }
 
     let src_ip = ip6.saddr;
@@ -475,13 +573,11 @@ fn process_ipv6(
         return Ok(xdp_action::XDP_DROP);
     }
 
-    let tcp_data = data + mem::size_of::<Ipv6Hdr>();
-
     // Use last 4 bytes as simplified IP keys
     let src_key = u32::from_be_bytes([src_ip[12], src_ip[13], src_ip[14], src_ip[15]]);
     let dst_key = u32::from_be_bytes([ip6.daddr[12], ip6.daddr[13], ip6.daddr[14], ip6.daddr[15]]);
 
-    process_tcp(ctx, tcp_data, data_end, src_key, dst_key, config)
+    process_tcp(ctx, header_offset, data_end, src_key, dst_key, config)
 }
 
 // ============================================================================

@@ -102,12 +102,19 @@ pub fn is_minecraft_bedrock(payload: &[u8]) -> bool {
     false
 }
 
+/// Maximum bytes for a VarInt (32-bit value encoded in 7-bit chunks)
+const MAX_VARINT_BYTES: usize = 5;
+
 /// Read a VarInt from the buffer
+///
+/// VarInt encoding uses 7 bits per byte with the high bit indicating continuation.
+/// A 32-bit value requires at most 5 bytes. The 5th byte can only use 4 bits
+/// (0x0f mask) to avoid overflow.
 fn read_varint(buf: &[u8]) -> Option<(i32, usize)> {
     let mut value: i32 = 0;
     let mut position = 0;
 
-    for (i, &byte) in buf.iter().enumerate() {
+    for (i, &byte) in buf.iter().take(MAX_VARINT_BYTES).enumerate() {
         value |= ((byte & 0x7f) as i32) << position;
 
         if byte & 0x80 == 0 {
@@ -115,12 +122,26 @@ fn read_varint(buf: &[u8]) -> Option<(i32, usize)> {
         }
 
         position += 7;
+
+        // VarInt overflow check for 32-bit values
+        // After reading 4 bytes (28 bits), we can only have 4 more bits
+        // The 5th byte must have its high nibble clear (only uses bits 0-3)
         if position >= 32 {
-            return None;
+            // For the 5th byte: only 4 bits are valid (bits 28-31)
+            // The remaining bits in the 5th byte must be zero or it's malformed
+            // Note: We already added the bits above, so check if this is the 5th byte
+            if i == 4 && (byte & 0xf0) != 0 {
+                return None; // Malformed 5th byte - high nibble set
+            }
+            // If we reach here with position >= 32 and haven't returned,
+            // the VarInt is still continuing which is invalid
+            if byte & 0x80 != 0 {
+                return None; // VarInt too long (more than 5 bytes)
+            }
         }
     }
 
-    None
+    None // Incomplete VarInt (ran out of bytes before finding terminator)
 }
 
 /// Minecraft Java protocol analyzer
@@ -204,8 +225,11 @@ impl MinecraftJavaAnalyzer {
             return false;
         }
 
-        // Check next state is valid (1 = status, 2 = login)
-        if handshake.next_state != 1 && handshake.next_state != 2 {
+        // Check next state is valid:
+        // 1 = status (server list ping)
+        // 2 = login (player joining)
+        // 3 = transfer (server transfer, Minecraft 1.20.5+)
+        if handshake.next_state < 1 || handshake.next_state > 3 {
             return false;
         }
 
@@ -357,15 +381,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_varint() {
-        // Single byte
+    fn test_read_varint_single_byte() {
         assert_eq!(read_varint(&[0x00]), Some((0, 1)));
         assert_eq!(read_varint(&[0x01]), Some((1, 1)));
         assert_eq!(read_varint(&[0x7f]), Some((127, 1)));
+    }
 
-        // Two bytes
+    #[test]
+    fn test_read_varint_two_bytes() {
         assert_eq!(read_varint(&[0x80, 0x01]), Some((128, 2)));
         assert_eq!(read_varint(&[0xff, 0x01]), Some((255, 2)));
+        assert_eq!(read_varint(&[0x80, 0x02]), Some((256, 2)));
+    }
+
+    #[test]
+    fn test_read_varint_max_positive() {
+        // Max positive i32: 2147483647 = 0x7FFFFFFF
+        // VarInt encoding: 0xff, 0xff, 0xff, 0xff, 0x07
+        assert_eq!(
+            read_varint(&[0xff, 0xff, 0xff, 0xff, 0x07]),
+            Some((i32::MAX, 5))
+        );
+    }
+
+    #[test]
+    fn test_read_varint_negative() {
+        // -1 in two's complement for VarInt: 0xff, 0xff, 0xff, 0xff, 0x0f
+        let result = read_varint(&[0xff, 0xff, 0xff, 0xff, 0x0f]);
+        assert_eq!(result, Some((-1, 5)));
+    }
+
+    #[test]
+    fn test_read_varint_malformed_fifth_byte() {
+        // 5th byte with high nibble set is invalid
+        // 0x10 = 0001_0000, high nibble is 0001 which is non-zero
+        assert_eq!(read_varint(&[0x80, 0x80, 0x80, 0x80, 0x10]), None);
+        // 0xf0 = 1111_0000, high nibble is 1111 which is non-zero
+        assert_eq!(read_varint(&[0x80, 0x80, 0x80, 0x80, 0xf0]), None);
+    }
+
+    #[test]
+    fn test_read_varint_too_long() {
+        // 6 bytes is always invalid
+        assert_eq!(
+            read_varint(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x01]),
+            None
+        );
+    }
+
+    #[test]
+    fn test_read_varint_incomplete() {
+        // Continuation bit set but no more bytes
+        assert_eq!(read_varint(&[0x80]), None);
+        assert_eq!(read_varint(&[0xff, 0xff]), None);
     }
 
     #[test]
@@ -378,5 +446,55 @@ mod tests {
         // Invalid - no magic
         let invalid = vec![0x01; 33];
         assert!(!is_minecraft_bedrock(&invalid));
+    }
+
+    #[test]
+    fn test_validate_handshake_next_state() {
+        let analyzer = MinecraftJavaAnalyzer::new();
+
+        // Status state (1) - valid
+        let handshake_status = MinecraftJavaHandshake {
+            protocol_version: 765,
+            server_address: "example.com".to_string(),
+            server_port: 25565,
+            next_state: 1,
+        };
+        assert!(analyzer.validate_handshake(&handshake_status));
+
+        // Login state (2) - valid
+        let handshake_login = MinecraftJavaHandshake {
+            protocol_version: 765,
+            server_address: "example.com".to_string(),
+            server_port: 25565,
+            next_state: 2,
+        };
+        assert!(analyzer.validate_handshake(&handshake_login));
+
+        // Transfer state (3) - valid for Minecraft 1.20.5+
+        let handshake_transfer = MinecraftJavaHandshake {
+            protocol_version: 766, // 1.20.5
+            server_address: "example.com".to_string(),
+            server_port: 25565,
+            next_state: 3,
+        };
+        assert!(analyzer.validate_handshake(&handshake_transfer));
+
+        // Invalid state (0) - should fail
+        let handshake_invalid = MinecraftJavaHandshake {
+            protocol_version: 765,
+            server_address: "example.com".to_string(),
+            server_port: 25565,
+            next_state: 0,
+        };
+        assert!(!analyzer.validate_handshake(&handshake_invalid));
+
+        // Invalid state (4) - should fail
+        let handshake_invalid2 = MinecraftJavaHandshake {
+            protocol_version: 765,
+            server_address: "example.com".to_string(),
+            server_port: 25565,
+            next_state: 4,
+        };
+        assert!(!analyzer.validate_handshake(&handshake_invalid2));
     }
 }

@@ -1063,9 +1063,10 @@ fn process_minecraft_bedrock(
             };
 
             // GUID VALIDATION: Should match the GUID from previous handshake
+            // A client sending GUID=0 when we have a recorded GUID is suspicious
             if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
-                if state.client_guid != 0 && client_guid != 0 && state.client_guid != client_guid {
-                    // GUID mismatch - potential attack
+                if state.client_guid != 0 && state.client_guid != client_guid {
+                    // GUID mismatch - potential attack (includes case where client_guid is 0)
                     return Ok(xdp_action::XDP_DROP);
                 }
             }
