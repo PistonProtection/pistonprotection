@@ -1,0 +1,356 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (without v prefix)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (do not push images)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  # Prepare release metadata
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      dry_run: ${{ steps.version.outputs.dry_run }}
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+            DRY_RUN="${{ inputs.dry_run }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            DRY_RUN="false"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
+
+          # Check if prerelease
+          if [[ "$VERSION" == *"-"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Release version: $VERSION"
+          echo "Dry run: $DRY_RUN"
+
+  # Build and push all Docker images
+  build-images:
+    name: Build ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: gateway
+            context: .
+            file: ./docker/gateway/Dockerfile
+          - component: worker
+            context: .
+            file: ./docker/worker/Dockerfile
+          - component: config-mgr
+            context: .
+            file: ./docker/config-mgr/Dockerfile
+          - component: metrics
+            context: .
+            file: ./docker/metrics/Dockerfile
+          - component: auth
+            context: .
+            file: ./docker/auth/Dockerfile
+          - component: operator
+            context: .
+            file: ./docker/operator/Dockerfile
+          - component: frontend
+            context: .
+            file: ./docker/frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.component }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ needs.prepare.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.prepare.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ needs.prepare.outputs.version }}
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.is_prerelease == 'false' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ needs.prepare.outputs.dry_run != 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version }}
+            GIT_COMMIT=${{ github.sha }}
+          provenance: true
+          sbom: true
+
+      - name: Generate SBOM
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.component }}:${{ needs.prepare.outputs.version }}
+          artifact-name: sbom-${{ matrix.component }}.spdx.json
+          output-file: sbom-${{ matrix.component }}.spdx.json
+
+      - name: Upload SBOM
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.component }}
+          path: sbom-${{ matrix.component }}.spdx.json
+
+  # Sign container images
+  sign-images:
+    name: Sign Images
+    runs-on: ubuntu-latest
+    needs: [prepare, build-images]
+    if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+    strategy:
+      matrix:
+        component:
+          - gateway
+          - worker
+          - config-mgr
+          - metrics
+          - auth
+          - operator
+          - frontend
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign image
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.component }}:${{ needs.prepare.outputs.version }}
+
+  # Build eBPF programs and create release artifacts
+  build-ebpf-release:
+    name: Build eBPF Release
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-action@nightly
+        with:
+          components: rust-src
+
+      - name: Install LLVM and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm clang libbpf-dev
+
+      - name: Install bpf-linker
+        run: cargo +nightly install bpf-linker
+
+      - name: Build eBPF programs
+        run: cargo +nightly build --target bpfel-unknown-none -Z build-std=core --release
+        working-directory: ebpf
+
+      - name: Create eBPF tarball
+        run: |
+          mkdir -p dist
+          cp ebpf/target/bpfel-unknown-none/release/*.o dist/ 2>/dev/null || true
+          tar -czvf pistonprotection-ebpf-${{ needs.prepare.outputs.version }}.tar.gz -C dist .
+
+      - name: Upload eBPF artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebpf-release
+          path: pistonprotection-ebpf-${{ needs.prepare.outputs.version }}.tar.gz
+
+  # Package and publish Helm chart
+  release-helm:
+    name: Release Helm Chart
+    runs-on: ubuntu-latest
+    needs: [prepare, build-images]
+    if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Update Chart version
+        run: |
+          VERSION=${{ needs.prepare.outputs.version }}
+          sed -i "s/^version:.*/version: $VERSION/" charts/pistonprotection/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" charts/pistonprotection/Chart.yaml
+
+          # Update image tags in values.yaml
+          sed -i "s/tag:.*/tag: \"$VERSION\"/" charts/pistonprotection/values.yaml
+
+      - name: Add Bitnami repo
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Package Helm chart
+        run: |
+          helm dependency build charts/pistonprotection
+          helm package charts/pistonprotection --destination .
+
+      - name: Upload Helm chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: pistonprotection-*.tgz
+
+      - name: Push to OCI registry
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          helm push pistonprotection-${{ needs.prepare.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+
+  # Create GitHub release
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [prepare, build-images, sign-images, build-ebpf-release, release-helm]
+    if: ${{ needs.prepare.outputs.dry_run != 'true' && always() && !cancelled() }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${{ needs.prepare.outputs.version }}
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          cat > CHANGELOG.md << 'EOF'
+          ## PistonProtection v${{ needs.prepare.outputs.version }}
+
+          ### Docker Images
+
+          ```bash
+          # Pull images
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gateway:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/worker:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/config-mgr:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/metrics:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/auth:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/operator:${{ needs.prepare.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:${{ needs.prepare.outputs.version }}
+          ```
+
+          ### Helm Chart
+
+          ```bash
+          # Install via OCI registry
+          helm install pistonprotection oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/pistonprotection --version ${{ needs.prepare.outputs.version }}
+          ```
+
+          ### Changes
+          EOF
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> CHANGELOG.md
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md
+          else
+            echo "" >> CHANGELOG.md
+            echo "Initial release" >> CHANGELOG.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PistonProtection v${{ needs.prepare.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ needs.prepare.outputs.is_prerelease == 'true' }}
+          files: |
+            artifacts/helm-chart/*.tgz
+            artifacts/ebpf-release/*.tar.gz
+            artifacts/sbom-*/*.spdx.json
+          generate_release_notes: true
+
+  # Notify on release completion
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [prepare, create-release]
+    if: always() && !cancelled()
+    steps:
+      - name: Send notification
+        run: |
+          if [[ "${{ needs.create-release.result }}" == "success" ]]; then
+            echo "Release v${{ needs.prepare.outputs.version }} completed successfully!"
+          else
+            echo "Release v${{ needs.prepare.outputs.version }} failed!"
+            exit 1
+          fi

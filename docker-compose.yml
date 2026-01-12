@@ -1,0 +1,448 @@
+# =============================================================================
+# PistonProtection - Local Development Docker Compose
+# =============================================================================
+#
+# Usage:
+#   docker compose up -d                    # Start all services
+#   docker compose up -d --build            # Rebuild and start
+#   docker compose logs -f gateway          # View gateway logs
+#   docker compose down -v                  # Stop and remove volumes
+#
+# Access:
+#   Frontend:    http://localhost:3000
+#   Gateway API: http://localhost:8080
+#   Grafana:     http://localhost:3001 (admin/admin)
+#   Prometheus:  http://localhost:9090
+#
+# =============================================================================
+
+name: pistonprotection
+
+services:
+  # ===========================================================================
+  # Core Services
+  # ===========================================================================
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway/Dockerfile
+    container_name: pp-gateway
+    ports:
+      - "8080:8080"   # HTTP API
+      - "9090:9090"   # gRPC API
+      - "9091:9091"   # Metrics
+    environment:
+      RUST_LOG: info,pistonprotection=debug
+      DATABASE_URL: postgres://pistonprotection:pistonprotection@postgres:5432/pistonprotection
+      REDIS_URL: redis://redis:6379
+      CONFIG_MGR_URL: http://config-mgr:8080
+      AUTH_SERVICE_URL: http://auth:8080
+      METRICS_SERVICE_URL: http://metrics:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      config-mgr:
+        condition: service_started
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    container_name: pp-worker
+    ports:
+      - "8081:8080"   # HTTP API
+      - "9092:9091"   # Metrics
+    environment:
+      RUST_LOG: info,pistonprotection=debug
+      REDIS_URL: redis://redis:6379
+      CONFIG_MGR_URL: http://config-mgr:8080
+      GATEWAY_URL: http://gateway:9090
+      EBPF_PROGRAMS_PATH: /opt/pistonprotection/ebpf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    # Required for eBPF
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - BPF
+    depends_on:
+      redis:
+        condition: service_healthy
+      config-mgr:
+        condition: service_started
+    networks:
+      - pistonprotection
+    volumes:
+      - /sys/fs/bpf:/sys/fs/bpf:rw
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+    restart: unless-stopped
+
+  config-mgr:
+    build:
+      context: .
+      dockerfile: docker/config-mgr/Dockerfile
+    container_name: pp-config-mgr
+    ports:
+      - "8082:8080"   # HTTP API
+      - "9093:9091"   # Metrics
+    environment:
+      RUST_LOG: info,pistonprotection=debug
+      DATABASE_URL: postgres://pistonprotection:pistonprotection@postgres:5432/pistonprotection
+      REDIS_URL: redis://redis:6379
+      CONFIG_DATA_DIR: /var/lib/pistonprotection/config
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pistonprotection
+    volumes:
+      - config-data:/var/lib/pistonprotection/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  metrics:
+    build:
+      context: .
+      dockerfile: docker/metrics/Dockerfile
+    container_name: pp-metrics
+    ports:
+      - "8083:8080"   # HTTP API
+      - "9094:9091"   # Prometheus metrics
+    environment:
+      RUST_LOG: info,pistonprotection=debug
+      DATABASE_URL: postgres://pistonprotection:pistonprotection@postgres:5432/pistonprotection
+      REDIS_URL: redis://redis:6379
+      METRICS_DATA_DIR: /var/lib/pistonprotection/metrics
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pistonprotection
+    volumes:
+      - metrics-data:/var/lib/pistonprotection/metrics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  auth:
+    build:
+      context: .
+      dockerfile: docker/auth/Dockerfile
+    container_name: pp-auth
+    ports:
+      - "8084:8080"   # HTTP API
+      - "9095:9091"   # Metrics
+    environment:
+      RUST_LOG: info,pistonprotection=debug
+      DATABASE_URL: postgres://pistonprotection:pistonprotection@postgres:5432/pistonprotection
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      AUTH_DATA_DIR: /var/lib/pistonprotection/auth
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pistonprotection
+    volumes:
+      - auth-data:/var/lib/pistonprotection/auth
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        API_URL: http://gateway:8080
+    container_name: pp-frontend
+    ports:
+      - "3000:8080"
+    environment:
+      API_URL: http://gateway:8080
+    depends_on:
+      - gateway
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Infrastructure Services
+  # ===========================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: pp-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: pistonprotection
+      POSTGRES_PASSWORD: pistonprotection
+      POSTGRES_DB: pistonprotection
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pistonprotection -d pistonprotection"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: pp-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Observability Stack
+  # ===========================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: pp-prometheus
+    ports:
+      - "9099:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: pp-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-piechart-panel
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/traffic-overview.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - pistonprotection
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: pp-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - pistonprotection
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: pp-promtail
+    volumes:
+      - ./observability/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - pistonprotection
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: pp-otel-collector
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+    volumes:
+      - ./observability/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    networks:
+      - pistonprotection
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Development Tools
+  # ===========================================================================
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: pp-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pistonprotection.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - pistonprotection
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+    restart: unless-stopped
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: pp-redis-commander
+    ports:
+      - "8085:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    networks:
+      - pistonprotection
+    depends_on:
+      - redis
+    profiles:
+      - tools
+    restart: unless-stopped
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: pp-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - pistonprotection
+    profiles:
+      - tools
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  pistonprotection:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  config-data:
+    driver: local
+  metrics-data:
+    driver: local
+  auth-data:
+    driver: local
+  pgadmin-data:
+    driver: local

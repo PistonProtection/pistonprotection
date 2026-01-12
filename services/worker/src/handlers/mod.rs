@@ -1,224 +1,256 @@
 //! Worker service handlers
+//!
+//! Contains HTTP handlers for health checks, metrics, and status endpoints,
+//! as well as the worker state management.
 
 pub mod http;
 
+use crate::config_sync::ConfigSyncManager;
+use crate::control_plane::{ControlPlaneClient, ConnectionState};
 use crate::ebpf::{interface::NetworkInterface, loader::EbpfLoader};
 use deadpool_redis::Pool as RedisPool;
 use parking_lot::RwLock;
 use pistonprotection_common::{config::Config, error::Result, redis::CacheService};
-use pistonprotection_proto::worker::{
-    worker_service_client::WorkerServiceClient, HeartbeatRequest, RegisterRequest, Worker,
-    WorkerCapabilities, WorkerStatus,
-};
 use std::sync::Arc;
-use tokio::time::{interval, Duration};
-use tonic::transport::Channel;
-use tracing::{debug, error, info, warn};
 
-/// Worker state
+/// Worker state shared across handlers
 #[derive(Clone)]
 pub struct WorkerState {
+    /// eBPF loader for program management
     pub loader: Arc<RwLock<EbpfLoader>>,
+    /// Configuration synchronization manager
+    pub config_sync: Arc<ConfigSyncManager>,
+    /// Control plane client for communication with gateway
+    pub control_plane: Arc<ControlPlaneClient>,
+    /// Redis cache service (optional)
     pub cache: Option<CacheService>,
+    /// Application configuration
     pub config: Arc<Config>,
+    /// Network interfaces on this worker
     pub interfaces: Arc<Vec<NetworkInterface>>,
-    pub worker_id: Arc<RwLock<Option<String>>>,
 }
 
 impl WorkerState {
+    /// Create a new worker state
     pub fn new(
-        loader: EbpfLoader,
+        loader: Arc<RwLock<EbpfLoader>>,
+        config_sync: Arc<ConfigSyncManager>,
+        control_plane: Arc<ControlPlaneClient>,
         redis: Option<RedisPool>,
-        config: Config,
-        interfaces: Vec<NetworkInterface>,
+        config: Arc<Config>,
+        interfaces: Arc<Vec<NetworkInterface>>,
     ) -> Self {
         let cache = redis.map(|pool| CacheService::new(pool, "piston:worker"));
 
         Self {
-            loader: Arc::new(RwLock::new(loader)),
+            loader,
+            config_sync,
+            control_plane,
             cache,
-            config: Arc::new(config),
-            interfaces: Arc::new(interfaces),
-            worker_id: Arc::new(RwLock::new(None)),
-        }
-    }
-}
-
-/// Main worker loop
-pub async fn worker_loop(state: WorkerState, control_plane_addr: &str) -> Result<()> {
-    // Connect to control plane
-    let channel = Channel::from_shared(control_plane_addr.to_string())
-        .map_err(|e| pistonprotection_common::error::Error::Internal(e.to_string()))?
-        .connect()
-        .await
-        .map_err(|e| pistonprotection_common::error::Error::Internal(format!("Failed to connect: {}", e)))?;
-
-    let mut client = WorkerServiceClient::new(channel);
-
-    // Register with control plane
-    let worker_info = build_worker_info(&state);
-    let register_response = client
-        .register(RegisterRequest {
-            worker: Some(worker_info),
-        })
-        .await;
-
-    match register_response {
-        Ok(response) => {
-            let resp = response.into_inner();
-            info!("Registered with control plane, worker_id: {}", resp.worker_id);
-            *state.worker_id.write() = Some(resp.worker_id.clone());
-
-            // Apply initial configuration if provided
-            if let Some(config) = resp.initial_config {
-                apply_config(&state, &config).await?;
-            }
-        }
-        Err(e) => {
-            warn!("Failed to register with control plane: {}. Running in standalone mode.", e);
+            config,
+            interfaces,
         }
     }
 
-    // Heartbeat loop
-    let mut heartbeat_interval = interval(Duration::from_secs(10));
+    /// Get the assigned worker ID from control plane
+    pub fn worker_id(&self) -> Option<String> {
+        self.control_plane.worker_id()
+    }
 
-    loop {
-        heartbeat_interval.tick().await;
+    /// Check if connected to control plane
+    pub fn is_connected(&self) -> bool {
+        self.control_plane.is_connected()
+    }
 
-        if let Some(worker_id) = state.worker_id.read().clone() {
-            // Send heartbeat
-            let metrics = collect_worker_metrics(&state);
-            let heartbeat = HeartbeatRequest {
-                worker_id: worker_id.clone(),
-                status: WorkerStatus::Ready.into(),
-                metrics: Some(metrics),
-            };
+    /// Get current connection state
+    pub fn connection_state(&self) -> ConnectionState {
+        self.control_plane.connection_state()
+    }
 
-            match client.heartbeat(heartbeat).await {
-                Ok(response) => {
-                    let resp = response.into_inner();
-                    if resp.config_update_available {
-                        debug!("Configuration update available, fetching...");
-                        // Fetch and apply new configuration
-                        // TODO: Implement config streaming
-                    }
-                }
-                Err(e) => {
-                    warn!("Heartbeat failed: {}", e);
-                }
-            }
+    /// Get current configuration version
+    pub fn config_version(&self) -> u32 {
+        self.control_plane.config_version()
+    }
+
+    /// Check if the worker is healthy
+    pub fn is_healthy(&self) -> bool {
+        // In standalone mode, always healthy
+        let is_standalone = std::env::var("PISTON_STANDALONE").is_ok();
+
+        if is_standalone {
+            return true;
         }
 
-        // Periodic tasks
-        cleanup_expired_entries(&state);
+        // Check control plane connection (allow brief disconnections)
+        let seconds_since_heartbeat = self.control_plane.seconds_since_last_heartbeat();
+        let heartbeat_healthy = seconds_since_heartbeat < 60; // Allow 1 minute without heartbeat
+
+        // Check eBPF loader status (basic check - loader exists and can be accessed)
+        let loader_healthy = {
+            let _loader = self.loader.read();
+            // Basic health check - loader exists and lock can be acquired
+            true
+        };
+
+        heartbeat_healthy && loader_healthy
     }
-}
 
-/// Build worker information for registration
-fn build_worker_info(state: &WorkerState) -> Worker {
-    let hostname = hostname::get()
-        .map(|h| h.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "unknown".to_string());
+    /// Check if the worker is ready to serve traffic
+    pub fn is_ready(&self) -> bool {
+        let is_standalone = std::env::var("PISTON_STANDALONE").is_ok();
 
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+        if is_standalone {
+            return true;
+        }
 
-    Worker {
-        id: String::new(), // Assigned by control plane
-        node_name: std::env::var("NODE_NAME").unwrap_or_else(|_| hostname.clone()),
-        hostname,
-        interfaces: state
-            .interfaces
+        // Must be connected and have configuration
+        self.is_connected() && self.config_sync.current_version().is_some()
+    }
+
+    /// Get eBPF map statistics
+    pub fn map_stats(&self) -> crate::ebpf::maps::MapStats {
+        let loader = self.loader.read();
+        let maps = loader.maps();
+        maps.read().stats()
+    }
+
+    /// Get configuration sync statistics
+    pub fn sync_stats(&self) -> crate::config_sync::SyncStats {
+        self.config_sync.stats()
+    }
+
+    /// Get the list of configured backends
+    pub fn configured_backends(&self) -> Vec<String> {
+        self.config_sync
+            .applied_backends()
+            .keys()
+            .cloned()
+            .collect()
+    }
+
+    /// Get XDP-capable interfaces
+    pub fn xdp_interfaces(&self) -> Vec<&NetworkInterface> {
+        self.interfaces
             .iter()
-            .map(|iface| pistonprotection_proto::worker::NetworkInterface {
-                name: iface.name.clone(),
-                ip_address: iface.ip_address.map(|ip| ip.into()),
-                mac_address: iface
-                    .mac_address
-                    .map(|mac| mac.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(":")),
-                xdp_status: None,
-                rx_bytes: 0,
-                tx_bytes: 0,
-                rx_packets: 0,
-                tx_packets: 0,
-                rx_dropped: 0,
-                tx_dropped: 0,
-            })
-            .collect(),
-        capabilities: Some(WorkerCapabilities {
-            xdp_native: true,
-            xdp_driver: true,
-            xdp_offload: false,
-            bpf_helpers: vec![],
-            max_bpf_stack_size: 512,
-            max_map_entries: 1_000_000,
-            cpu_cores: sys.cpus().len() as u32,
-            memory_bytes: sys.total_memory(),
-            network_drivers: vec![],
-            kernel_version: sysinfo::System::kernel_version().unwrap_or_default(),
-            kernel_major: 0,
-            kernel_minor: 0,
-        }),
-        status: WorkerStatus::Registering.into(),
-        labels: std::collections::HashMap::new(),
-        registered_at: None,
-        last_heartbeat: None,
+            .filter(|i| i.supports_xdp())
+            .collect()
+    }
+
+    /// Get attached XDP programs count
+    pub fn attached_programs_count(&self) -> usize {
+        let loader = self.loader.read();
+        loader.list_attached().len()
+    }
+
+    /// Trigger a configuration refresh
+    pub fn trigger_config_refresh(&self) {
+        self.config_sync.trigger_sync();
+    }
+
+    /// Block an IP address locally
+    pub fn block_ip(&self, ip: std::net::IpAddr, reason: &str, duration_secs: Option<u32>) -> Result<()> {
+        let loader = self.loader.read();
+        let maps = loader.maps();
+        let mut map_manager = maps.write();
+        map_manager.block_ip(ip, reason, duration_secs)
+    }
+
+    /// Unblock an IP address locally
+    pub fn unblock_ip(&self, ip: &std::net::IpAddr) -> Result<()> {
+        let loader = self.loader.read();
+        let maps = loader.maps();
+        let mut map_manager = maps.write();
+        map_manager.unblock_ip(ip)
+    }
+
+    /// Check if an IP is blocked
+    pub fn is_ip_blocked(&self, ip: &std::net::IpAddr) -> bool {
+        let loader = self.loader.read();
+        let maps = loader.maps();
+        let map_manager = maps.read();
+        map_manager.is_blocked(ip)
+    }
+
+    /// Get list of blocked IPs
+    pub fn list_blocked_ips(&self) -> Vec<crate::ebpf::maps::BlockedIpEntry> {
+        let loader = self.loader.read();
+        let maps = loader.maps();
+        let map_manager = maps.read();
+        map_manager.list_blocked_ips().into_iter().cloned().collect()
     }
 }
 
-/// Collect worker metrics
-fn collect_worker_metrics(state: &WorkerState) -> pistonprotection_proto::worker::WorkerMetrics {
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+/// Extended health check response
+#[derive(Debug, Clone)]
+pub struct HealthCheckResult {
+    /// Overall health status
+    pub healthy: bool,
+    /// Whether worker is ready to serve traffic
+    pub ready: bool,
+    /// Control plane connection status
+    pub control_plane_connected: bool,
+    /// Seconds since last successful heartbeat
+    pub seconds_since_heartbeat: u64,
+    /// Current configuration version
+    pub config_version: u32,
+    /// Number of configured backends
+    pub backends_count: usize,
+    /// Number of attached XDP programs
+    pub xdp_programs_count: usize,
+    /// eBPF map entry counts
+    pub map_stats: MapStatsInfo,
+}
 
-    let cpu_percent = sys.global_cpu_usage();
-    let memory_percent = (sys.used_memory() as f32 / sys.total_memory() as f32) * 100.0;
+#[derive(Debug, Clone)]
+pub struct MapStatsInfo {
+    pub blocked_ips: usize,
+    pub rate_limits: usize,
+    pub conntrack_entries: usize,
+    pub backends: usize,
+}
 
-    pistonprotection_proto::worker::WorkerMetrics {
-        cpu_percent,
-        memory_percent,
-        interfaces: vec![], // TODO: Collect interface metrics
+impl WorkerState {
+    /// Perform comprehensive health check
+    pub fn health_check(&self) -> HealthCheckResult {
+        let is_standalone = std::env::var("PISTON_STANDALONE").is_ok();
+        let map_stats = self.map_stats();
+
+        let control_plane_connected = if is_standalone {
+            true // Treat as connected in standalone mode
+        } else {
+            self.is_connected()
+        };
+
+        let seconds_since_heartbeat = if is_standalone {
+            0
+        } else {
+            self.control_plane.seconds_since_last_heartbeat()
+        };
+
+        let healthy = self.is_healthy();
+        let ready = self.is_ready();
+
+        HealthCheckResult {
+            healthy,
+            ready,
+            control_plane_connected,
+            seconds_since_heartbeat,
+            config_version: self.config_version(),
+            backends_count: self.configured_backends().len(),
+            xdp_programs_count: self.attached_programs_count(),
+            map_stats: MapStatsInfo {
+                blocked_ips: map_stats.blocked_ips,
+                rate_limits: map_stats.rate_limits,
+                conntrack_entries: map_stats.conntrack_entries,
+                backends: map_stats.backends,
+            },
+        }
     }
 }
 
-/// Apply configuration from control plane
-async fn apply_config(
-    state: &WorkerState,
-    config: &pistonprotection_proto::worker::FilterConfig,
-) -> Result<()> {
-    info!("Applying configuration version {}", config.version);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // Update map manager with new configuration
-    let mut loader = state.loader.write();
-    let maps = loader.maps();
-    let mut map_manager = maps.write();
-
-    for backend in &config.backends {
-        map_manager.update_backend(crate::ebpf::maps::BackendConfig {
-            id: backend.backend_id.clone(),
-            protection_level: backend.protection.as_ref().map(|p| p.level as u8).unwrap_or(0),
-            rate_limit_pps: backend
-                .protection
-                .as_ref()
-                .and_then(|p| p.per_ip_rate.as_ref())
-                .map(|r| r.tokens_per_second)
-                .unwrap_or(10000),
-            rate_limit_bps: 0,
-            blocked_countries: backend
-                .protection
-                .as_ref()
-                .map(|p| p.blocked_country_ids.iter().map(|&id| id as u16).collect())
-                .unwrap_or_default(),
-        });
-    }
-
-    Ok(())
-}
-
-/// Cleanup expired entries
-fn cleanup_expired_entries(state: &WorkerState) {
-    let loader = state.loader.read();
-    let maps = loader.maps();
-    let mut map_manager = maps.write();
-    map_manager.cleanup_expired();
+    // Tests would go here
 }

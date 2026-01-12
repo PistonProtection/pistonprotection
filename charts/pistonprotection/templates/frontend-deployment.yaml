@@ -6,12 +6,22 @@ metadata:
   labels:
     {{- include "pistonprotection.frontend.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.frontend.autoscaling.enabled }}
   replicas: {{ .Values.frontend.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "pistonprotection.frontend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        {{- if .Values.observability.loki.enabled }}
+        promtail.io/collect: "true"
+        {{- end }}
+        {{- with .Values.frontend.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       labels:
         {{- include "pistonprotection.frontend.selectorLabels" . | nindent 8 }}
     spec:
@@ -19,31 +29,98 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      serviceAccountName: {{ include "pistonprotection.serviceAccountName" . }}
+      {{- with .Values.frontend.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          {{- with .Values.frontend.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 3000
               protocol: TCP
           env:
+            - name: NODE_ENV
+              value: {{ .Values.global.environment | default "production" | quote }}
             - name: VITE_API_URL
+              {{- if .Values.frontend.config.apiUrl }}
+              value: {{ .Values.frontend.config.apiUrl | quote }}
+              {{- else }}
               value: "http://{{ include "pistonprotection.fullname" . }}-gateway:{{ .Values.gateway.service.port }}"
+              {{- end }}
+            - name: VITE_AUTH_URL
+              value: "http://{{ include "pistonprotection.fullname" . }}-auth:{{ .Values.auth.service.port }}"
+            - name: VITE_ENABLE_REALTIME
+              value: {{ .Values.frontend.config.enableRealtime | quote }}
+            - name: VITE_REFRESH_INTERVAL
+              value: {{ .Values.frontend.config.refreshInterval | quote }}
+            - name: VITE_DEFAULT_THEME
+              value: {{ .Values.frontend.config.defaultTheme | quote }}
+            {{- with .Values.frontend.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.json
+              subPath: config.json
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "pistonprotection.fullname" . }}-frontend-config
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.frontend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.frontend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.frontend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -51,6 +128,10 @@ metadata:
   name: {{ include "pistonprotection.fullname" . }}-frontend
   labels:
     {{- include "pistonprotection.frontend.labels" . | nindent 4 }}
+  {{- with .Values.frontend.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.frontend.service.type }}
   ports:

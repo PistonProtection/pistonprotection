@@ -1,0 +1,307 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-config
+  labels:
+    {{- include "pistonprotection.labels" . | nindent 4 }}
+data:
+  # Global configuration
+  environment: {{ .Values.global.environment | default "production" | quote }}
+  log-level: {{ .Values.global.logLevel | default "info" | quote }}
+
+  # Protection settings
+  protection-level: {{ .Values.protection.defaultLevel | quote }}
+  pps-per-ip: {{ .Values.protection.rateLimit.ppsPerIp | quote }}
+  burst-size: {{ .Values.protection.rateLimit.burst | quote }}
+  global-pps: {{ .Values.protection.rateLimit.globalPps | quote }}
+  connections-per-ip: {{ .Values.protection.rateLimit.connectionsPerIp | quote }}
+  new-connections-per-second: {{ .Values.protection.rateLimit.newConnectionsPerSecond | quote }}
+
+  # Protocol settings
+  minecraft-enabled: {{ .Values.protection.protocols.minecraft.enabled | quote }}
+  minecraft-min-version: {{ .Values.protection.protocols.minecraft.minVersion | quote }}
+  minecraft-max-version: {{ .Values.protection.protocols.minecraft.maxVersion | quote }}
+  minecraft-packet-inspection: {{ .Values.protection.protocols.minecraft.packetInspection | quote }}
+  minecraft-max-packet-size: {{ .Values.protection.protocols.minecraft.maxPacketSize | quote }}
+  quic-enabled: {{ .Values.protection.protocols.quic.enabled | quote }}
+  quic-max-streams: {{ .Values.protection.protocols.quic.maxStreams | quote }}
+  syn-cookies-enabled: {{ .Values.protection.protocols.synCookies.enabled | quote }}
+  syn-cookies-threshold: {{ .Values.protection.protocols.synCookies.threshold | quote }}
+  tcp-enabled: {{ .Values.protection.protocols.tcp.enabled | quote }}
+  tcp-max-segment-size: {{ .Values.protection.protocols.tcp.maxSegmentSize | quote }}
+  tcp-connection-tracking: {{ .Values.protection.protocols.tcp.connectionTracking | quote }}
+  udp-enabled: {{ .Values.protection.protocols.udp.enabled | quote }}
+  udp-timeout: {{ .Values.protection.protocols.udp.timeout | quote }}
+
+  # Challenge settings
+  js-challenge-enabled: {{ .Values.protection.challenge.jsChallenge | quote }}
+  challenge-cookie-lifetime: {{ .Values.protection.challenge.cookieLifetime | quote }}
+  challenge-difficulty: {{ .Values.protection.challenge.difficulty | quote }}
+
+  # List settings
+  blacklist-enabled: {{ .Values.protection.lists.blacklistEnabled | quote }}
+  whitelist-enabled: {{ .Values.protection.lists.whitelistEnabled | quote }}
+  auto-blacklist-threshold: {{ .Values.protection.lists.autoBlacklistThreshold | quote }}
+  auto-blacklist-duration: {{ .Values.protection.lists.autoBlacklistDuration | quote }}
+
+---
+{{- if .Values.gateway.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-gateway-config
+  labels:
+    {{- include "pistonprotection.gateway.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      grpc_port: 9090
+      metrics_port: 9091
+
+    connection_pool:
+      size: {{ .Values.gateway.config.connectionPoolSize }}
+      timeout_seconds: {{ .Values.gateway.config.requestTimeout }}
+      max_connections: {{ .Values.gateway.config.maxConcurrentConnections }}
+
+    logging:
+      enabled: {{ .Values.gateway.config.requestLogging }}
+      level: {{ .Values.global.logLevel | default "info" }}
+
+    cors:
+      enabled: {{ .Values.gateway.config.cors.enabled }}
+      allow_origins:
+        {{- range .Values.gateway.config.cors.allowOrigins }}
+        - {{ . | quote }}
+        {{- end }}
+      allow_methods:
+        {{- range .Values.gateway.config.cors.allowMethods }}
+        - {{ . | quote }}
+        {{- end }}
+      allow_headers:
+        {{- range .Values.gateway.config.cors.allowHeaders }}
+        - {{ . | quote }}
+        {{- end }}
+      max_age: {{ .Values.gateway.config.cors.maxAge }}
+
+    {{- if .Values.observability.tracing.enabled }}
+    tracing:
+      enabled: true
+      endpoint: {{ .Values.observability.tracing.endpoint | quote }}
+      service_name: {{ .Values.observability.tracing.serviceName }}-gateway
+      sampling_ratio: {{ .Values.observability.tracing.samplingRatio }}
+    {{- end }}
+{{- end }}
+
+---
+{{- if .Values.worker.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-worker-config
+  labels:
+    {{- include "pistonprotection.worker.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    xdp:
+      interface: {{ .Values.worker.config.networkInterface }}
+      mode: {{ .Values.worker.config.xdpMode }}
+      per_cpu_maps: {{ .Values.worker.config.perCpuMaps }}
+      map_size: {{ .Values.worker.config.mapSize }}
+
+    stats:
+      interval_seconds: {{ .Values.worker.config.statsInterval }}
+
+    protection:
+      level: {{ .Values.protection.defaultLevel }}
+      rate_limit:
+        pps_per_ip: {{ .Values.protection.rateLimit.ppsPerIp }}
+        burst: {{ .Values.protection.rateLimit.burst }}
+        global_pps: {{ .Values.protection.rateLimit.globalPps }}
+      protocols:
+        minecraft:
+          enabled: {{ .Values.protection.protocols.minecraft.enabled }}
+          min_version: {{ .Values.protection.protocols.minecraft.minVersion }}
+          max_version: {{ .Values.protection.protocols.minecraft.maxVersion }}
+        syn_cookies:
+          enabled: {{ .Values.protection.protocols.synCookies.enabled }}
+          threshold: {{ .Values.protection.protocols.synCookies.threshold }}
+{{- end }}
+
+---
+{{- if .Values.configMgr.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-configmgr-config
+  labels:
+    {{- include "pistonprotection.configMgr.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      metrics_port: 9091
+
+    sync:
+      interval_seconds: {{ .Values.configMgr.config.syncInterval }}
+      validation_enabled: {{ .Values.configMgr.config.enableValidation }}
+
+    cache:
+      ttl_seconds: {{ .Values.configMgr.config.cacheTtl }}
+{{- end }}
+
+---
+{{- if .Values.auth.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-auth-config
+  labels:
+    {{- include "pistonprotection.auth.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      metrics_port: 9091
+
+    jwt:
+      expiration: {{ .Values.auth.config.jwtExpiration | quote }}
+      refresh_expiration: {{ .Values.auth.config.refreshTokenExpiration | quote }}
+
+    security:
+      password_min_length: {{ .Values.auth.config.passwordMinLength }}
+      mfa_enabled: {{ .Values.auth.config.mfaEnabled }}
+      session_timeout_minutes: {{ .Values.auth.config.sessionTimeout }}
+      max_login_attempts: {{ .Values.auth.config.maxLoginAttempts }}
+      lockout_duration_minutes: {{ .Values.auth.config.lockoutDuration }}
+
+    api_keys:
+      enabled: {{ .Values.auth.config.apiKeys.enabled }}
+      prefix: {{ .Values.auth.config.apiKeys.prefix | quote }}
+      default_expiration_days: {{ .Values.auth.config.apiKeys.defaultExpiration }}
+
+    {{- if .Values.auth.config.oauth.enabled }}
+    oauth:
+      enabled: true
+      providers:
+        {{- range .Values.auth.config.oauth.providers }}
+        - name: {{ .name | quote }}
+          client_id: {{ .clientId | quote }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+---
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-metrics-config
+  labels:
+    {{- include "pistonprotection.metrics.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      metrics_port: 9091
+
+    aggregation:
+      interval_seconds: {{ .Values.metrics.config.aggregationInterval }}
+      retention_period: {{ .Values.metrics.config.retentionPeriod | quote }}
+
+    collection:
+      per_ip_metrics: {{ .Values.metrics.config.perIpMetrics }}
+      max_tracked_ips: {{ .Values.metrics.config.maxTrackedIps }}
+
+    histogram:
+      latency_buckets:
+        {{- range .Values.metrics.config.latencyBuckets }}
+        - {{ . }}
+        {{- end }}
+{{- end }}
+
+---
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-frontend-config
+  labels:
+    {{- include "pistonprotection.frontend.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {
+      "apiUrl": {{ if .Values.frontend.config.apiUrl }}"{{ .Values.frontend.config.apiUrl }}"{{ else }}"http://{{ include "pistonprotection.fullname" . }}-gateway:{{ .Values.gateway.service.port }}"{{ end }},
+      "authUrl": "http://{{ include "pistonprotection.fullname" . }}-auth:{{ .Values.auth.service.port }}",
+      "enableRealtime": {{ .Values.frontend.config.enableRealtime }},
+      "refreshInterval": {{ .Values.frontend.config.refreshInterval }},
+      "defaultTheme": "{{ .Values.frontend.config.defaultTheme }}"
+    }
+{{- end }}
+
+---
+{{- if .Values.operator.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-operator-config
+  labels:
+    {{- include "pistonprotection.operator.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    operator:
+      leader_election: {{ .Values.operator.config.leaderElection }}
+      reconcile_interval_seconds: {{ .Values.operator.config.reconcileInterval }}
+      watch_all_namespaces: {{ .Values.operator.config.watchAllNamespaces }}
+      {{- if and (not .Values.operator.config.watchAllNamespaces) .Values.operator.config.watchNamespaces }}
+      watch_namespaces:
+        {{- range .Values.operator.config.watchNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- end }}
+
+    metrics:
+      port: {{ .Values.operator.service.metricsPort }}
+
+    health:
+      port: {{ .Values.operator.service.healthPort }}
+{{- end }}
+
+---
+{{- if .Values.geoip.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-geoip-config
+  labels:
+    {{- include "pistonprotection.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    geoip:
+      type: {{ .Values.geoip.type | quote }}
+      edition_ids:
+        {{- range .Values.geoip.editionIds }}
+        - {{ . | quote }}
+        {{- end }}
+      update_schedule: {{ .Values.geoip.updateSchedule | quote }}
+      database_path: /data/geoip
+{{- end }}
+
+---
+{{- if .Values.stripe.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-stripe-config
+  labels:
+    {{- include "pistonprotection.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    stripe:
+      webhook_path: {{ .Values.stripe.webhookPath | quote }}
+      test_mode: {{ .Values.stripe.testMode }}
+      prices:
+        starter: {{ .Values.stripe.prices.starter | quote }}
+        professional: {{ .Values.stripe.prices.professional | quote }}
+        enterprise: {{ .Values.stripe.prices.enterprise | quote }}
+{{- end }}

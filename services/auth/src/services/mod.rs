@@ -1,0 +1,123 @@
+//! Service layer for the authentication service
+
+use deadpool_redis::Pool as RedisPool;
+use pistonprotection_common::{config::Config, redis::CacheService};
+use sqlx::PgPool;
+use std::sync::Arc;
+
+pub mod auth;
+pub mod session;
+pub mod jwt;
+pub mod apikey;
+pub mod permission;
+pub mod user;
+pub mod organization;
+pub mod audit;
+pub mod stripe;
+
+pub use auth::AuthService;
+pub use session::SessionService;
+pub use jwt::JwtService;
+pub use apikey::ApiKeyService;
+pub use permission::PermissionService;
+pub use user::UserService;
+pub use organization::OrganizationService;
+pub use audit::AuditService;
+pub use stripe::StripeService;
+
+use crate::config::AuthConfig;
+
+/// Shared application state
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+    pub cache: CacheService,
+    pub config: Arc<Config>,
+    pub auth_config: Arc<AuthConfig>,
+    pub jwt_service: Arc<JwtService>,
+    pub session_service: Arc<SessionService>,
+    pub permission_service: Arc<PermissionService>,
+    pub stripe_service: Option<Arc<StripeService>>,
+}
+
+impl AppState {
+    /// Create new application state
+    pub fn new(db: PgPool, redis: RedisPool, config: Config, auth_config: AuthConfig) -> Self {
+        let cache = CacheService::new(redis, "piston:auth");
+
+        let jwt_service = Arc::new(JwtService::new(&auth_config.jwt));
+        let session_service = Arc::new(SessionService::new(
+            cache.clone(),
+            auth_config.session.clone(),
+        ));
+        let permission_service = Arc::new(PermissionService::new(
+            cache.clone(),
+            auth_config.rbac.clone(),
+        ));
+
+        // Initialize Stripe service if configured
+        let stripe_service = if auth_config.stripe.is_configured() {
+            Some(Arc::new(StripeService::new(
+                auth_config.stripe.clone(),
+                db.clone(),
+            )))
+        } else {
+            None
+        };
+
+        Self {
+            db,
+            cache,
+            config: Arc::new(config),
+            auth_config: Arc::new(auth_config),
+            jwt_service,
+            session_service,
+            permission_service,
+            stripe_service,
+        }
+    }
+
+    /// Get a new AuthService instance
+    pub fn auth_service(&self) -> AuthService {
+        AuthService::new(
+            self.db.clone(),
+            self.jwt_service.clone(),
+            self.session_service.clone(),
+            self.auth_config.clone(),
+        )
+    }
+
+    /// Get a new UserService instance
+    pub fn user_service(&self) -> UserService {
+        UserService::new(self.db.clone(), self.auth_config.clone())
+    }
+
+    /// Get a new OrganizationService instance
+    pub fn organization_service(&self) -> OrganizationService {
+        OrganizationService::new(self.db.clone(), self.cache.clone())
+    }
+
+    /// Get a new ApiKeyService instance
+    pub fn api_key_service(&self) -> ApiKeyService {
+        ApiKeyService::new(
+            self.db.clone(),
+            self.cache.clone(),
+            self.auth_config.clone(),
+        )
+    }
+
+    /// Get a new AuditService instance
+    pub fn audit_service(&self) -> AuditService {
+        AuditService::new(self.db.clone())
+    }
+
+    /// Get the Stripe service if configured
+    pub fn stripe_service(&self) -> Option<Arc<StripeService>> {
+        self.stripe_service.clone()
+    }
+
+    /// Check if Stripe is enabled
+    pub fn is_stripe_enabled(&self) -> bool {
+        self.stripe_service.is_some()
+    }
+}

@@ -7,11 +7,12 @@ members = [
     "metrics",
     "worker",
     "proto",
+    "auth",
 ]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 authors = ["PistonProtection Team"]
 license = "Apache-2.0"
 repository = "https://github.com/PistonProtection/pistonprotection"
@@ -77,6 +78,7 @@ async-trait = "0.1"
 parking_lot = "0.12"
 dashmap = "6.0"
 lru = "0.13"
+hex = "0.4"
 
 # HTTP client (for health checks, webhooks)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }

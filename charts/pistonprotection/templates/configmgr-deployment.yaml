@@ -1,0 +1,144 @@
+{{- if .Values.configMgr.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-config-mgr
+  labels:
+    {{- include "pistonprotection.configMgr.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.configMgr.autoscaling.enabled }}
+  replicas: {{ .Values.configMgr.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.configMgr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        {{- if .Values.observability.loki.enabled }}
+        promtail.io/collect: "true"
+        {{- end }}
+        {{- with .Values.configMgr.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "pistonprotection.configMgr.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pistonprotection.serviceAccountName" . }}
+      {{- with .Values.configMgr.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      containers:
+        - name: config-mgr
+          image: "{{ .Values.configMgr.image.repository }}:{{ .Values.configMgr.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.configMgr.image.pullPolicy }}
+          {{- with .Values.configMgr.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9091
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.global.logLevel | default "info" | quote }}
+            - name: SERVICE_NAME
+              value: "config-mgr"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | default "production" | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: redis-url
+            - name: SYNC_INTERVAL
+              value: {{ .Values.configMgr.config.syncInterval | quote }}
+            - name: VALIDATION_ENABLED
+              value: {{ .Values.configMgr.config.enableValidation | quote }}
+            - name: CACHE_TTL
+              value: {{ .Values.configMgr.config.cacheTtl | quote }}
+            {{- if .Values.observability.tracing.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.tracing.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: "{{ .Values.observability.tracing.serviceName }}-config-mgr"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.observability.tracing.samplingRatio | quote }}
+            {{- end }}
+            {{- with .Values.configMgr.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.configMgr.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /etc/pistonprotection
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: {{ include "pistonprotection.fullname" . }}-configmgr-config
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.configMgr.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.configMgr.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.configMgr.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,25 +1,440 @@
 # PistonProtection Helm Chart Values
 # Default values for pistonprotection deployment
 
+# -- Override the name of the chart
+nameOverride: ""
+# -- Override the full name of the chart
+fullnameOverride: ""
+
 # Global settings
 global:
-  # Image pull secrets
+  # -- Image pull secrets for all services
   imagePullSecrets: []
-  # Storage class for persistent volumes
+  # -- Storage class for persistent volumes
   storageClass: ""
+  # -- Global environment
+  environment: production
+  # -- Global log level
+  logLevel: info
 
-# Gateway service configuration
+# ============================================================================
+# Gateway Service Configuration
+# ============================================================================
 gateway:
+  # -- Enable the gateway service
   enabled: true
+  # -- Number of gateway replicas
   replicaCount: 2
   image:
+    # -- Gateway image repository
     repository: pistonprotection/gateway
-    tag: ""  # Defaults to appVersion
+    # -- Gateway image tag (defaults to appVersion)
+    tag: ""
+    # -- Image pull policy
     pullPolicy: IfNotPresent
   service:
+    # -- Service type
     type: ClusterIP
+    # -- HTTP port
     port: 8080
+    # -- gRPC port
     grpcPort: 9090
+    # -- Metrics port
+    metricsPort: 9091
+    # -- Annotations for the service
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    # -- Enable horizontal pod autoscaling
+    enabled: false
+    # -- Minimum number of replicas
+    minReplicas: 2
+    # -- Maximum number of replicas
+    maxReplicas: 10
+    # -- Target CPU utilization percentage
+    targetCPUUtilization: 80
+    # -- Target memory utilization percentage
+    targetMemoryUtilization: 80
+    # -- Custom metrics for scaling
+    customMetrics: []
+    # behavior for scale up/down
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        selectPolicy: Max
+  # -- Pod disruption budget settings
+  pdb:
+    enabled: true
+    minAvailable: 1
+    # maxUnavailable: 1
+  # -- Node selector for gateway pods
+  nodeSelector: {}
+  # -- Tolerations for gateway pods
+  tolerations: []
+  # -- Affinity rules for gateway pods
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Extra volume mounts
+  extraVolumeMounts: []
+  # -- Extra volumes
+  extraVolumes: []
+  # -- Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  # -- Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- Gateway-specific configuration
+  config:
+    # -- Connection pool size
+    connectionPoolSize: 100
+    # -- Request timeout in seconds
+    requestTimeout: 30
+    # -- Max concurrent connections
+    maxConcurrentConnections: 10000
+    # -- Enable request logging
+    requestLogging: true
+    # -- CORS configuration
+    cors:
+      enabled: true
+      allowOrigins:
+        - "*"
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - "*"
+      maxAge: 86400
+
+# ============================================================================
+# Worker Service Configuration (eBPF/XDP filtering)
+# ============================================================================
+worker:
+  # -- Enable the worker service
+  enabled: true
+  # -- Worker deployment kind (DaemonSet or Deployment)
+  kind: DaemonSet
+  # -- Number of worker replicas (only used when kind is Deployment)
+  replicaCount: 3
+  image:
+    # -- Worker image repository
+    repository: pistonprotection/worker
+    # -- Worker image tag
+    tag: ""
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- HTTP port
+    port: 8080
+    # -- Metrics port
+    metricsPort: 9090
+  # -- Host network is required for XDP
+  hostNetwork: true
+  # -- DNS policy when using host network
+  dnsPolicy: ClusterFirstWithHostNet
+  # -- Pod security context (privileged required for eBPF)
+  securityContext:
+    privileged: true
+    capabilities:
+      add:
+        - NET_ADMIN
+        - SYS_ADMIN
+        - BPF
+        - PERFMON
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+  # -- Update strategy for DaemonSet
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  # -- Node selector for worker pods
+  nodeSelector:
+    pistonprotection.io/worker: "true"
+  # -- Tolerations for worker pods
+  tolerations:
+    - key: "pistonprotection.io/worker"
+      operator: "Exists"
+      effect: "NoSchedule"
+  # -- Affinity rules for worker pods
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Volumes for eBPF maps and kernel headers
+  volumes:
+    - name: bpf-maps
+      hostPath:
+        path: /sys/fs/bpf
+        type: DirectoryOrCreate
+    - name: kernel-debug
+      hostPath:
+        path: /sys/kernel/debug
+        type: Directory
+    - name: kernel-headers
+      hostPath:
+        path: /usr/src
+        type: Directory
+  # -- Volume mounts for eBPF
+  volumeMounts:
+    - name: bpf-maps
+      mountPath: /sys/fs/bpf
+    - name: kernel-debug
+      mountPath: /sys/kernel/debug
+    - name: kernel-headers
+      mountPath: /usr/src
+      readOnly: true
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Worker-specific configuration
+  config:
+    # -- Network interface to attach XDP program
+    networkInterface: eth0
+    # -- XDP mode (native, offload, generic)
+    xdpMode: native
+    # -- Enable per-CPU maps for better performance
+    perCpuMaps: true
+    # -- BPF map size (number of entries)
+    mapSize: 65536
+    # -- Stats collection interval in seconds
+    statsInterval: 10
+
+# ============================================================================
+# Config Manager Service
+# ============================================================================
+configMgr:
+  # -- Enable the config manager service
+  enabled: true
+  # -- Number of config manager replicas
+  replicaCount: 1
+  image:
+    # -- Config manager image repository
+    repository: pistonprotection/config-mgr
+    # -- Config manager image tag
+    tag: ""
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- HTTP port
+    port: 8080
+    # -- Metrics port
+    metricsPort: 9091
+    # -- Annotations for the service
+    annotations: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    # -- Enable horizontal pod autoscaling
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 80
+  pdb:
+    enabled: false
+    minAvailable: 1
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Config manager configuration
+  config:
+    # -- Configuration sync interval in seconds
+    syncInterval: 30
+    # -- Enable configuration validation
+    enableValidation: true
+    # -- Configuration cache TTL in seconds
+    cacheTtl: 300
+
+# ============================================================================
+# Metrics Collector Service
+# ============================================================================
+metrics:
+  # -- Enable the metrics service
+  enabled: true
+  # -- Number of metrics replicas
+  replicaCount: 1
+  image:
+    # -- Metrics image repository
+    repository: pistonprotection/metrics
+    # -- Metrics image tag
+    tag: ""
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- HTTP port
+    port: 8080
+    # -- Prometheus metrics port
+    metricsPort: 9091
+    # -- Annotations for the service
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilization: 80
+  pdb:
+    enabled: false
+    minAvailable: 1
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Metrics service configuration
+  config:
+    # -- Metrics aggregation interval in seconds
+    aggregationInterval: 15
+    # -- Metrics retention period
+    retentionPeriod: 24h
+    # -- Enable detailed per-IP metrics
+    perIpMetrics: true
+    # -- Maximum number of unique IPs to track
+    maxTrackedIps: 100000
+    # -- Histogram buckets for latency metrics
+    latencyBuckets:
+      - 0.001
+      - 0.005
+      - 0.01
+      - 0.025
+      - 0.05
+      - 0.1
+      - 0.25
+      - 0.5
+      - 1.0
+      - 2.5
+      - 5.0
+      - 10.0
+
+# ============================================================================
+# Auth Service
+# ============================================================================
+auth:
+  # -- Enable the auth service
+  enabled: true
+  # -- Number of auth replicas
+  replicaCount: 2
+  image:
+    # -- Auth image repository
+    repository: pistonprotection/auth
+    # -- Auth image tag
+    tag: ""
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- HTTP port
+    port: 8080
+    # -- Metrics port
+    metricsPort: 9091
+    # -- Annotations for the service
+    annotations: {}
   resources:
     requests:
       cpu: 100m
@@ -32,100 +447,89 @@ gateway:
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilization: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+  # -- Node selector
   nodeSelector: {}
+  # -- Tolerations
   tolerations: []
+  # -- Affinity rules
   affinity: {}
-
-# Worker service configuration (eBPF/XDP filtering)
-worker:
-  enabled: true
-  # DaemonSet by default for network-level filtering
-  kind: DaemonSet
-  image:
-    repository: pistonprotection/worker
-    tag: ""
-    pullPolicy: IfNotPresent
-  # Host network is required for XDP
-  hostNetwork: true
-  dnsPolicy: ClusterFirstWithHostNet
-  # Privileged mode required for eBPF
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
   securityContext:
-    privileged: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
     capabilities:
-      add:
-        - NET_ADMIN
-        - SYS_ADMIN
-        - BPF
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 1000m
-      memory: 512Mi
-  # Node selector for worker nodes
-  nodeSelector:
-    pistonprotection.io/worker: "true"
-  tolerations:
-    - key: "pistonprotection.io/worker"
-      operator: "Exists"
-      effect: "NoSchedule"
-  # Volumes for eBPF maps
-  volumes:
-    - name: bpf-maps
-      hostPath:
-        path: /sys/fs/bpf
-        type: DirectoryOrCreate
-  volumeMounts:
-    - name: bpf-maps
-      mountPath: /sys/fs/bpf
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Auth service configuration
+  config:
+    # -- JWT token expiration time
+    jwtExpiration: 24h
+    # -- JWT refresh token expiration
+    refreshTokenExpiration: 7d
+    # -- Password minimum length
+    passwordMinLength: 12
+    # -- Enable MFA
+    mfaEnabled: true
+    # -- Session timeout in minutes
+    sessionTimeout: 60
+    # -- Max login attempts before lockout
+    maxLoginAttempts: 5
+    # -- Lockout duration in minutes
+    lockoutDuration: 15
+    # -- OAuth2/OIDC providers
+    oauth:
+      enabled: false
+      providers: []
+      # - name: google
+      #   clientId: ""
+      #   clientSecretRef: google-oauth-secret
+      # - name: github
+      #   clientId: ""
+      #   clientSecretRef: github-oauth-secret
+    # -- API key settings
+    apiKeys:
+      enabled: true
+      # -- API key prefix
+      prefix: "pp_"
+      # -- Default API key expiration in days
+      defaultExpiration: 365
 
-# Config Manager service
-configMgr:
-  enabled: true
-  replicaCount: 1
-  image:
-    repository: pistonprotection/config-mgr
-    tag: ""
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 8080
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-
-# Metrics collector service
-metrics:
-  enabled: true
-  replicaCount: 1
-  image:
-    repository: pistonprotection/metrics
-    tag: ""
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 8080
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
-
-# Kubernetes operator
+# ============================================================================
+# Kubernetes Operator
+# ============================================================================
 operator:
+  # -- Enable the operator
   enabled: true
+  # -- Number of operator replicas (usually 1 for leader election)
   replicaCount: 1
   image:
+    # -- Operator image repository
     repository: pistonprotection/operator
+    # -- Operator image tag
     tag: ""
+    # -- Image pull policy
     pullPolicy: IfNotPresent
+  service:
+    # -- Service type
+    type: ClusterIP
+    # -- Metrics port
+    metricsPort: 8080
+    # -- Health port
+    healthPort: 8081
+    # -- Annotations for the service
+    annotations: {}
   resources:
     requests:
       cpu: 100m
@@ -133,20 +537,63 @@ operator:
     limits:
       cpu: 500m
       memory: 512Mi
-  # Install CRDs
+  # -- Install CRDs
   installCRDs: true
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Operator configuration
+  config:
+    # -- Enable leader election
+    leaderElection: true
+    # -- Reconciliation interval in seconds
+    reconcileInterval: 30
+    # -- Watch all namespaces
+    watchAllNamespaces: false
+    # -- Namespaces to watch (if watchAllNamespaces is false)
+    watchNamespaces: []
 
-# Frontend dashboard
+# ============================================================================
+# Frontend Dashboard
+# ============================================================================
 frontend:
+  # -- Enable the frontend
   enabled: true
+  # -- Number of frontend replicas
   replicaCount: 2
   image:
+    # -- Frontend image repository
     repository: pistonprotection/frontend
+    # -- Frontend image tag
     tag: ""
+    # -- Image pull policy
     pullPolicy: IfNotPresent
   service:
+    # -- Service type
     type: ClusterIP
+    # -- HTTP port
     port: 3000
+    # -- Annotations for the service
+    annotations: {}
   resources:
     requests:
       cpu: 50m
@@ -154,14 +601,64 @@ frontend:
     limits:
       cpu: 200m
       memory: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+  # -- Extra environment variables
+  extraEnv: []
+  # -- Frontend configuration
+  config:
+    # -- API base URL (auto-configured if not set)
+    apiUrl: ""
+    # -- Enable real-time updates via WebSocket
+    enableRealtime: true
+    # -- Dashboard refresh interval in seconds
+    refreshInterval: 5
+    # -- Theme (light, dark, system)
+    defaultTheme: system
 
-# Ingress configuration
+# ============================================================================
+# Ingress Configuration
+# ============================================================================
 ingress:
+  # -- Enable ingress
   enabled: false
-  className: ""
+  # -- Ingress class name
+  className: nginx
+  # -- Ingress annotations
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # -- Ingress hosts configuration
   hosts:
     - host: pistonprotection.local
       paths:
@@ -171,114 +668,423 @@ ingress:
         - path: /api
           pathType: Prefix
           service: gateway
+        - path: /auth
+          pathType: Prefix
+          service: auth
+  # -- TLS configuration
   tls: []
   #  - secretName: pistonprotection-tls
   #    hosts:
   #      - pistonprotection.local
 
-# PostgreSQL configuration
+# ============================================================================
+# PostgreSQL Configuration
+# ============================================================================
 postgresql:
+  # -- Enable bundled PostgreSQL
   enabled: true
+  # -- PostgreSQL authentication settings
   auth:
+    # -- Postgres admin password (required)
     postgresPassword: ""
+    # -- Application username
     username: pistonprotection
+    # -- Application password
     password: ""
+    # -- Application database name
     database: pistonprotection
+    # -- Existing secret for PostgreSQL credentials
+    existingSecret: ""
+  # -- Primary instance configuration
   primary:
     persistence:
+      # -- Enable persistence
       enabled: true
+      # -- Storage size
       size: 10Gi
-  # External PostgreSQL (when postgresql.enabled=false)
+      # -- Storage class
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    # -- PostgreSQL configuration
+    configuration: |
+      max_connections = 200
+      shared_buffers = 256MB
+      effective_cache_size = 768MB
+      maintenance_work_mem = 128MB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 8MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      min_wal_size = 1GB
+      max_wal_size = 4GB
+      max_worker_processes = 4
+      max_parallel_workers_per_gather = 2
+      max_parallel_workers = 4
+  # -- External PostgreSQL (when postgresql.enabled=false)
   external:
+    # -- External PostgreSQL host
     host: ""
+    # -- External PostgreSQL port
     port: 5432
+    # -- Database name
     database: pistonprotection
+    # -- Username
     username: ""
+    # -- Password
     password: ""
+    # -- Existing secret containing password
     existingSecret: ""
+    # -- Key in existing secret
+    existingSecretKey: password
+    # -- Enable SSL connection
+    sslMode: require
 
-# Redis configuration
+# ============================================================================
+# Redis Configuration
+# ============================================================================
 redis:
+  # -- Enable bundled Redis
   enabled: true
+  # -- Redis architecture (standalone or replication)
   architecture: standalone
   auth:
+    # -- Enable authentication
     enabled: true
+    # -- Redis password
     password: ""
+    # -- Existing secret for Redis password
+    existingSecret: ""
   master:
     persistence:
+      # -- Enable persistence
       enabled: true
+      # -- Storage size
       size: 1Gi
-  # External Redis (when redis.enabled=false)
+      # -- Storage class
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # -- Redis configuration
+    configuration: |
+      maxmemory 256mb
+      maxmemory-policy allkeys-lru
+      appendonly yes
+      appendfsync everysec
+  # -- External Redis (when redis.enabled=false)
   external:
+    # -- External Redis host
     host: ""
+    # -- External Redis port
     port: 6379
+    # -- Redis password
     password: ""
+    # -- Existing secret containing password
     existingSecret: ""
+    # -- Key in existing secret
+    existingSecretKey: password
+    # -- Enable TLS
+    tls: false
+    # -- Redis database number
+    database: 0
 
-# Observability
+# ============================================================================
+# Observability Configuration
+# ============================================================================
 observability:
   # Prometheus metrics
   prometheus:
+    # -- Enable Prometheus metrics
     enabled: true
     serviceMonitor:
+      # -- Create ServiceMonitor resources
       enabled: false
+      # -- ServiceMonitor namespace
       namespace: ""
+      # -- Scrape interval
       interval: 30s
+      # -- Scrape timeout
       scrapeTimeout: 10s
+      # -- Additional labels for ServiceMonitor
+      labels: {}
+      # -- Relabeling configs
+      relabelings: []
+      # -- Metric relabeling configs
+      metricRelabelings: []
+    # -- PrometheusRule settings
+    rules:
+      # -- Create PrometheusRule resources
+      enabled: false
+      # -- Additional labels for PrometheusRule
+      labels: {}
+      # -- Namespace for PrometheusRule
+      namespace: ""
+
   # Grafana dashboards
   grafana:
+    # -- Enable Grafana integration
     enabled: false
     dashboards:
+      # -- Create dashboard ConfigMaps
       enabled: true
+      # -- Dashboard labels (for Grafana sidecar discovery)
+      labels:
+        grafana_dashboard: "1"
+      # -- Dashboard annotations
+      annotations: {}
+      # -- Folder for dashboards in Grafana
+      folder: "PistonProtection"
+
   # Loki logging
   loki:
+    # -- Enable Loki integration
     enabled: false
+    # -- Loki endpoint URL
+    url: ""
+    # -- Tenant ID for multi-tenant Loki
+    tenantId: ""
+    # -- Additional labels for logs
+    labels: {}
 
-# Service accounts
+  # OpenTelemetry tracing
+  tracing:
+    # -- Enable distributed tracing
+    enabled: false
+    # -- OTLP endpoint
+    endpoint: ""
+    # -- Sampling ratio (0.0 to 1.0)
+    samplingRatio: 0.1
+    # -- Service name
+    serviceName: pistonprotection
+
+# ============================================================================
+# GeoIP Database Configuration
+# ============================================================================
+geoip:
+  # -- Enable GeoIP lookups
+  enabled: true
+  # -- GeoIP database type (maxmind, ip2location)
+  type: maxmind
+  # -- MaxMind account ID
+  accountId: ""
+  # -- MaxMind license key
+  licenseKey: ""
+  # -- Existing secret for GeoIP credentials
+  existingSecret: ""
+  # -- Database edition IDs to download
+  editionIds:
+    - GeoLite2-Country
+    - GeoLite2-City
+    - GeoLite2-ASN
+  # -- Database update frequency (cron expression)
+  updateSchedule: "0 3 * * 3"  # Weekly on Wednesday at 3am
+  # -- Database storage configuration
+  storage:
+    # -- Enable persistent storage for GeoIP databases
+    enabled: true
+    # -- Storage size
+    size: 1Gi
+    # -- Storage class
+    storageClass: ""
+
+# ============================================================================
+# Stripe Webhook Configuration
+# ============================================================================
+stripe:
+  # -- Enable Stripe integration
+  enabled: false
+  # -- Stripe API key (use existingSecret in production)
+  apiKey: ""
+  # -- Stripe webhook signing secret
+  webhookSecret: ""
+  # -- Existing secret for Stripe credentials
+  existingSecret: ""
+  # -- Stripe API key key in secret
+  apiKeyKey: api-key
+  # -- Webhook secret key in secret
+  webhookSecretKey: webhook-secret
+  # -- Webhook endpoint path
+  webhookPath: /webhooks/stripe
+  # -- Enable test mode
+  testMode: false
+  # -- Product price IDs
+  prices:
+    starter: ""
+    professional: ""
+    enterprise: ""
+
+# ============================================================================
+# Service Accounts
+# ============================================================================
 serviceAccount:
+  # -- Create service accounts
   create: true
+  # -- Service account annotations
   annotations: {}
+  # -- Service account name override
   name: ""
 
-# RBAC configuration
+# ============================================================================
+# RBAC Configuration
+# ============================================================================
 rbac:
+  # -- Create RBAC resources
   create: true
 
-# Pod security policies
+# ============================================================================
+# Pod Security Policies
+# ============================================================================
 podSecurityPolicy:
+  # -- Create PSP resources (deprecated in K8s 1.25+)
   enabled: false
 
-# Network policies
+# ============================================================================
+# Network Policies
+# ============================================================================
 networkPolicy:
+  # -- Enable network policies
   enabled: false
+  # -- Allow ingress from these namespaces
+  allowedNamespaces: []
+  # -- Allow ingress from these CIDR blocks
+  allowedCIDRs: []
+  # -- Additional ingress rules
+  additionalIngressRules: []
+  # -- Additional egress rules
+  additionalEgressRules: []
 
-# Protection settings (defaults)
+# ============================================================================
+# Protection Settings (Defaults)
+# ============================================================================
 protection:
-  # Default protection level (1-5)
+  # -- Default protection level (1-5)
   defaultLevel: 3
-  # Default rate limits
+  # -- Rate limiting configuration
   rateLimit:
+    # -- Packets per second per IP
     ppsPerIp: 1000
+    # -- Burst allowance
     burst: 2000
+    # -- Global packets per second limit
     globalPps: 1000000
-  # Protocol validation
+    # -- Connections per IP limit
+    connectionsPerIp: 100
+    # -- New connections per second per IP
+    newConnectionsPerSecond: 50
+  # -- Protocol validation settings
   protocols:
     minecraft:
+      # -- Enable Minecraft protocol validation
       enabled: true
+      # -- Minimum protocol version
       minVersion: 47
+      # -- Maximum protocol version
       maxVersion: 769
+      # -- Enable packet inspection
+      packetInspection: true
+      # -- Max packet size in bytes
+      maxPacketSize: 32767
     quic:
+      # -- Enable QUIC protocol support
       enabled: true
+      # -- QUIC max streams
+      maxStreams: 100
     synCookies:
+      # -- Enable SYN cookies
       enabled: true
+      # -- SYN cookie threshold
+      threshold: 1000
+    tcp:
+      # -- Enable TCP validation
+      enabled: true
+      # -- Max segment size
+      maxSegmentSize: 1460
+      # -- Enable connection tracking
+      connectionTracking: true
+    udp:
+      # -- Enable UDP filtering
+      enabled: true
+      # -- UDP timeout in seconds
+      timeout: 30
+  # -- Challenge settings
+  challenge:
+    # -- Enable JavaScript challenge
+    jsChallenge: true
+    # -- Challenge cookie lifetime in seconds
+    cookieLifetime: 3600
+    # -- Challenge difficulty (1-10)
+    difficulty: 5
+  # -- Blacklist/Whitelist settings
+  lists:
+    # -- Enable IP blacklisting
+    blacklistEnabled: true
+    # -- Enable IP whitelisting
+    whitelistEnabled: true
+    # -- Auto-blacklist threshold (violations before ban)
+    autoBlacklistThreshold: 10
+    # -- Auto-blacklist duration in seconds
+    autoBlacklistDuration: 3600
 
-# Extra environment variables
+# ============================================================================
+# Secrets Configuration
+# ============================================================================
+secrets:
+  # -- Use external secrets operator
+  externalSecrets:
+    enabled: false
+    # -- External secrets refresh interval
+    refreshInterval: 1h
+    # -- Secret store reference
+    secretStoreRef:
+      name: ""
+      kind: ClusterSecretStore
+  # -- JWT signing key (auto-generated if not provided)
+  jwtSigningKey: ""
+  # -- Encryption key for sensitive data
+  encryptionKey: ""
+  # -- Existing secret containing all credentials
+  existingSecret: ""
+
+# ============================================================================
+# Extra Environment Variables
+# ============================================================================
 extraEnv: []
   # - name: MY_VAR
   #   value: "my-value"
 
-# Extra volumes
+# ============================================================================
+# Extra Volumes
+# ============================================================================
 extraVolumes: []
 
-# Extra volume mounts
+# ============================================================================
+# Extra Volume Mounts
+# ============================================================================
 extraVolumeMounts: []
+
+# ============================================================================
+# Pod Priority Class
+# ============================================================================
+priorityClassName: ""
+
+# ============================================================================
+# Topology Spread Constraints
+# ============================================================================
+topologySpreadConstraints: []
+  # - maxSkew: 1
+  #   topologyKey: topology.kubernetes.io/zone
+  #   whenUnsatisfiable: ScheduleAnyway
+  #   labelSelector:
+  #     matchLabels:
+  #       app.kubernetes.io/name: pistonprotection

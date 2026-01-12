@@ -1,0 +1,103 @@
+{{- if and .Values.gateway.enabled .Values.gateway.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-gateway
+  labels:
+    {{- include "pistonprotection.gateway.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.gateway.pdb.minAvailable }}
+  minAvailable: {{ .Values.gateway.pdb.minAvailable }}
+  {{- else if .Values.gateway.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.gateway.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.gateway.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+{{- if and .Values.auth.enabled .Values.auth.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-auth
+  labels:
+    {{- include "pistonprotection.auth.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.auth.pdb.minAvailable }}
+  minAvailable: {{ .Values.auth.pdb.minAvailable }}
+  {{- else if .Values.auth.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.auth.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.auth.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+{{- if and .Values.metrics.enabled .Values.metrics.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-metrics
+  labels:
+    {{- include "pistonprotection.metrics.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.metrics.pdb.minAvailable }}
+  minAvailable: {{ .Values.metrics.pdb.minAvailable }}
+  {{- else if .Values.metrics.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.metrics.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.metrics.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+{{- if and .Values.configMgr.enabled .Values.configMgr.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-config-mgr
+  labels:
+    {{- include "pistonprotection.configMgr.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.configMgr.pdb.minAvailable }}
+  minAvailable: {{ .Values.configMgr.pdb.minAvailable }}
+  {{- else if .Values.configMgr.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.configMgr.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.configMgr.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+{{- if and .Values.frontend.enabled .Values.frontend.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-frontend
+  labels:
+    {{- include "pistonprotection.frontend.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.frontend.pdb.minAvailable }}
+  minAvailable: {{ .Values.frontend.pdb.minAvailable }}
+  {{- else if .Values.frontend.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.frontend.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.frontend.selectorLabels" . | nindent 6 }}
+{{- end }}

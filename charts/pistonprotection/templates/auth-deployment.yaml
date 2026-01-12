@@ -1,0 +1,193 @@
+{{- if .Values.auth.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-auth
+  labels:
+    {{- include "pistonprotection.auth.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.auth.autoscaling.enabled }}
+  replicas: {{ .Values.auth.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pistonprotection.auth.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- if .Values.observability.loki.enabled }}
+        promtail.io/collect: "true"
+        {{- end }}
+        {{- with .Values.auth.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "pistonprotection.auth.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pistonprotection.serviceAccountName" . }}
+      {{- with .Values.auth.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      containers:
+        - name: auth
+          image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.auth.image.pullPolicy }}
+          {{- with .Values.auth.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9091
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.global.logLevel | default "info" | quote }}
+            - name: SERVICE_NAME
+              value: "auth"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | default "production" | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: redis-url
+            - name: JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: jwt-signing-key
+            - name: JWT_EXPIRATION
+              value: {{ .Values.auth.config.jwtExpiration | quote }}
+            - name: REFRESH_TOKEN_EXPIRATION
+              value: {{ .Values.auth.config.refreshTokenExpiration | quote }}
+            - name: PASSWORD_MIN_LENGTH
+              value: {{ .Values.auth.config.passwordMinLength | quote }}
+            - name: MFA_ENABLED
+              value: {{ .Values.auth.config.mfaEnabled | quote }}
+            - name: SESSION_TIMEOUT
+              value: {{ .Values.auth.config.sessionTimeout | quote }}
+            - name: MAX_LOGIN_ATTEMPTS
+              value: {{ .Values.auth.config.maxLoginAttempts | quote }}
+            - name: LOCKOUT_DURATION
+              value: {{ .Values.auth.config.lockoutDuration | quote }}
+            - name: API_KEYS_ENABLED
+              value: {{ .Values.auth.config.apiKeys.enabled | quote }}
+            - name: API_KEY_PREFIX
+              value: {{ .Values.auth.config.apiKeys.prefix | quote }}
+            {{- if .Values.auth.config.oauth.enabled }}
+            - name: OAUTH_ENABLED
+              value: "true"
+            {{- range .Values.auth.config.oauth.providers }}
+            - name: OAUTH_{{ .name | upper }}_CLIENT_ID
+              value: {{ .clientId | quote }}
+            - name: OAUTH_{{ .name | upper }}_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretRef }}
+                  key: client-secret
+            {{- end }}
+            {{- end }}
+            {{- if .Values.observability.tracing.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.tracing.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: "{{ .Values.observability.tracing.serviceName }}-auth"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.observability.tracing.samplingRatio | quote }}
+            {{- end }}
+            {{- with .Values.auth.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.auth.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.auth.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.auth.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.auth.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-auth
+  labels:
+    {{- include "pistonprotection.auth.labels" . | nindent 4 }}
+  {{- with .Values.auth.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.auth.service.type }}
+  ports:
+    - port: {{ .Values.auth.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.auth.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "pistonprotection.auth.selectorLabels" . | nindent 4 }}
+{{- end }}

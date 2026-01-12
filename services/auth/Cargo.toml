@@ -1,0 +1,108 @@
+[package]
+name = "pistonprotection-auth"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+description = "PistonProtection Authentication and Authorization Service"
+
+[[bin]]
+name = "auth"
+path = "src/main.rs"
+
+[dependencies]
+pistonprotection-proto = { path = "../proto" }
+pistonprotection-common = { path = "../common" }
+
+# Async
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# gRPC
+tonic = { workspace = true }
+tonic-health = { workspace = true }
+tonic-reflection = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Redis
+deadpool-redis = { workspace = true }
+redis = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Validation
+validator = { workspace = true }
+
+# Tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Metrics
+prometheus = { workspace = true }
+
+# Config
+config = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Utils
+uuid = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+base64 = { workspace = true }
+sha2 = { workspace = true }
+hmac = { workspace = true }
+rand = { workspace = true }
+
+# HTTP server (for health/metrics endpoints)
+axum = { version = "0.8", features = ["http2"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+
+# JWT and authentication
+jsonwebtoken = "9.3"
+argon2 = "0.5"
+
+# Lazy static
+lazy_static = "1.4"
+
+# Password hashing
+password-hash = "0.5"
+
+# Hex encoding
+hex = { workspace = true }
+
+# IP network utilities
+ipnetwork = { workspace = true }
+
+# Stripe integration
+stripe-rust = { package = "async-stripe", version = "0.39", features = ["runtime-tokio-hyper"] }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }
+tempfile = "3.10"
+serial_test = "3.0"
+wiremock = "0.6"
+test-case = "3.3"
+pretty_assertions = "1.4"
+fake = { version = "2.9", features = ["derive"] }
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+
+[[test]]
+name = "integration"
+path = "src/tests/mod.rs"
+
+[[bench]]
+name = "auth_benchmarks"
+harness = false

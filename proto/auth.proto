@@ -111,6 +111,139 @@ enum SubscriptionStatus {
   SUBSCRIPTION_STATUS_UNPAID = 5;
 }
 
+// Billing period
+enum BillingPeriod {
+  BILLING_PERIOD_UNSPECIFIED = 0;
+  BILLING_PERIOD_MONTHLY = 1;
+  BILLING_PERIOD_YEARLY = 2;
+}
+
+// Plan type
+enum PlanType {
+  PLAN_TYPE_UNSPECIFIED = 0;
+  PLAN_TYPE_FREE = 1;
+  PLAN_TYPE_STARTER = 2;
+  PLAN_TYPE_PRO = 3;
+  PLAN_TYPE_ENTERPRISE = 4;
+}
+
+// Invoice status
+enum InvoiceStatus {
+  INVOICE_STATUS_UNSPECIFIED = 0;
+  INVOICE_STATUS_DRAFT = 1;
+  INVOICE_STATUS_OPEN = 2;
+  INVOICE_STATUS_PAID = 3;
+  INVOICE_STATUS_UNCOLLECTIBLE = 4;
+  INVOICE_STATUS_VOID = 5;
+}
+
+// Usage metric type
+enum UsageMetricType {
+  USAGE_METRIC_TYPE_UNSPECIFIED = 0;
+  USAGE_METRIC_TYPE_REQUESTS = 1;
+  USAGE_METRIC_TYPE_BANDWIDTH_BYTES = 2;
+  USAGE_METRIC_TYPE_BLOCKED_REQUESTS = 3;
+  USAGE_METRIC_TYPE_CHALLENGES_SERVED = 4;
+}
+
+// Subscription plan definition
+message Plan {
+  string id = 1;
+  string name = 2;
+  PlanType plan_type = 3;
+  string description = 4;
+  int64 price_monthly_cents = 5;
+  int64 price_yearly_cents = 6;
+  uint32 max_backends = 7;
+  uint32 max_origins_per_backend = 8;
+  uint32 max_domains = 9;
+  uint32 max_filter_rules = 10;
+  uint64 max_bandwidth_bytes = 11;
+  uint64 max_requests = 12;
+  bool advanced_protection = 13;
+  bool priority_support = 14;
+  bool custom_ssl = 15;
+  bool api_access = 16;
+  uint32 data_retention_days = 17;
+  bool is_active = 18;
+}
+
+// Invoice
+message Invoice {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_id = 3;
+  string stripe_invoice_id = 4;
+  string number = 5;
+  InvoiceStatus status = 6;
+  string currency = 7;
+  int64 subtotal_cents = 8;
+  int64 tax_cents = 9;
+  int64 total_cents = 10;
+  int64 amount_paid_cents = 11;
+  int64 amount_due_cents = 12;
+  string description = 13;
+  string invoice_pdf_url = 14;
+  string hosted_invoice_url = 15;
+  common.Timestamp period_start = 16;
+  common.Timestamp period_end = 17;
+  common.Timestamp due_date = 18;
+  common.Timestamp paid_at = 19;
+  common.Timestamp created_at = 20;
+}
+
+// Usage record
+message UsageRecord {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_id = 3;
+  UsageMetricType metric_type = 4;
+  int64 quantity = 5;
+  common.Timestamp timestamp = 6;
+}
+
+// Usage summary for a billing period
+message UsageSummary {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_id = 3;
+  common.Timestamp period_start = 4;
+  common.Timestamp period_end = 5;
+  int64 total_requests = 6;
+  int64 total_bandwidth_bytes = 7;
+  int64 total_blocked_requests = 8;
+  int64 total_challenges_served = 9;
+  int64 overage_requests = 10;
+  int64 overage_bandwidth_bytes = 11;
+  int64 overage_charges_cents = 12;
+}
+
+// Payment method
+message PaymentMethod {
+  string id = 1;
+  string organization_id = 2;
+  string payment_type = 3;  // card, bank_account, etc.
+  string card_brand = 4;
+  string card_last4 = 5;
+  int32 card_exp_month = 6;
+  int32 card_exp_year = 7;
+  bool is_default = 8;
+  common.Timestamp created_at = 9;
+}
+
+// Checkout session response
+message CheckoutSession {
+  string id = 1;
+  string url = 2;
+  common.Timestamp expires_at = 3;
+}
+
+// Billing portal session response
+message BillingPortalSession {
+  string id = 1;
+  string url = 2;
+}
+
 // Organization limits based on plan
 message OrganizationLimits {
   uint32 max_backends = 1;
@@ -263,6 +396,31 @@ service AuthService {
   rpc CreateInvitation(CreateInvitationRequest) returns (CreateInvitationResponse);
   rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
   rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+
+  // Billing - Plans
+  rpc ListPlans(ListPlansRequest) returns (ListPlansResponse);
+  rpc GetPlan(GetPlanRequest) returns (GetPlanResponse);
+
+  // Billing - Subscriptions
+  rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+  rpc UpdateSubscription(UpdateSubscriptionRequest) returns (UpdateSubscriptionResponse);
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
+  rpc ResumeSubscription(ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse);
+
+  // Billing - Checkout
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse);
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse);
+
+  // Billing - Invoices
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+
+  // Billing - Usage
+  rpc GetUsageSummary(GetUsageSummaryRequest) returns (GetUsageSummaryResponse);
+  rpc ReportUsage(ReportUsageRequest) returns (ReportUsageResponse);
+
+  // Billing - Payment Methods
+  rpc ListPaymentMethods(ListPaymentMethodsRequest) returns (ListPaymentMethodsResponse);
 }
 
 // Request/Response messages
@@ -426,4 +584,147 @@ message RevokeInvitationRequest {
 
 message RevokeInvitationResponse {
   bool success = 1;
+}
+
+// ==================== Billing Request/Response Messages ====================
+
+// Plans
+message ListPlansRequest {
+  bool include_inactive = 1;
+}
+
+message ListPlansResponse {
+  repeated Plan plans = 1;
+}
+
+message GetPlanRequest {
+  string plan_id = 1;
+}
+
+message GetPlanResponse {
+  Plan plan = 1;
+}
+
+// Subscriptions
+message GetSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message GetSubscriptionResponse {
+  Subscription subscription = 1;
+  Plan plan = 2;
+}
+
+message UpdateSubscriptionRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  BillingPeriod billing_period = 3;
+  ProrationBehavior proration_behavior = 4;
+}
+
+// Proration behavior for subscription changes
+enum ProrationBehavior {
+  PRORATION_BEHAVIOR_UNSPECIFIED = 0;
+  PRORATION_BEHAVIOR_CREATE_PRORATIONS = 1;
+  PRORATION_BEHAVIOR_NONE = 2;
+  PRORATION_BEHAVIOR_ALWAYS_INVOICE = 3;
+}
+
+message UpdateSubscriptionResponse {
+  Subscription subscription = 1;
+}
+
+message CancelSubscriptionRequest {
+  string organization_id = 1;
+  bool cancel_at_period_end = 2;  // If true, cancels at end of billing period
+  string cancellation_reason = 3;
+  string feedback = 4;
+}
+
+message CancelSubscriptionResponse {
+  Subscription subscription = 1;
+}
+
+message ResumeSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message ResumeSubscriptionResponse {
+  Subscription subscription = 1;
+}
+
+// Checkout
+message CreateCheckoutSessionRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  BillingPeriod billing_period = 3;
+  string success_url = 4;
+  string cancel_url = 5;
+  bool allow_promotion_codes = 6;
+}
+
+message CreateCheckoutSessionResponse {
+  CheckoutSession session = 1;
+}
+
+message CreateBillingPortalSessionRequest {
+  string organization_id = 1;
+  string return_url = 2;
+}
+
+message CreateBillingPortalSessionResponse {
+  BillingPortalSession session = 1;
+}
+
+// Invoices
+message ListInvoicesRequest {
+  string organization_id = 1;
+  common.Pagination pagination = 2;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+  common.PaginationInfo pagination = 2;
+}
+
+message GetInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoiceResponse {
+  Invoice invoice = 1;
+}
+
+// Usage
+message GetUsageSummaryRequest {
+  string organization_id = 1;
+  common.Timestamp period_start = 2;
+  common.Timestamp period_end = 3;
+}
+
+message GetUsageSummaryResponse {
+  UsageSummary summary = 1;
+  OrganizationLimits limits = 2;  // To show usage vs limits
+}
+
+message ReportUsageRequest {
+  string organization_id = 1;
+  UsageMetricType metric_type = 2;
+  int64 quantity = 3;
+  common.Timestamp timestamp = 4;
+  string idempotency_key = 5;
+}
+
+message ReportUsageResponse {
+  bool success = 1;
+  UsageRecord record = 2;
+}
+
+// Payment Methods
+message ListPaymentMethodsRequest {
+  string organization_id = 1;
+}
+
+message ListPaymentMethodsResponse {
+  repeated PaymentMethod payment_methods = 1;
 }

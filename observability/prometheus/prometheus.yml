@@ -1,0 +1,82 @@
+# PistonProtection Prometheus Configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'pistonprotection-local'
+    env: 'development'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - /etc/prometheus/alerts.yaml
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # PistonProtection Gateway
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'gateway'
+
+  # PistonProtection Worker
+  - job_name: 'worker'
+    static_configs:
+      - targets: ['worker:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'worker'
+
+  # PistonProtection Config Manager
+  - job_name: 'config-mgr'
+    static_configs:
+      - targets: ['config-mgr:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'config-mgr'
+
+  # PistonProtection Metrics Service
+  - job_name: 'metrics-service'
+    static_configs:
+      - targets: ['metrics:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'metrics'
+
+  # PistonProtection Auth Service
+  - job_name: 'auth'
+    static_configs:
+      - targets: ['auth:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'auth'
+
+  # OpenTelemetry Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # Redis (using redis_exporter if available)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  # PostgreSQL (using postgres_exporter if available)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']

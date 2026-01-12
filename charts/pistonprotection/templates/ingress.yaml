@@ -41,6 +41,14 @@ spec:
                 name: {{ include "pistonprotection.fullname" $ }}-gateway
                 port:
                   number: {{ $.Values.gateway.service.port }}
+                {{- else if eq .service "auth" }}
+                name: {{ include "pistonprotection.fullname" $ }}-auth
+                port:
+                  number: {{ $.Values.auth.service.port }}
+                {{- else if eq .service "metrics" }}
+                name: {{ include "pistonprotection.fullname" $ }}-metrics
+                port:
+                  number: {{ $.Values.metrics.service.port }}
                 {{- end }}
           {{- end }}
     {{- end }}

@@ -1,6 +1,7 @@
 //! gRPC service handlers
 
 use crate::services::AppState;
+use futures::StreamExt;
 use pistonprotection_proto::{
     backend::{
         backend_service_server::{BackendService as BackendServiceTrait, BackendServiceServer},
@@ -133,77 +134,214 @@ impl BackendServiceTrait for BackendGrpcService {
         }))
     }
 
+    // =========================================================================
+    // Origin Management
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn add_origin(
         &self,
-        _request: Request<AddOriginRequest>,
+        request: Request<AddOriginRequest>,
     ) -> Result<Response<AddOriginResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+        let origin = req
+            .origin
+            .ok_or_else(|| Status::invalid_argument("Origin is required"))?;
+
+        let created = self
+            .service
+            .add_origin(&req.backend_id, origin)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(AddOriginResponse {
+            origin: Some(created),
+        }))
     }
 
+    #[instrument(skip(self, request))]
     async fn update_origin(
         &self,
-        _request: Request<UpdateOriginRequest>,
+        request: Request<UpdateOriginRequest>,
     ) -> Result<Response<UpdateOriginResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+        let origin = req
+            .origin
+            .ok_or_else(|| Status::invalid_argument("Origin is required"))?;
+
+        let updated = self
+            .service
+            .update_origin(&req.backend_id, origin)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(UpdateOriginResponse {
+            origin: Some(updated),
+        }))
     }
 
+    #[instrument(skip(self, request))]
     async fn remove_origin(
         &self,
-        _request: Request<RemoveOriginRequest>,
+        request: Request<RemoveOriginRequest>,
     ) -> Result<Response<RemoveOriginResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        self.service
+            .remove_origin(&req.backend_id, &req.origin_id)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(RemoveOriginResponse { success: true }))
     }
 
+    // =========================================================================
+    // Protection Settings
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn update_protection(
         &self,
-        _request: Request<UpdateProtectionRequest>,
+        request: Request<UpdateProtectionRequest>,
     ) -> Result<Response<UpdateProtectionResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+        let protection = req
+            .protection
+            .ok_or_else(|| Status::invalid_argument("Protection settings are required"))?;
+
+        let updated = self
+            .service
+            .update_protection(&req.backend_id, protection)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(UpdateProtectionResponse {
+            protection: Some(updated),
+        }))
     }
 
+    #[instrument(skip(self, request))]
     async fn set_protection_level(
         &self,
-        _request: Request<SetProtectionLevelRequest>,
+        request: Request<SetProtectionLevelRequest>,
     ) -> Result<Response<SetProtectionLevelResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        let level = ProtectionLevel::try_from(req.level)
+            .map_err(|_| Status::invalid_argument("Invalid protection level"))?;
+
+        let updated_level = self
+            .service
+            .set_protection_level(&req.backend_id, level)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(SetProtectionLevelResponse {
+            level: updated_level as i32,
+        }))
     }
 
+    // =========================================================================
+    // Status and Streaming
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn get_backend_status(
         &self,
-        _request: Request<GetBackendStatusRequest>,
+        request: Request<GetBackendStatusRequest>,
     ) -> Result<Response<GetBackendStatusResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        let status = self
+            .service
+            .get_status(&req.backend_id)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(GetBackendStatusResponse {
+            status: Some(status),
+        }))
     }
 
     type WatchBackendStatusStream =
         Pin<Box<dyn Stream<Item = Result<BackendStatus, Status>> + Send>>;
 
+    #[instrument(skip(self, request))]
     async fn watch_backend_status(
         &self,
-        _request: Request<WatchBackendStatusRequest>,
+        request: Request<WatchBackendStatusRequest>,
     ) -> Result<Response<Self::WatchBackendStatusStream>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        let stream = self
+            .service
+            .watch_status(&req.backend_id)
+            .await
+            .map_err(Status::from)?;
+
+        // Convert Result<BackendStatus> to Result<BackendStatus, Status>
+        let mapped_stream = stream.map(|result| result.map_err(Status::from));
+
+        Ok(Response::new(Box::pin(mapped_stream)))
     }
 
+    // =========================================================================
+    // Domain Management
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn add_domain(
         &self,
-        _request: Request<AddDomainRequest>,
+        request: Request<AddDomainRequest>,
     ) -> Result<Response<AddDomainResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        if req.domain.is_empty() {
+            return Err(Status::invalid_argument("Domain is required"));
+        }
+
+        let (domain, verification_token, verification_method) = self
+            .service
+            .add_domain(&req.backend_id, &req.domain)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(AddDomainResponse {
+            domain,
+            verification_token,
+            verification_method,
+        }))
     }
 
+    #[instrument(skip(self, request))]
     async fn remove_domain(
         &self,
-        _request: Request<RemoveDomainRequest>,
+        request: Request<RemoveDomainRequest>,
     ) -> Result<Response<RemoveDomainResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        self.service
+            .remove_domain(&req.backend_id, &req.domain)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(RemoveDomainResponse { success: true }))
     }
 
+    #[instrument(skip(self, request))]
     async fn verify_domain(
         &self,
-        _request: Request<VerifyDomainRequest>,
+        request: Request<VerifyDomainRequest>,
     ) -> Result<Response<VerifyDomainResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        let (verified, error) = self
+            .service
+            .verify_domain(&req.backend_id, &req.domain)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(VerifyDomainResponse { verified, error }))
     }
 }
 
@@ -312,18 +450,68 @@ impl FilterServiceTrait for FilterGrpcService {
         }))
     }
 
+    // =========================================================================
+    // Bulk Operations
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn bulk_create_rules(
         &self,
-        _request: Request<BulkCreateRulesRequest>,
+        request: Request<BulkCreateRulesRequest>,
     ) -> Result<Response<BulkCreateRulesResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        if req.rules.is_empty() {
+            return Err(Status::invalid_argument("At least one rule is required"));
+        }
+
+        // Limit bulk operations to prevent abuse
+        if req.rules.len() > 100 {
+            return Err(Status::invalid_argument(
+                "Cannot create more than 100 rules at once",
+            ));
+        }
+
+        let (created_rules, errors) = self
+            .service
+            .bulk_create(&req.backend_id, req.rules)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(BulkCreateRulesResponse {
+            rules: created_rules,
+            errors,
+        }))
     }
 
+    #[instrument(skip(self, request))]
     async fn bulk_delete_rules(
         &self,
-        _request: Request<BulkDeleteRulesRequest>,
+        request: Request<BulkDeleteRulesRequest>,
     ) -> Result<Response<BulkDeleteRulesResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        if req.rule_ids.is_empty() {
+            return Err(Status::invalid_argument("At least one rule ID is required"));
+        }
+
+        // Limit bulk operations to prevent abuse
+        if req.rule_ids.len() > 100 {
+            return Err(Status::invalid_argument(
+                "Cannot delete more than 100 rules at once",
+            ));
+        }
+
+        let (deleted_count, errors) = self
+            .service
+            .bulk_delete(req.rule_ids)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(BulkDeleteRulesResponse {
+            deleted_count,
+            errors,
+        }))
     }
 
     #[instrument(skip(self, request))]
@@ -336,25 +524,68 @@ impl FilterServiceTrait for FilterGrpcService {
         self.service
             .reorder(&req.backend_id, req.rule_ids)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(ReorderRulesResponse { success: true }))
     }
 
+    // =========================================================================
+    // Statistics
+    // =========================================================================
+
+    #[instrument(skip(self, request))]
     async fn get_rule_stats(
         &self,
-        _request: Request<GetRuleStatsRequest>,
+        request: Request<GetRuleStatsRequest>,
     ) -> Result<Response<GetRuleStatsResponse>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        // Convert proto timestamps to chrono
+        let from = req.from.map(|ts| {
+            chrono::DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
+                .unwrap_or_else(|| chrono::Utc::now() - chrono::Duration::hours(24))
+        });
+
+        let to = req.to.map(|ts| {
+            chrono::DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
+                .unwrap_or_else(chrono::Utc::now)
+        });
+
+        let (stats, time_series) = self
+            .service
+            .get_stats(&req.rule_id, from, to)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(GetRuleStatsResponse {
+            stats: Some(stats),
+            time_series,
+        }))
     }
+
+    // =========================================================================
+    // Streaming
+    // =========================================================================
 
     type WatchRulesStream = Pin<Box<dyn Stream<Item = Result<RuleUpdate, Status>> + Send>>;
 
+    #[instrument(skip(self, request))]
     async fn watch_rules(
         &self,
-        _request: Request<WatchRulesRequest>,
+        request: Request<WatchRulesRequest>,
     ) -> Result<Response<Self::WatchRulesStream>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        let req = request.into_inner();
+
+        let stream = self
+            .service
+            .watch_rules(&req.backend_id)
+            .await
+            .map_err(Status::from)?;
+
+        // Convert Result<RuleUpdate> to Result<RuleUpdate, Status>
+        let mapped_stream = stream.map(|result| result.map_err(Status::from));
+
+        Ok(Response::new(Box::pin(mapped_stream)))
     }
 }
 

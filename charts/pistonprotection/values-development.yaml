@@ -1,0 +1,389 @@
+# PistonProtection Helm Chart - Development Values
+# Use this file for development and testing environments
+
+# Global settings
+global:
+  imagePullSecrets: []
+  storageClass: ""
+  environment: development
+  logLevel: debug
+
+# =============================================================================
+# Gateway Service - Development Configuration
+# =============================================================================
+gateway:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/gateway
+    tag: ""  # Uses appVersion by default
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8080
+    grpcPort: 9090
+    metricsPort: 9091
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  config:
+    connectionPoolSize: 20
+    requestTimeout: 60
+    maxConcurrentConnections: 1000
+    requestLogging: true
+    cors:
+      enabled: true
+      allowOrigins:
+        - "*"
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - "*"
+      maxAge: 86400
+
+# =============================================================================
+# Worker Service - Development Configuration
+# =============================================================================
+worker:
+  enabled: true
+  kind: DaemonSet
+  image:
+    repository: pistonprotection/worker
+    pullPolicy: Always
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  nodeSelector: {}
+  tolerations:
+    - operator: "Exists"
+  config:
+    networkInterface: eth0
+    xdpMode: generic  # Use generic mode for development (works without XDP support)
+    perCpuMaps: false
+    mapSize: 16384
+    statsInterval: 10
+
+# =============================================================================
+# Config Manager Service - Development Configuration
+# =============================================================================
+configMgr:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/config-mgr
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    syncInterval: 60
+    enableValidation: true
+    cacheTtl: 60
+
+# =============================================================================
+# Metrics Service - Development Configuration
+# =============================================================================
+metrics:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/metrics
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    aggregationInterval: 30
+    retentionPeriod: 6h
+    perIpMetrics: true
+    maxTrackedIps: 10000
+
+# =============================================================================
+# Auth Service - Development Configuration
+# =============================================================================
+auth:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/auth
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    jwtExpiration: 24h
+    refreshTokenExpiration: 30d
+    passwordMinLength: 8
+    mfaEnabled: false
+    sessionTimeout: 120
+    maxLoginAttempts: 10
+    lockoutDuration: 5
+    apiKeys:
+      enabled: true
+      prefix: "pp_dev_"
+      defaultExpiration: 365
+
+# =============================================================================
+# Operator - Development Configuration
+# =============================================================================
+operator:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/operator
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  installCRDs: true
+  config:
+    leaderElection: false
+    reconcileInterval: 60
+    watchAllNamespaces: true
+
+# =============================================================================
+# Frontend - Development Configuration
+# =============================================================================
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/frontend
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    enableRealtime: true
+    refreshInterval: 10
+    defaultTheme: dark
+
+# =============================================================================
+# Ingress - Development Configuration
+# =============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: pistonprotection.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: gateway
+        - path: /auth
+          pathType: Prefix
+          service: auth
+  tls: []
+
+# =============================================================================
+# PostgreSQL - Development Configuration
+# =============================================================================
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: devpassword
+    username: pistonprotection
+    password: devpassword
+    database: pistonprotection
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# =============================================================================
+# Redis - Development Configuration
+# =============================================================================
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: devpassword
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    configuration: |
+      maxmemory 128mb
+      maxmemory-policy allkeys-lru
+      appendonly no
+
+# =============================================================================
+# Observability - Development Configuration
+# =============================================================================
+observability:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+    rules:
+      enabled: false
+
+  grafana:
+    enabled: false
+    dashboards:
+      enabled: true
+      labels:
+        grafana_dashboard: "1"
+
+  loki:
+    enabled: false
+
+  tracing:
+    enabled: false
+
+# =============================================================================
+# GeoIP - Development Configuration
+# =============================================================================
+geoip:
+  enabled: false
+
+# =============================================================================
+# Stripe - Development Configuration
+# =============================================================================
+stripe:
+  enabled: false
+
+# =============================================================================
+# Security - Development Configuration
+# =============================================================================
+networkPolicy:
+  enabled: false
+
+secrets:
+  externalSecrets:
+    enabled: false
+  jwtSigningKey: "dev-jwt-signing-key-change-in-production"
+  encryptionKey: "dev-encryption-key-32chars!!"
+
+# =============================================================================
+# Protection Settings - Development Configuration
+# =============================================================================
+protection:
+  defaultLevel: 2
+  rateLimit:
+    ppsPerIp: 5000
+    burst: 10000
+    globalPps: 10000000
+    connectionsPerIp: 500
+    newConnectionsPerSecond: 200
+  protocols:
+    minecraft:
+      enabled: true
+      minVersion: 47
+      maxVersion: 769
+      packetInspection: true
+      maxPacketSize: 32767
+    quic:
+      enabled: true
+      maxStreams: 100
+    synCookies:
+      enabled: true
+      threshold: 5000
+    tcp:
+      enabled: true
+      maxSegmentSize: 1460
+      connectionTracking: true
+    udp:
+      enabled: true
+      timeout: 60
+  challenge:
+    jsChallenge: false
+    cookieLifetime: 3600
+    difficulty: 3
+  lists:
+    blacklistEnabled: true
+    whitelistEnabled: true
+    autoBlacklistThreshold: 100
+    autoBlacklistDuration: 300
+
+# =============================================================================
+# Additional Development Settings
+# =============================================================================
+priorityClassName: ""
+
+topologySpreadConstraints: []
+
+# Extra environment variables for debugging
+extraEnv:
+  - name: RUST_BACKTRACE
+    value: "1"
+  - name: RUST_LOG
+    value: "debug,hyper=info,tower=info"

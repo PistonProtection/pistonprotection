@@ -68,3 +68,18 @@ lazy_static = "1.4"
 [dev-dependencies]
 tokio-test = { workspace = true }
 mockall = { workspace = true }
+tempfile = "3.10"
+serial_test = "3.0"
+wiremock = "0.6"
+test-case = "3.3"
+pretty_assertions = "1.4"
+fake = { version = "2.9", features = ["derive"] }
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+
+[[test]]
+name = "integration"
+path = "src/tests/mod.rs"
+
+[[bench]]
+name = "gateway_benchmarks"
+harness = false

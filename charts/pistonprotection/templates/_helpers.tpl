@@ -112,6 +112,45 @@ app.kubernetes.io/component: frontend
 {{- end }}
 
 {{/*
+Auth component labels
+*/}}
+{{- define "pistonprotection.auth.labels" -}}
+{{ include "pistonprotection.labels" . }}
+app.kubernetes.io/component: auth
+{{- end }}
+
+{{- define "pistonprotection.auth.selectorLabels" -}}
+{{ include "pistonprotection.selectorLabels" . }}
+app.kubernetes.io/component: auth
+{{- end }}
+
+{{/*
+Metrics component labels
+*/}}
+{{- define "pistonprotection.metrics.labels" -}}
+{{ include "pistonprotection.labels" . }}
+app.kubernetes.io/component: metrics
+{{- end }}
+
+{{- define "pistonprotection.metrics.selectorLabels" -}}
+{{ include "pistonprotection.selectorLabels" . }}
+app.kubernetes.io/component: metrics
+{{- end }}
+
+{{/*
+Config Manager component labels
+*/}}
+{{- define "pistonprotection.configMgr.labels" -}}
+{{ include "pistonprotection.labels" . }}
+app.kubernetes.io/component: config-mgr
+{{- end }}
+
+{{- define "pistonprotection.configMgr.selectorLabels" -}}
+{{ include "pistonprotection.selectorLabels" . }}
+app.kubernetes.io/component: config-mgr
+{{- end }}
+
+{{/*
 Database connection URL
 */}}
 {{- define "pistonprotection.databaseUrl" -}}
@@ -138,4 +177,113 @@ Image tag
 */}}
 {{- define "pistonprotection.imageTag" -}}
 {{- .Values.image.tag | default .Chart.AppVersion }}
+{{- end }}
+
+{{/*
+Loki annotations for log collection
+*/}}
+{{- define "pistonprotection.lokiAnnotations" -}}
+{{- if .Values.observability.loki.enabled }}
+promtail.io/collect: "true"
+{{- if .Values.observability.loki.url }}
+promtail.io/endpoint: {{ .Values.observability.loki.url | quote }}
+{{- end }}
+{{- if .Values.observability.loki.tenantId }}
+promtail.io/tenant-id: {{ .Values.observability.loki.tenantId | quote }}
+{{- end }}
+{{- range $key, $value := .Values.observability.loki.labels }}
+promtail.io/{{ $key }}: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Common pod annotations including Loki integration
+*/}}
+{{- define "pistonprotection.podAnnotations" -}}
+{{- include "pistonprotection.lokiAnnotations" . }}
+{{- end }}
+
+{{/*
+Return PostgreSQL hostname
+*/}}
+{{- define "pistonprotection.postgresql.host" -}}
+{{- if .Values.postgresql.enabled }}
+{{- printf "%s-postgresql" (include "pistonprotection.fullname" .) }}
+{{- else }}
+{{- .Values.postgresql.external.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return PostgreSQL port
+*/}}
+{{- define "pistonprotection.postgresql.port" -}}
+{{- if .Values.postgresql.enabled }}
+{{- printf "5432" }}
+{{- else }}
+{{- .Values.postgresql.external.port | toString }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return Redis hostname
+*/}}
+{{- define "pistonprotection.redis.host" -}}
+{{- if .Values.redis.enabled }}
+{{- printf "%s-redis-master" (include "pistonprotection.fullname" .) }}
+{{- else }}
+{{- .Values.redis.external.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return Redis port
+*/}}
+{{- define "pistonprotection.redis.port" -}}
+{{- if .Values.redis.enabled }}
+{{- printf "6379" }}
+{{- else }}
+{{- .Values.redis.external.port | toString }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return the appropriate API version for HorizontalPodAutoscaler
+*/}}
+{{- define "pistonprotection.hpa.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "autoscaling/v2" }}
+{{- print "autoscaling/v2" }}
+{{- else }}
+{{- print "autoscaling/v2beta2" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return the appropriate API version for PodDisruptionBudget
+*/}}
+{{- define "pistonprotection.pdb.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "policy/v1" }}
+{{- print "policy/v1" }}
+{{- else }}
+{{- print "policy/v1beta1" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return the appropriate API version for NetworkPolicy
+*/}}
+{{- define "pistonprotection.networkPolicy.apiVersion" -}}
+{{- print "networking.k8s.io/v1" }}
+{{- end }}
+
+{{/*
+Checksum for config and secrets to trigger pod restarts on changes
+*/}}
+{{- define "pistonprotection.configChecksum" -}}
+checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+{{- end }}
+
+{{- define "pistonprotection.secretChecksum" -}}
+checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
 {{- end }}

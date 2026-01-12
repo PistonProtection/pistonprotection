@@ -1,0 +1,311 @@
+# PistonProtection Helm Chart - Minimal Values
+# Use this file for quick testing, demos, or resource-constrained environments
+# This configuration disables non-essential services and uses minimal resources
+
+# Global settings
+global:
+  imagePullSecrets: []
+  storageClass: ""
+  environment: minimal
+  logLevel: info
+
+# =============================================================================
+# Gateway Service - Minimal Configuration
+# =============================================================================
+gateway:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/gateway
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+    grpcPort: 9090
+    metricsPort: 9091
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  config:
+    connectionPoolSize: 10
+    requestTimeout: 30
+    maxConcurrentConnections: 500
+    requestLogging: false
+    cors:
+      enabled: true
+      allowOrigins:
+        - "*"
+
+# =============================================================================
+# Worker Service - Minimal Configuration
+# =============================================================================
+worker:
+  enabled: true
+  kind: DaemonSet
+  image:
+    repository: pistonprotection/worker
+    pullPolicy: IfNotPresent
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  nodeSelector: {}
+  tolerations:
+    - operator: "Exists"
+  config:
+    networkInterface: eth0
+    xdpMode: generic
+    perCpuMaps: false
+    mapSize: 8192
+    statsInterval: 30
+
+# =============================================================================
+# Config Manager Service - Disabled in Minimal
+# =============================================================================
+configMgr:
+  enabled: false
+
+# =============================================================================
+# Metrics Service - Disabled in Minimal
+# =============================================================================
+metrics:
+  enabled: false
+
+# =============================================================================
+# Auth Service - Minimal Configuration
+# =============================================================================
+auth:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/auth
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    jwtExpiration: 24h
+    refreshTokenExpiration: 7d
+    passwordMinLength: 8
+    mfaEnabled: false
+    sessionTimeout: 60
+    maxLoginAttempts: 10
+    lockoutDuration: 5
+    apiKeys:
+      enabled: true
+      prefix: "pp_"
+      defaultExpiration: 365
+
+# =============================================================================
+# Operator - Minimal Configuration
+# =============================================================================
+operator:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/operator
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  installCRDs: true
+  config:
+    leaderElection: false
+    reconcileInterval: 60
+    watchAllNamespaces: true
+
+# =============================================================================
+# Frontend - Minimal Configuration
+# =============================================================================
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pistonprotection/frontend
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+  autoscaling:
+    enabled: false
+  pdb:
+    enabled: false
+  config:
+    enableRealtime: false
+    refreshInterval: 30
+    defaultTheme: system
+
+# =============================================================================
+# Ingress - Minimal Configuration
+# =============================================================================
+ingress:
+  enabled: false
+
+# =============================================================================
+# PostgreSQL - Minimal Configuration
+# =============================================================================
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: minimalpassword
+    username: pistonprotection
+    password: minimalpassword
+    database: pistonprotection
+  primary:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+# =============================================================================
+# Redis - Minimal Configuration
+# =============================================================================
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: minimalpassword
+  master:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    configuration: |
+      maxmemory 64mb
+      maxmemory-policy allkeys-lru
+      appendonly no
+      save ""
+
+# =============================================================================
+# Observability - Disabled in Minimal
+# =============================================================================
+observability:
+  prometheus:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+    rules:
+      enabled: false
+  grafana:
+    enabled: false
+    dashboards:
+      enabled: false
+  loki:
+    enabled: false
+  tracing:
+    enabled: false
+
+# =============================================================================
+# GeoIP - Disabled in Minimal
+# =============================================================================
+geoip:
+  enabled: false
+
+# =============================================================================
+# Stripe - Disabled in Minimal
+# =============================================================================
+stripe:
+  enabled: false
+
+# =============================================================================
+# Security - Disabled in Minimal
+# =============================================================================
+networkPolicy:
+  enabled: false
+
+secrets:
+  externalSecrets:
+    enabled: false
+  jwtSigningKey: "minimal-jwt-key-change-in-production"
+  encryptionKey: "minimal-enc-key-32characters!!"
+
+# =============================================================================
+# Protection Settings - Minimal Configuration (permissive)
+# =============================================================================
+protection:
+  defaultLevel: 1
+  rateLimit:
+    ppsPerIp: 10000
+    burst: 20000
+    globalPps: 50000000
+    connectionsPerIp: 1000
+    newConnectionsPerSecond: 500
+  protocols:
+    minecraft:
+      enabled: true
+      minVersion: 47
+      maxVersion: 769
+      packetInspection: false
+      maxPacketSize: 65535
+    quic:
+      enabled: false
+    synCookies:
+      enabled: false
+    tcp:
+      enabled: true
+      maxSegmentSize: 1460
+      connectionTracking: false
+    udp:
+      enabled: true
+      timeout: 120
+  challenge:
+    jsChallenge: false
+    cookieLifetime: 3600
+    difficulty: 1
+  lists:
+    blacklistEnabled: true
+    whitelistEnabled: true
+    autoBlacklistThreshold: 1000
+    autoBlacklistDuration: 60
+
+# =============================================================================
+# Pod Settings
+# =============================================================================
+priorityClassName: ""
+topologySpreadConstraints: []
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []

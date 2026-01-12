@@ -1,0 +1,303 @@
+{{- if and .Values.observability.prometheus.enabled .Values.observability.prometheus.rules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "pistonprotection.fullname" . }}-rules
+  labels:
+    {{- include "pistonprotection.labels" . | nindent 4 }}
+    {{- with .Values.observability.prometheus.rules.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if .Values.observability.prometheus.rules.namespace }}
+  namespace: {{ .Values.observability.prometheus.rules.namespace }}
+  {{- end }}
+spec:
+  groups:
+    # ==========================================================================
+    # DDoS Protection Alerts
+    # ==========================================================================
+    - name: pistonprotection.ddos
+      rules:
+        # High packet rate alert
+        - alert: PistonProtectionHighPacketRate
+          expr: |
+            sum(rate(pistonprotection_packets_total[5m])) > {{ .Values.protection.rateLimit.globalPps | mul 0.8 }}
+          for: 2m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "High packet rate detected"
+            description: "Packet rate is at {{ "{{" }} printf \"%.0f\" $value {{ "}}" }} pps, approaching the global limit of {{ .Values.protection.rateLimit.globalPps }} pps."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/high-packet-rate"
+
+        # Critical packet rate alert
+        - alert: PistonProtectionCriticalPacketRate
+          expr: |
+            sum(rate(pistonprotection_packets_total[5m])) > {{ .Values.protection.rateLimit.globalPps | mul 0.95 }}
+          for: 1m
+          labels:
+            severity: critical
+            team: security
+          annotations:
+            summary: "Critical packet rate - potential DDoS attack"
+            description: "Packet rate is at {{ "{{" }} printf \"%.0f\" $value {{ "}}" }} pps, at 95% of global limit. Possible DDoS attack in progress."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/ddos-attack"
+
+        # High drop rate alert
+        - alert: PistonProtectionHighDropRate
+          expr: |
+            sum(rate(pistonprotection_packets_dropped_total[5m])) / sum(rate(pistonprotection_packets_total[5m])) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "High packet drop rate"
+            description: "{{ "{{" }} printf \"%.1f\" (mul $value 100) {{ "}}" }}% of packets are being dropped. This may indicate an ongoing attack or misconfiguration."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/high-drop-rate"
+
+        # Blocked IP surge
+        - alert: PistonProtectionBlockedIPSurge
+          expr: |
+            increase(pistonprotection_blocked_ips_total[5m]) > 100
+          for: 1m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Surge in blocked IPs"
+            description: "{{ "{{" }} printf \"%.0f\" $value {{ "}}" }} new IPs have been blocked in the last 5 minutes."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/blocked-ip-surge"
+
+        # Connection flood detection
+        - alert: PistonProtectionConnectionFlood
+          expr: |
+            sum(rate(pistonprotection_new_connections_total[1m])) > 10000
+          for: 2m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Connection flood detected"
+            description: "{{ "{{" }} printf \"%.0f\" $value {{ "}}" }} new connections per second detected. Possible SYN flood attack."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/connection-flood"
+
+        # Protocol violation surge
+        - alert: PistonProtectionProtocolViolations
+          expr: |
+            sum(rate(pistonprotection_protocol_violations_total[5m])) > 100
+          for: 2m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "High protocol violation rate"
+            description: "{{ "{{" }} printf \"%.0f\" $value {{ "}}" }} protocol violations per second. Possible protocol-level attack."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/protocol-violations"
+
+    # ==========================================================================
+    # Service Health Alerts
+    # ==========================================================================
+    - name: pistonprotection.health
+      rules:
+        # Gateway service down
+        - alert: PistonProtectionGatewayDown
+          expr: |
+            absent(up{job="{{ include "pistonprotection.fullname" . }}-gateway"} == 1)
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Gateway service is down"
+            description: "PistonProtection gateway service has been down for more than 1 minute."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/gateway-down"
+
+        # Worker pods not ready
+        - alert: PistonProtectionWorkerNotReady
+          expr: |
+            kube_daemonset_status_number_ready{daemonset="{{ include "pistonprotection.fullname" . }}-worker"}
+            < kube_daemonset_status_desired_number_scheduled{daemonset="{{ include "pistonprotection.fullname" . }}-worker"}
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Worker pods not ready"
+            description: "Some PistonProtection worker pods are not ready. {{ "{{" }} $value {{ "}}" }} pods missing."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/worker-not-ready"
+
+        # Auth service errors
+        - alert: PistonProtectionAuthErrors
+          expr: |
+            sum(rate(pistonprotection_auth_errors_total[5m])) > 10
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High auth service error rate"
+            description: "Auth service is experiencing {{ "{{" }} printf \"%.1f\" $value {{ "}}" }} errors per second."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/auth-errors"
+
+        # High latency alert
+        - alert: PistonProtectionHighLatency
+          expr: |
+            histogram_quantile(0.99, sum(rate(pistonprotection_request_duration_seconds_bucket[5m])) by (le)) > 1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High request latency"
+            description: "P99 latency is {{ "{{" }} printf \"%.2f\" $value {{ "}}" }} seconds, above the 1 second threshold."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/high-latency"
+
+        # Pod restart alert
+        - alert: PistonProtectionPodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}", pod=~"{{ include "pistonprotection.fullname" . }}.*"}[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Pod restarting frequently"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} has restarted {{ "{{" }} printf \"%.0f\" $value {{ "}}" }} times in the last hour."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/pod-restarts"
+
+    # ==========================================================================
+    # Resource Alerts
+    # ==========================================================================
+    - name: pistonprotection.resources
+      rules:
+        # High CPU usage
+        - alert: PistonProtectionHighCPU
+          expr: |
+            sum(rate(container_cpu_usage_seconds_total{namespace="{{ .Release.Namespace }}", pod=~"{{ include "pistonprotection.fullname" . }}.*"}[5m])) by (pod)
+            / sum(kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}", pod=~"{{ include "pistonprotection.fullname" . }}.*", resource="cpu"}) by (pod) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High CPU usage"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} is using {{ "{{" }} printf \"%.0f\" (mul $value 100) {{ "}}" }}% of CPU limit."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/high-cpu"
+
+        # High memory usage
+        - alert: PistonProtectionHighMemory
+          expr: |
+            sum(container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}", pod=~"{{ include "pistonprotection.fullname" . }}.*"}) by (pod)
+            / sum(kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}", pod=~"{{ include "pistonprotection.fullname" . }}.*", resource="memory"}) by (pod) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High memory usage"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} is using {{ "{{" }} printf \"%.0f\" (mul $value 100) {{ "}}" }}% of memory limit."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/high-memory"
+
+        # BPF map usage high
+        - alert: PistonProtectionBPFMapFull
+          expr: |
+            pistonprotection_bpf_map_entries / pistonprotection_bpf_map_max_entries > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "BPF map nearly full"
+            description: "BPF map {{ "{{" }} $labels.map_name {{ "}}" }} is {{ "{{" }} printf \"%.0f\" (mul $value 100) {{ "}}" }}% full."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/bpf-map-full"
+
+    # ==========================================================================
+    # Database and Cache Alerts
+    # ==========================================================================
+    - name: pistonprotection.database
+      rules:
+        # PostgreSQL connection issues
+        - alert: PistonProtectionDatabaseConnectionErrors
+          expr: |
+            sum(rate(pistonprotection_database_connection_errors_total[5m])) > 1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Database connection errors"
+            description: "{{ "{{" }} printf \"%.1f\" $value {{ "}}" }} database connection errors per second."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/database-errors"
+
+        # Redis connection issues
+        - alert: PistonProtectionRedisConnectionErrors
+          expr: |
+            sum(rate(pistonprotection_redis_connection_errors_total[5m])) > 1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Redis connection errors"
+            description: "{{ "{{" }} printf \"%.1f\" $value {{ "}}" }} Redis connection errors per second."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/redis-errors"
+
+        # High database query latency
+        - alert: PistonProtectionDatabaseSlowQueries
+          expr: |
+            histogram_quantile(0.99, sum(rate(pistonprotection_database_query_duration_seconds_bucket[5m])) by (le)) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Slow database queries"
+            description: "P99 database query latency is {{ "{{" }} printf \"%.2f\" $value {{ "}}" }} seconds."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/slow-queries"
+
+    # ==========================================================================
+    # SLO Alerts
+    # ==========================================================================
+    - name: pistonprotection.slo
+      rules:
+        # Availability SLO
+        - alert: PistonProtectionAvailabilitySLOBreach
+          expr: |
+            (1 - (sum(rate(pistonprotection_request_errors_total[1h])) / sum(rate(pistonprotection_requests_total[1h])))) < 0.999
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Availability SLO breach"
+            description: "Service availability is {{ "{{" }} printf \"%.3f\" (mul $value 100) {{ "}}" }}%, below the 99.9% SLO target."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/slo-breach"
+
+        # Latency SLO
+        - alert: PistonProtectionLatencySLOBreach
+          expr: |
+            histogram_quantile(0.95, sum(rate(pistonprotection_request_duration_seconds_bucket[1h])) by (le)) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Latency SLO breach"
+            description: "P95 latency is {{ "{{" }} printf \"%.3f\" $value {{ "}}" }} seconds, above the 100ms SLO target."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/latency-slo"
+
+        # Error budget consumption
+        - alert: PistonProtectionErrorBudgetLow
+          expr: |
+            pistonprotection_error_budget_remaining < 0.25
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Error budget running low"
+            description: "Only {{ "{{" }} printf \"%.0f\" (mul $value 100) {{ "}}" }}% of error budget remaining."
+            runbook_url: "https://docs.pistonprotection.io/runbooks/error-budget"
+{{- end }}

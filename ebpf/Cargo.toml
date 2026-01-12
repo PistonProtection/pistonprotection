@@ -3,9 +3,16 @@ name = "pistonprotection-ebpf"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 aya-ebpf = "0.1"
 aya-log-ebpf = "0.1"
+
+# ==============================================================================
+# XDP Filter Programs
+# ==============================================================================
 
 [[bin]]
 name = "xdp_filter"
@@ -19,6 +26,26 @@ path = "src/xdp_ratelimit.rs"
 name = "xdp_minecraft"
 path = "src/xdp_minecraft.rs"
 
+[[bin]]
+name = "xdp_http"
+path = "src/xdp_http.rs"
+
+[[bin]]
+name = "xdp_quic"
+path = "src/xdp_quic.rs"
+
+[[bin]]
+name = "xdp_udp"
+path = "src/xdp_udp.rs"
+
+[[bin]]
+name = "xdp_tcp"
+path = "src/xdp_tcp.rs"
+
+# ==============================================================================
+# Build Profiles
+# ==============================================================================
+
 [profile.dev]
 opt-level = 3
 debug = false
@@ -31,6 +58,13 @@ codegen-units = 1
 rpath = false
 
 [profile.release]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
 lto = true
 panic = "abort"
+incremental = false
 codegen-units = 1
+rpath = false
+strip = "symbols"

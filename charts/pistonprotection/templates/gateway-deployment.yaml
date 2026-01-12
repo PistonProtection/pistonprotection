@@ -14,6 +14,15 @@ spec:
       {{- include "pistonprotection.gateway.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- if .Values.observability.loki.enabled }}
+        promtail.io/collect: "true"
+        {{- end }}
+        {{- with .Values.gateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       labels:
         {{- include "pistonprotection.gateway.selectorLabels" . | nindent 8 }}
     spec:
@@ -22,10 +31,21 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "pistonprotection.serviceAccountName" . }}
+      {{- with .Values.gateway.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       containers:
         - name: gateway
           image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          {{- with .Values.gateway.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -38,28 +58,76 @@ spec:
               protocol: TCP
           env:
             - name: RUST_LOG
-              value: "info"
+              value: {{ .Values.global.logLevel | default "info" | quote }}
+            - name: SERVICE_NAME
+              value: "gateway"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | default "production" | quote }}
             - name: DATABASE_URL
-              value: {{ include "pistonprotection.databaseUrl" . | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: database-url
             - name: REDIS_URL
-              value: {{ include "pistonprotection.redisUrl" . | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: redis-url
+            - name: JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pistonprotection.fullname" . }}-secrets
+                  key: jwt-signing-key
+            - name: CONNECTION_POOL_SIZE
+              value: {{ .Values.gateway.config.connectionPoolSize | quote }}
+            - name: REQUEST_TIMEOUT
+              value: {{ .Values.gateway.config.requestTimeout | quote }}
+            - name: MAX_CONCURRENT_CONNECTIONS
+              value: {{ .Values.gateway.config.maxConcurrentConnections | quote }}
+            {{- if .Values.observability.tracing.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.tracing.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: "{{ .Values.observability.tracing.serviceName }}-gateway"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.observability.tracing.samplingRatio | quote }}
+            {{- end }}
+            {{- with .Values.gateway.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            {{- toYaml .Values.gateway.livenessProbe | nindent 12 }}
           readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            {{- toYaml .Values.gateway.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.gateway.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /etc/pistonprotection
+              readOnly: true
+            {{- with .Values.gateway.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: {{ include "pistonprotection.fullname" . }}-gateway-config
+        {{- with .Values.gateway.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with .Values.gateway.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -70,6 +138,10 @@ spec:
       {{- end }}
       {{- with .Values.gateway.tolerations }}
       tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
