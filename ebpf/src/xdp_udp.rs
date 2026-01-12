@@ -140,6 +140,7 @@ pub struct UdpStats {
     pub dropped_port_scan: u64,
     pub dropped_blocked_ip: u64,
     pub dropped_blocked_port: u64,
+    pub dropped_fragmented: u64,
     pub dns_packets: u64,
     pub ntp_packets: u64,
     pub ssdp_packets: u64,
@@ -166,6 +167,13 @@ pub struct AmpSourceEntry {
 const ETH_P_IP: u16 = 0x0800;
 const ETH_P_IPV6: u16 = 0x86DD;
 const IPPROTO_UDP: u8 = 17;
+const IPPROTO_FRAGMENT: u8 = 44; // IPv6 Fragment header next protocol
+
+// IPv4 fragmentation flags (in frag_off field)
+// frag_off is 16 bits: [3 bits flags][13 bits fragment offset]
+// Flags: bit 15 = Reserved, bit 14 = DF (Don't Fragment), bit 13 = MF (More Fragments)
+const IP_MF: u16 = 0x2000; // More Fragments flag
+const IP_OFFSET_MASK: u16 = 0x1FFF; // Fragment offset mask (13 bits)
 
 // Amplification attack source ports
 const PORT_DNS: u16 = 53;
@@ -307,6 +315,46 @@ fn process_ipv4(
         return Ok(xdp_action::XDP_PASS);
     }
 
+    // ========================================================================
+    // FRAGMENTATION HANDLING
+    // ========================================================================
+    // IP fragmentation can be used to bypass UDP filtering:
+    // 1. First fragment contains UDP header but may have truncated payload
+    // 2. Subsequent fragments have no UDP header, just raw payload
+    // 3. Amplification attacks can use fragments to bypass size checks
+    //
+    // Strategy:
+    // - Drop non-first fragments (no UDP header to inspect)
+    // - For first fragments with MF=1, apply stricter validation
+    // - Block known amplification port responses that are fragmented
+    // ========================================================================
+    let frag_off = u16::from_be(ip.frag_off);
+    let is_fragmented = (frag_off & IP_MF) != 0 || (frag_off & IP_OFFSET_MASK) != 0;
+    let is_first_fragment = (frag_off & IP_OFFSET_MASK) == 0;
+
+    if is_fragmented {
+        if !is_first_fragment {
+            // Non-first fragment - has no UDP header, can't inspect
+            // Drop at protection level >= 2 (moderate/aggressive)
+            if config.protection_level >= 2 {
+                update_stats_fragmented();
+                return Ok(xdp_action::XDP_DROP);
+            }
+            // At protection level 1, pass through (may be legitimate)
+            return Ok(xdp_action::XDP_PASS);
+        }
+
+        // First fragment with more fragments flag set
+        // This is suspicious for UDP - legitimate UDP rarely fragments
+        // At aggressive protection, drop all fragmented UDP
+        if config.protection_level >= 3 {
+            update_stats_fragmented();
+            return Ok(xdp_action::XDP_DROP);
+        }
+        // Otherwise continue to process, but with heightened suspicion
+        // The UDP processing will still validate what we can see
+    }
+
     let src_ip = u32::from_be(ip.saddr);
 
     // Check whitelist
@@ -323,12 +371,26 @@ fn process_ipv4(
     let ihl = (ip.version_ihl & 0x0f) as usize * 4;
     let udp_data = data + ihl;
 
-    process_udp(ctx, udp_data, data_end, src_ip, config)
+    // For fragmented first fragments, pass is_fragmented flag for stricter checks
+    process_udp(ctx, udp_data, data_end, src_ip, config, is_fragmented)
 }
 
 // ============================================================================
 // IPv6 Processing
 // ============================================================================
+
+/// IPv6 Fragment Header structure
+#[repr(C)]
+struct Ipv6FragHdr {
+    nexthdr: u8,
+    reserved: u8,
+    frag_off_m: u16, // Fragment offset (13 bits) + Reserved (2 bits) + M flag (1 bit)
+    identification: u32,
+}
+
+// IPv6 fragmentation constants
+const IPV6_FRAG_OFFSET_MASK: u16 = 0xFFF8; // Upper 13 bits (shifted left by 3)
+const IPV6_FRAG_M_FLAG: u16 = 0x0001; // More fragments flag (lowest bit)
 
 #[inline(always)]
 fn process_ipv6(
@@ -342,26 +404,109 @@ fn process_ipv6(
     }
 
     let ip6 = unsafe { &*(data as *const Ipv6Hdr) };
+    let mut next_header = ip6.nexthdr;
+    let mut header_offset = data + mem::size_of::<Ipv6Hdr>();
+    let mut is_fragmented = false;
+    let mut is_first_fragment = true;
 
-    // Only process UDP
-    if ip6.nexthdr != IPPROTO_UDP {
+    // ========================================================================
+    // IPv6 EXTENSION HEADER PARSING
+    // ========================================================================
+    // IPv6 can have extension headers between the main header and UDP.
+    // We need to check for the Fragment extension header (protocol 44).
+    // For simplicity, we only handle: Hop-by-Hop (0), Routing (43), Fragment (44)
+    // Other extension headers are rare for UDP traffic.
+    // ========================================================================
+
+    // Bounded loop for eBPF verifier - max 3 extension headers is reasonable
+    for _ in 0..3 {
+        match next_header {
+            IPPROTO_UDP => {
+                // Found UDP, done parsing extension headers
+                break;
+            }
+            IPPROTO_FRAGMENT => {
+                // Fragment extension header
+                if header_offset + mem::size_of::<Ipv6FragHdr>() > data_end {
+                    return Ok(xdp_action::XDP_PASS);
+                }
+
+                let frag_hdr = unsafe { &*(header_offset as *const Ipv6FragHdr) };
+                let frag_off_m = u16::from_be(frag_hdr.frag_off_m);
+
+                // Check fragment offset (bits 3-15) and M flag (bit 0)
+                let frag_offset = frag_off_m & IPV6_FRAG_OFFSET_MASK;
+                let more_fragments = (frag_off_m & IPV6_FRAG_M_FLAG) != 0;
+
+                is_fragmented = more_fragments || frag_offset != 0;
+                is_first_fragment = frag_offset == 0;
+
+                next_header = frag_hdr.nexthdr;
+                header_offset += mem::size_of::<Ipv6FragHdr>();
+            }
+            0 | 43 | 60 => {
+                // Hop-by-Hop (0), Routing (43), Destination Options (60)
+                // These have a common format: next_header, length, data
+                if header_offset + 2 > data_end {
+                    return Ok(xdp_action::XDP_PASS);
+                }
+
+                let ext_next = unsafe { *(header_offset as *const u8) };
+                let ext_len = unsafe { *((header_offset + 1) as *const u8) };
+                // Length is in 8-byte units, not including first 8 bytes
+                let total_len = ((ext_len as usize) + 1) * 8;
+
+                next_header = ext_next;
+                header_offset += total_len;
+            }
+            _ => {
+                // Unknown or unsupported extension header
+                // If it's not UDP, we can't process it
+                return Ok(xdp_action::XDP_PASS);
+            }
+        }
+    }
+
+    // After parsing, check if we found UDP
+    if next_header != IPPROTO_UDP {
         return Ok(xdp_action::XDP_PASS);
+    }
+
+    // ========================================================================
+    // IPv6 FRAGMENTATION HANDLING
+    // ========================================================================
+    // Same strategy as IPv4: drop non-first fragments, be suspicious of first fragments
+    // ========================================================================
+    if is_fragmented {
+        if !is_first_fragment {
+            // Non-first fragment - has no UDP header, can't inspect
+            if config.protection_level >= 2 {
+                update_stats_fragmented();
+                return Ok(xdp_action::XDP_DROP);
+            }
+            return Ok(xdp_action::XDP_PASS);
+        }
+
+        // First fragment with more fragments
+        if config.protection_level >= 3 {
+            update_stats_fragmented();
+            return Ok(xdp_action::XDP_DROP);
+        }
     }
 
     let src_ip = ip6.saddr;
 
-    // Check if IP is blocked (using last 4 bytes as simplified key)
+    // Check if IP is blocked (using full IPv6 address)
     if is_ip_blocked_v6(&src_ip) {
         update_stats_blocked();
         return Ok(xdp_action::XDP_DROP);
     }
 
-    let udp_data = data + mem::size_of::<Ipv6Hdr>();
-
-    // Use last 4 bytes as simplified IP key
+    // Use last 4 bytes as simplified IP key for rate limiting
+    // (Full IPv6 tracking is done via UDP_IP_STATE_V6 map)
     let ip_key = u32::from_be_bytes([src_ip[12], src_ip[13], src_ip[14], src_ip[15]]);
 
-    process_udp(ctx, udp_data, data_end, ip_key, config)
+    process_udp(ctx, header_offset, data_end, ip_key, config, is_fragmented)
 }
 
 // ============================================================================
@@ -375,6 +520,7 @@ fn process_udp(
     data_end: usize,
     src_ip: u32,
     config: &UdpConfig,
+    is_fragmented: bool,
 ) -> Result<u32, ()> {
     if data + mem::size_of::<UdpHdr>() > data_end {
         return Ok(xdp_action::XDP_PASS);
@@ -392,6 +538,40 @@ fn process_udp(
     if unsafe { BLOCKED_PORTS.get(&dst_port) }.is_some() {
         update_stats_blocked_port();
         return Ok(xdp_action::XDP_DROP);
+    }
+
+    // ========================================================================
+    // FRAGMENTED AMPLIFICATION CHECK
+    // ========================================================================
+    // If this is a fragmented packet from a known amplification port,
+    // drop it immediately - legitimate services don't typically send
+    // fragmented UDP responses.
+    // ========================================================================
+    if is_fragmented {
+        let is_amp_source = matches!(
+            src_port,
+            PORT_DNS
+                | PORT_NTP
+                | PORT_SSDP
+                | PORT_SNMP
+                | PORT_MEMCACHED
+                | PORT_CHARGEN
+                | PORT_QOTD
+                | PORT_LDAP
+                | PORT_MSSQL
+                | PORT_RIP
+                | PORT_PORTMAP
+                | PORT_NETBIOS
+                | PORT_CLDAP
+                | PORT_TFTP
+        );
+
+        if is_amp_source && config.protection_level >= 2 {
+            // Fragmented response from amplification port - almost certainly an attack
+            update_stats_amplification();
+            update_stats_fragmented();
+            return Ok(xdp_action::XDP_DROP);
+        }
     }
 
     // Validate packet size
@@ -433,6 +613,7 @@ fn process_udp(
             dst_port,
             payload_len,
             config,
+            is_fragmented,
         ) {
             return Ok(action);
         }
@@ -462,14 +643,15 @@ fn process_udp(
 
 #[inline(always)]
 fn check_amplification_attack(
-    ctx: &XdpContext,
+    _ctx: &XdpContext,
     data: usize,
     data_end: usize,
     src_ip: u32,
     src_port: u16,
-    dst_port: u16,
+    _dst_port: u16,
     payload_len: u16,
     config: &UdpConfig,
+    is_fragmented: bool,
 ) -> Option<u32> {
     // Check if source port is a known amplification vector
     let is_amp_source = matches!(
@@ -949,6 +1131,15 @@ fn update_stats_blocked_port() {
     if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
         unsafe {
             (*stats).dropped_blocked_port += 1;
+        }
+    }
+}
+
+#[inline(always)]
+fn update_stats_fragmented() {
+    if let Some(stats) = unsafe { UDP_STATS.get_ptr_mut(0) } {
+        unsafe {
+            (*stats).dropped_fragmented += 1;
         }
     }
 }

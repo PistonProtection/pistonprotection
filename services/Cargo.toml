@@ -24,7 +24,7 @@ tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["codec"] }
 
 # gRPC and Protobuf
-tonic = { version = "0.13", features = ["transport", "tls", "gzip", "zstd"] }
+tonic = { version = "0.13", features = ["transport", "tls-ring", "tls-native-roots", "gzip", "zstd"] }
 tonic-build = "0.13"
 tonic-health = "0.13"
 tonic-reflection = "0.13"
@@ -82,6 +82,9 @@ hex = "0.4"
 
 # HTTP client (for health checks, webhooks)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+http = "1.0"
+http-body = "1.0"
+http-body-util = "0.1"
 
 # IP and network
 ipnetwork = "0.21"
