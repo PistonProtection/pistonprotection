@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardFiltersRouteImport } from './routes/dashboard/filters'
 import { Route as DashboardBillingRouteImport } from './routes/dashboard/billing'
@@ -33,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsIndexRoute = DocsIndexRouteImport.update({
+  id: '/docs/',
+  path: '/docs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -41,6 +48,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
@@ -101,8 +113,10 @@ export interface FileRoutesByFullPath {
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/docs': typeof DocsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,8 +129,10 @@ export interface FileRoutesByTo {
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/docs': typeof DocsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,8 +147,10 @@ export interface FileRoutesById {
   '/dashboard/billing': typeof DashboardBillingRoute
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/docs/$': typeof DocsSplatRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/docs/': typeof DocsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -148,8 +166,10 @@ export interface FileRouteTypes {
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/docs/$'
     | '/admin'
     | '/dashboard/'
+    | '/docs'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -162,8 +182,10 @@ export interface FileRouteTypes {
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/docs/$'
     | '/admin'
     | '/dashboard'
+    | '/docs'
   id:
     | '__root__'
     | '/'
@@ -177,8 +199,10 @@ export interface FileRouteTypes {
     | '/dashboard/billing'
     | '/dashboard/filters'
     | '/dashboard/settings'
+    | '/docs/$'
     | '/admin/'
     | '/dashboard/'
+    | '/docs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -188,7 +212,9 @@ export interface RootRouteChildren {
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminOverviewRoute: typeof AdminOverviewRoute
   AuthAuthViewRoute: typeof AuthAuthViewRoute
+  DocsSplatRoute: typeof DocsSplatRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  DocsIndexRoute: typeof DocsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -207,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/': {
+      id: '/docs/'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/': {
       id: '/dashboard/'
       path: '/'
@@ -219,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/settings': {
@@ -316,7 +356,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminOverviewRoute: AdminOverviewRoute,
   AuthAuthViewRoute: AuthAuthViewRoute,
+  DocsSplatRoute: DocsSplatRoute,
   AdminIndexRoute: AdminIndexRoute,
+  DocsIndexRoute: DocsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,0 +1,220 @@
+---
+title: TCP/UDP Protection
+description: Generic Layer 4 protection for TCP and UDP traffic.
+---
+
+# TCP/UDP Protection
+
+PistonProtection provides generic Layer 4 protection for any TCP or UDP based protocol.
+
+## TCP Protection
+
+### Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: tcp-service
+spec:
+  protocol: tcp
+  upstream:
+    host: 192.168.1.100
+    port: 25565
+  protection:
+    tcp:
+      # Connection limits
+      maxConnectionsPerIp: 100
+      maxTotalConnections: 10000
+      # SYN protection
+      synFloodProtection: true
+      synCookies: true
+      # Connection timeout
+      connectTimeout: 30s
+      idleTimeout: 300s
+```
+
+### SYN Flood Protection
+
+XDP-level SYN flood mitigation:
+
+```yaml
+synFlood:
+  enabled: true
+  # SYN rate limit per IP
+  synRatePerIp: 50
+  # Total SYN rate limit
+  synRateTotal: 10000
+  # Enable SYN cookies
+  synCookies: true
+  # SYN backlog size
+  backlogSize: 65535
+```
+
+### ACK Flood Protection
+
+```yaml
+ackFlood:
+  enabled: true
+  # ACK packets must match existing connection
+  validateConnection: true
+  # Rate limit ACK packets
+  rateLimit: 1000
+```
+
+### RST Attack Protection
+
+```yaml
+rstAttack:
+  enabled: true
+  # Validate RST packet sequence numbers
+  validateSequence: true
+  # Rate limit RST packets
+  rateLimit: 100
+```
+
+### Slow Read Attack
+
+```yaml
+slowRead:
+  enabled: true
+  # Minimum receive window size
+  minWindowSize: 1024
+  # Disconnect slow readers
+  disconnectSlow: true
+```
+
+## UDP Protection
+
+### Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: udp-service
+spec:
+  protocol: udp
+  upstream:
+    host: 192.168.1.100
+    port: 27015
+  protection:
+    udp:
+      # Packet limits
+      packetsPerSecondPerIp: 1000
+      packetsPerSecondTotal: 100000
+      # Size limits
+      maxPacketSize: 65535
+      minPacketSize: 1
+```
+
+### Amplification Protection
+
+UDP is commonly used for amplification attacks:
+
+```yaml
+amplification:
+  enabled: true
+  # Maximum response/request size ratio
+  maxRatio: 10
+  # Block known amplification protocols on other ports
+  blockAmplificationProtocols: true
+  # Validate source IPs
+  spoofingProtection: true
+```
+
+### Fragmentation Attack
+
+```yaml
+fragmentation:
+  enabled: true
+  # Maximum fragments per packet
+  maxFragments: 10
+  # Fragment reassembly timeout
+  reassemblyTimeout: 30s
+  # Maximum reassembly buffer
+  maxReassemblyBuffer: 1048576
+```
+
+### Port Scanning Protection
+
+```yaml
+portScan:
+  enabled: true
+  # Maximum ports accessed per IP per minute
+  portsPerMinute: 10
+  # Block after detection
+  blockDuration: 3600s
+```
+
+## Common Settings
+
+Both TCP and UDP support these common settings:
+
+### Rate Limiting
+
+```yaml
+rateLimit:
+  # Per-IP rate limit
+  perIp:
+    packetsPerSecond: 1000
+    bytesPerSecond: 10485760  # 10 MB/s
+  # Per-subnet rate limit
+  perSubnet:
+    prefix: 24  # /24 for IPv4
+    packetsPerSecond: 10000
+    bytesPerSecond: 104857600  # 100 MB/s
+```
+
+### Geo Blocking
+
+```yaml
+geoBlocking:
+  enabled: true
+  mode: allowlist  # or blocklist
+  countries:
+    - US
+    - CA
+    - GB
+```
+
+### IP Reputation
+
+```yaml
+ipReputation:
+  enabled: true
+  # Block IPs with bad reputation
+  blockThreshold: 0.2
+  # Challenge IPs with medium reputation
+  challengeThreshold: 0.5
+  # Use external reputation feeds
+  feeds:
+    - name: spamhaus
+      enabled: true
+    - name: abuseipdb
+      enabled: true
+      apiKey: your-api-key
+```
+
+## HAProxy Protocol
+
+Forward client IPs to backend:
+
+```yaml
+upstream:
+  host: 192.168.1.100
+  port: 25565
+  proxyProtocol: v2
+```
+
+## Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `tcp_connections_total` | Total TCP connections |
+| `tcp_syn_received` | SYN packets received |
+| `tcp_syn_blocked` | SYN packets blocked |
+| `udp_packets_total` | Total UDP packets |
+| `udp_packets_blocked` | Blocked UDP packets |
+| `bandwidth_in_bytes` | Incoming bandwidth |
+| `bandwidth_out_bytes` | Outgoing bandwidth |

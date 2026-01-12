@@ -1,0 +1,125 @@
+---
+title: Quick Start
+description: Get PistonProtection running in 5 minutes with Docker Compose.
+---
+
+# Quick Start
+
+This guide will get you up and running with PistonProtection in just a few minutes using Docker Compose.
+
+## Prerequisites
+
+- Docker 24.0+
+- Docker Compose v2+
+- 4GB RAM available
+
+## Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/PistonProtection/pistonprotection.git
+cd pistonprotection
+```
+
+## Step 2: Start Services
+
+```bash
+docker compose up -d
+```
+
+This starts all services:
+- **Frontend**: http://localhost:3000
+- **Gateway API**: http://localhost:8080
+- **Grafana**: http://localhost:3001 (admin/admin)
+- **Prometheus**: http://localhost:9099
+
+## Step 3: Access the Dashboard
+
+Open your browser and navigate to http://localhost:3000
+
+1. Click **Get Started** to create an account
+2. Create your first backend configuration
+3. Point your DNS to the PistonProtection edge
+
+## Step 4: Configure a Backend
+
+Create a new backend via the API:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/backends \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "my-minecraft-server",
+    "protocol": "minecraft_java",
+    "upstream": {
+      "host": "192.168.1.100",
+      "port": 25565
+    },
+    "protection": {
+      "enabled": true,
+      "rate_limit": 100,
+      "bot_detection": true
+    }
+  }'
+```
+
+## Step 5: Verify Protection
+
+Check that your backend is protected:
+
+```bash
+# View active connections
+curl http://localhost:8080/api/v1/backends/my-minecraft-server/stats
+
+# View blocked attacks
+curl http://localhost:8080/api/v1/backends/my-minecraft-server/attacks
+```
+
+## Development Tools
+
+Start additional development tools:
+
+```bash
+# Start with pgAdmin and Redis Commander
+docker compose --profile tools up -d
+```
+
+Access tools:
+- **pgAdmin**: http://localhost:5050 (admin@pistonprotection.local / admin)
+- **Redis Commander**: http://localhost:8085
+
+## Troubleshooting
+
+### Services Not Starting
+
+Check logs for errors:
+
+```bash
+docker compose logs gateway
+docker compose logs worker
+```
+
+### Database Connection Issues
+
+Ensure PostgreSQL is healthy:
+
+```bash
+docker compose ps postgres
+docker compose logs postgres
+```
+
+### eBPF Not Loading
+
+The worker requires privileged mode for eBPF. Verify:
+
+```bash
+docker compose logs worker | grep -i ebpf
+```
+
+## Next Steps
+
+<Cards>
+  <Card title="Configuration" description="Learn about all configuration options" href="/docs/configuration" />
+  <Card title="Protocols" description="Protocol-specific protection settings" href="/docs/protocols" />
+  <Card title="Production Deployment" description="Deploy to Kubernetes" href="/docs/deployment" />
+</Cards>

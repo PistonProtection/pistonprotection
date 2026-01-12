@@ -1,0 +1,163 @@
+---
+title: API Reference
+description: PistonProtection REST API reference documentation.
+---
+
+# API Reference
+
+The PistonProtection API provides programmatic access to manage backends, rules, and monitor traffic.
+
+## Base URL
+
+```
+https://api.pistonprotection.com/api/v1
+```
+
+For self-hosted installations:
+
+```
+http://your-gateway:8080/api/v1
+```
+
+## Authentication
+
+All API requests require authentication via Bearer token or API key.
+
+```bash
+# Bearer token (JWT)
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  https://api.pistonprotection.com/api/v1/backends
+
+# API key
+curl -H "X-API-Key: pp_live_abc123..." \
+  https://api.pistonprotection.com/api/v1/backends
+```
+
+See [Authentication](/docs/api/authentication) for details.
+
+## Response Format
+
+All responses are JSON:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 100
+  }
+}
+```
+
+Error responses:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid backend configuration",
+    "details": [
+      {
+        "field": "upstream.port",
+        "message": "Port must be between 1 and 65535"
+      }
+    ]
+  }
+}
+```
+
+## Rate Limiting
+
+API requests are rate limited:
+
+| Plan | Requests/minute |
+|------|-----------------|
+| Free | 60 |
+| Starter | 300 |
+| Professional | 1000 |
+| Enterprise | Unlimited |
+
+Rate limit headers:
+
+```
+X-RateLimit-Limit: 300
+X-RateLimit-Remaining: 299
+X-RateLimit-Reset: 1609459200
+```
+
+## Pagination
+
+List endpoints support pagination:
+
+```bash
+GET /api/v1/backends?page=2&per_page=50
+```
+
+Response includes pagination metadata:
+
+```json
+{
+  "data": [...],
+  "meta": {
+    "page": 2,
+    "per_page": 50,
+    "total": 150,
+    "total_pages": 3
+  }
+}
+```
+
+## Filtering
+
+Filter results using query parameters:
+
+```bash
+# Filter backends by protocol
+GET /api/v1/backends?protocol=minecraft_java
+
+# Filter rules by enabled status
+GET /api/v1/rules?enabled=true
+
+# Multiple filters
+GET /api/v1/backends?protocol=tcp&status=active
+```
+
+## Sorting
+
+Sort results:
+
+```bash
+# Sort by creation date (descending)
+GET /api/v1/backends?sort=-created_at
+
+# Sort by name (ascending)
+GET /api/v1/backends?sort=name
+```
+
+## API Sections
+
+<Cards>
+  <Card title="Authentication" description="Login, tokens, and API keys" href="/docs/api/authentication" />
+  <Card title="Backends" description="Manage protected backends" href="/docs/api/backends" />
+  <Card title="Rules" description="Filter rules management" href="/docs/api/rules" />
+</Cards>
+
+## SDKs
+
+Official SDKs are available:
+
+- **JavaScript/TypeScript**: `npm install @pistonprotection/sdk`
+- **Python**: `pip install pistonprotection`
+- **Go**: `go get github.com/pistonprotection/go-sdk`
+- **Rust**: `cargo add pistonprotection-sdk`
+
+## OpenAPI Specification
+
+Download the OpenAPI spec:
+
+```bash
+curl https://api.pistonprotection.com/api/v1/openapi.json
+```

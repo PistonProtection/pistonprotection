@@ -1,0 +1,140 @@
+---
+title: Architecture
+description: Understand the PistonProtection architecture and components.
+---
+
+# Architecture Overview
+
+PistonProtection uses a distributed architecture designed for high availability and scalability.
+
+## System Components
+
+```
+                    ┌─────────────────────────────────────────────┐
+                    │                  Internet                    │
+                    └─────────────────────┬───────────────────────┘
+                                          │
+                    ┌─────────────────────▼───────────────────────┐
+                    │            GeoDNS / Anycast                  │
+                    │         (Route to nearest edge)              │
+                    └─────────────────────┬───────────────────────┘
+                                          │
+         ┌────────────────────────────────┼────────────────────────────────┐
+         │                                │                                │
+         ▼                                ▼                                ▼
+┌─────────────────┐              ┌─────────────────┐              ┌─────────────────┐
+│   Edge Node 1   │              │   Edge Node 2   │              │   Edge Node N   │
+│                 │              │                 │              │                 │
+│  ┌───────────┐  │              │  ┌───────────┐  │              │  ┌───────────┐  │
+│  │  Worker   │  │              │  │  Worker   │  │              │  │  Worker   │  │
+│  │ (XDP/eBPF)│  │              │  │ (XDP/eBPF)│  │              │  │ (XDP/eBPF)│  │
+│  └───────────┘  │              │  └───────────┘  │              │  └───────────┘  │
+└────────┬────────┘              └────────┬────────┘              └────────┬────────┘
+         │                                │                                │
+         └────────────────────────────────┼────────────────────────────────┘
+                                          │
+                    ┌─────────────────────▼───────────────────────┐
+                    │              Control Plane                   │
+                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+                    │  │ Gateway │ │Config   │ │ Metrics │       │
+                    │  │   API   │ │ Manager │ │ Service │       │
+                    │  └─────────┘ └─────────┘ └─────────┘       │
+                    └─────────────────────────────────────────────┘
+                                          │
+                    ┌─────────────────────▼───────────────────────┐
+                    │         Backend Servers (Your Servers)       │
+                    └─────────────────────────────────────────────┘
+```
+
+## Component Details
+
+### Worker (XDP/eBPF Engine)
+
+The Worker is the core packet processing component:
+
+- **XDP Programs**: Run in the kernel at the earliest point in the network stack
+- **Per-connection State**: Track connection state for stateful filtering
+- **Protocol Analyzers**: Deep packet inspection for L7 protocols
+- **Rate Limiters**: Token bucket rate limiting per IP/subnet
+
+```rust
+// Simplified XDP program flow
+#[xdp]
+pub fn xdp_filter(ctx: XdpContext) -> u32 {
+    let action = match parse_packet(&ctx) {
+        Ok(packet) => process_packet(packet),
+        Err(_) => XDP_DROP,
+    };
+    action
+}
+```
+
+### Gateway
+
+The Gateway provides the management API:
+
+- **REST API**: CRUD operations for backends, rules, users
+- **gRPC API**: High-performance internal communication
+- **WebSocket**: Real-time metrics and alerts
+- **Authentication**: JWT-based auth with role-based access
+
+### Config Manager
+
+Distributed configuration management:
+
+- **Real-time Updates**: Push config changes to all workers
+- **Version Control**: Track configuration history
+- **Validation**: Ensure configuration correctness before deployment
+- **Redis Pub/Sub**: Fast configuration distribution
+
+### Metrics Service
+
+Observability and analytics:
+
+- **Prometheus Metrics**: Export metrics for monitoring
+- **Attack Detection**: Real-time attack pattern detection
+- **Traffic Analysis**: Historical traffic analysis
+- **Alerting**: Integration with alerting systems
+
+## Data Flow
+
+### Inbound Traffic Flow
+
+1. Traffic arrives at edge node via Anycast/GeoDNS
+2. XDP program inspects packet at driver level
+3. Malicious packets dropped before reaching kernel
+4. Clean traffic passed to proxy
+5. Proxy forwards to backend with HAProxy protocol
+
+### Configuration Flow
+
+1. Admin updates configuration via Gateway API
+2. Gateway validates and stores in database
+3. Config Manager detects change via database trigger
+4. Config Manager pushes to Redis Pub/Sub
+5. Workers receive update and reload eBPF maps
+
+## Kubernetes Integration
+
+On Kubernetes, PistonProtection integrates with Cilium CNI:
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: minecraft-server
+spec:
+  protocol: minecraft_java
+  upstream:
+    service: minecraft-svc
+    port: 25565
+  protection:
+    enabled: true
+    rateLimit: 100
+```
+
+The Kubernetes operator:
+- Watches for ProtectedBackend resources
+- Configures Cilium network policies
+- Manages Worker DaemonSets on edge nodes
+- Handles automatic scaling and failover

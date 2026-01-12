@@ -1,0 +1,118 @@
+---
+title: Installation
+description: Install PistonProtection from source or using pre-built packages.
+---
+
+# Installation
+
+## From Source
+
+### Prerequisites
+
+Install the required development tools:
+
+```bash
+# Install Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup default stable
+rustup component add rust-src
+
+# Install eBPF toolchain (for nightly builds)
+rustup install nightly
+rustup component add rust-src --toolchain nightly
+
+# Install bpf-linker
+cargo install bpf-linker
+
+# Install Node.js dependencies (for frontend)
+corepack enable
+pnpm install
+```
+
+### Clone and Build
+
+```bash
+# Clone the repository
+git clone https://github.com/PistonProtection/pistonprotection.git
+cd pistonprotection
+
+# Install dependencies
+make deps
+
+# Build all components
+make build-release
+```
+
+### Build Individual Components
+
+```bash
+# Build Rust services only
+make build-services
+
+# Build eBPF programs only
+make build-ebpf
+
+# Build frontend only
+make build-frontend
+```
+
+## Using Docker
+
+The easiest way to run PistonProtection is using Docker Compose:
+
+```bash
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+### Docker Images
+
+Pre-built Docker images are available:
+
+```bash
+docker pull ghcr.io/pistonprotection/gateway:latest
+docker pull ghcr.io/pistonprotection/worker:latest
+docker pull ghcr.io/pistonprotection/config-mgr:latest
+docker pull ghcr.io/pistonprotection/metrics:latest
+docker pull ghcr.io/pistonprotection/auth:latest
+docker pull ghcr.io/pistonprotection/frontend:latest
+```
+
+## Using Helm
+
+For Kubernetes deployments, use our Helm chart:
+
+```bash
+# Add the Helm repository
+helm repo add pistonprotection https://pistonprotection.github.io/charts
+helm repo update
+
+# Install PistonProtection
+helm install pistonprotection pistonprotection/pistonprotection \
+  --namespace pistonprotection \
+  --create-namespace
+```
+
+## Verify Installation
+
+After installation, verify all components are running:
+
+```bash
+# Check service health
+curl http://localhost:8080/health
+
+# Check metrics
+curl http://localhost:9091/metrics
+```
+
+## Next Steps
+
+- [Quick Start Guide](/docs/getting-started/quick-start)
+- [Configuration Reference](/docs/configuration)
+- [Deployment Guide](/docs/deployment)

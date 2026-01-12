@@ -1,0 +1,191 @@
+---
+title: HTTP Protection
+description: Layer 7 protection for HTTP/1.1, HTTP/2, and HTTP/3 traffic.
+---
+
+# HTTP Protection
+
+PistonProtection provides comprehensive Layer 7 protection for HTTP traffic.
+
+## Supported Versions
+
+- **HTTP/1.1**: Traditional HTTP over TCP
+- **HTTP/2**: Multiplexed streams over TCP
+- **HTTP/3**: QUIC-based (see [QUIC Protection](/docs/protocols/quic))
+
+## Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: web-server
+spec:
+  protocol: http
+  upstream:
+    host: 192.168.1.100
+    port: 80
+  protection:
+    http:
+      # Rate limiting
+      requestsPerSecond: 100
+      burstSize: 200
+      # Request limits
+      maxHeaderSize: 8192
+      maxBodySize: 10485760  # 10MB
+      maxHeaders: 100
+      # Security
+      blockMalformedRequests: true
+      requireHostHeader: true
+```
+
+## Attack Detection
+
+### HTTP Flood
+
+High-volume request attacks:
+
+```yaml
+floodProtection:
+  enabled: true
+  # Requests per second threshold
+  threshold: 1000
+  # Per-IP limit
+  perIpLimit: 50
+  # Challenge suspicious clients
+  challengeMode: javascript
+```
+
+### Slowloris
+
+Slow HTTP attacks that hold connections:
+
+```yaml
+slowloris:
+  enabled: true
+  # Header timeout
+  headerTimeout: 30s
+  # Body timeout
+  bodyTimeout: 60s
+  # Minimum data rate (bytes/sec)
+  minDataRate: 100
+```
+
+### HTTP Request Smuggling
+
+Detects inconsistent Content-Length and Transfer-Encoding:
+
+```yaml
+smugglingProtection:
+  enabled: true
+  # Block ambiguous requests
+  blockAmbiguous: true
+  # Normalize headers
+  normalizeHeaders: true
+```
+
+### Header Injection
+
+Validates header content:
+
+```yaml
+headerValidation:
+  enabled: true
+  # Block null bytes
+  blockNullBytes: true
+  # Block CRLF injection
+  blockCrlf: true
+  # Validate header names
+  strictHeaderNames: true
+```
+
+## WAF Rules
+
+Basic WAF functionality:
+
+```yaml
+waf:
+  enabled: true
+  rules:
+    # Block common SQL injection patterns
+    - name: sql-injection
+      pattern: "(?i)(union|select|insert|update|delete|drop).*"
+      target: [query, body]
+      action: block
+    # Block XSS attempts
+    - name: xss
+      pattern: "<script.*?>.*?</script>"
+      target: [query, body, headers]
+      action: block
+    # Block path traversal
+    - name: path-traversal
+      pattern: "\\.\\./|\\.\\.\\\\"
+      target: [path, query]
+      action: block
+```
+
+## Rate Limiting
+
+Multiple rate limiting strategies:
+
+```yaml
+rateLimit:
+  # Global rate limit
+  global:
+    requestsPerSecond: 10000
+  # Per-IP rate limit
+  perIp:
+    requestsPerSecond: 100
+    burstSize: 200
+  # Per-path rate limits
+  paths:
+    - path: "/api/login"
+      requestsPerSecond: 5
+    - path: "/api/register"
+      requestsPerSecond: 2
+```
+
+## Caching
+
+Cache responses to reduce backend load:
+
+```yaml
+cache:
+  enabled: true
+  # Default TTL
+  defaultTtl: 60s
+  # Max cached entries
+  maxEntries: 10000
+  # Cache rules
+  rules:
+    - path: "/static/*"
+      ttl: 3600s
+    - path: "/api/status"
+      ttl: 5s
+```
+
+## TLS Termination
+
+```yaml
+tls:
+  enabled: true
+  # Certificate from secret
+  secretName: tls-secret
+  # Minimum TLS version
+  minVersion: "1.2"
+  # Preferred cipher suites
+  cipherSuites:
+    - TLS_AES_128_GCM_SHA256
+    - TLS_AES_256_GCM_SHA384
+    - TLS_CHACHA20_POLY1305_SHA256
+```
+
+## Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `http_requests_total` | Total HTTP requests |
+| `http_requests_blocked` | Blocked requests |
+| `http_request_duration_seconds` | Request latency |
+| `http_response_size_bytes` | Response sizes |
+| `http_active_connections` | Active connections |

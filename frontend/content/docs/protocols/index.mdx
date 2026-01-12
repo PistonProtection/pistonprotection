@@ -1,0 +1,43 @@
+---
+title: Protocol Support
+description: PistonProtection provides protocol-aware protection for various application protocols.
+---
+
+# Protocol Support
+
+PistonProtection provides deep packet inspection and protocol-aware filtering for multiple protocols.
+
+## Supported Protocols
+
+<Cards>
+  <Card title="Minecraft Java" description="Full protocol state machine with bot detection" href="/docs/protocols/minecraft-java" />
+  <Card title="Minecraft Bedrock" description="RakNet protection with amplification prevention" href="/docs/protocols/minecraft-bedrock" />
+  <Card title="HTTP/1-3" description="Layer 7 HTTP protection with rate limiting" href="/docs/protocols/http" />
+  <Card title="QUIC" description="UDP-based HTTP/3 and custom QUIC protection" href="/docs/protocols/quic" />
+  <Card title="TCP/UDP" description="Generic L4 protection for any protocol" href="/docs/protocols/tcp-udp" />
+</Cards>
+
+## Protection Features
+
+All protocols support these common features:
+
+| Feature | Description |
+|---------|-------------|
+| Rate Limiting | Token bucket rate limiting per IP/subnet |
+| Geo Blocking | Block or allow traffic by country |
+| IP Reputation | Automatic scoring based on behavior |
+| Connection Limits | Maximum connections per IP |
+| Bandwidth Limits | Maximum bandwidth per backend |
+
+## Protocol-Specific Detection
+
+Each protocol has tailored attack detection:
+
+| Protocol | Attack Types Detected |
+|----------|----------------------|
+| Minecraft Java | Bot joins, handshake floods, packet spam, state attacks |
+| Minecraft Bedrock | RakNet amplification, ping floods, MOTD abuse |
+| HTTP | Slowloris, HTTP floods, header injection, request smuggling |
+| QUIC | Version negotiation attacks, retry storms, token abuse |
+| TCP | SYN floods, ACK floods, RST attacks, slow read |
+| UDP | Amplification, fragmentation, port scanning |

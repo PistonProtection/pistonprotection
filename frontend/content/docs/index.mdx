@@ -1,0 +1,51 @@
+---
+title: Introduction
+description: PistonProtection is an enterprise-grade, self-hostable DDoS protection platform powered by eBPF/XDP.
+---
+
+# Welcome to PistonProtection
+
+PistonProtection is an **open-source, enterprise-grade DDoS protection platform** that uses eBPF/XDP for high-performance packet filtering at the Linux kernel level.
+
+## Key Features
+
+- **eBPF/XDP Filtering**: Process millions of packets per second at wire speed
+- **Multi-Protocol Support**: TCP, UDP, HTTP/1-3, QUIC, Minecraft Java/Bedrock
+- **Kubernetes Native**: Deploy with Helm charts and custom CRDs
+- **Self-Hostable**: Run on your own infrastructure with full control
+- **Real-time Analytics**: Grafana dashboards with Prometheus metrics
+
+## Quick Start
+
+Get started with PistonProtection in minutes:
+
+```bash
+# Clone the repository
+git clone https://github.com/PistonProtection/pistonprotection.git
+cd pistonprotection
+
+# Start local development environment
+make deps
+make dev
+```
+
+## Architecture Overview
+
+PistonProtection consists of several components:
+
+| Component | Description |
+|-----------|-------------|
+| **Gateway** | API gateway for HTTP/gRPC routing |
+| **Worker** | XDP/eBPF packet filtering nodes |
+| **Config Manager** | Distributed configuration management |
+| **Metrics** | Metrics collection and aggregation |
+| **Auth** | Authentication and authorization service |
+
+## Next Steps
+
+<Cards>
+  <Card title="Getting Started" href="/docs/getting-started" />
+  <Card title="Deployment Guide" href="/docs/deployment" />
+  <Card title="Configuration" href="/docs/configuration" />
+  <Card title="API Reference" href="/docs/api" />
+</Cards>

@@ -1,0 +1,193 @@
+---
+title: Worker Configuration
+description: Configure the PistonProtection Worker service.
+---
+
+# Worker Configuration
+
+The Worker runs XDP/eBPF programs for packet filtering.
+
+## Configuration File
+
+```toml
+# /etc/pistonprotection/worker.toml
+
+[server]
+# HTTP API address
+http_addr = "0.0.0.0:8080"
+# Metrics endpoint
+metrics_addr = "0.0.0.0:9091"
+
+[ebpf]
+# Path to eBPF program objects
+programs_path = "/opt/pistonprotection/ebpf"
+# Network interface for XDP
+interface = "eth0"
+# XDP mode: native, skb, or generic
+xdp_mode = "native"
+# Enable XDP hardware offload (if supported)
+hw_offload = false
+# eBPF map sizes
+map_sizes.connections = 1000000
+map_sizes.rate_limits = 100000
+map_sizes.blocked_ips = 100000
+
+[redis]
+# Redis connection URL
+url = "redis://localhost:6379"
+# Connection pool size
+pool_size = 20
+# Subscription channels
+channels = ["config_updates", "rule_updates"]
+
+[config]
+# Config Manager URL
+config_mgr_url = "http://config-mgr:8080"
+# Config refresh interval
+refresh_interval = "10s"
+# Local config cache
+cache_enabled = true
+cache_ttl = "60s"
+
+[gateway]
+# Gateway gRPC URL (for registration)
+url = "http://gateway:9090"
+# Worker registration
+register = true
+# Heartbeat interval
+heartbeat_interval = "10s"
+
+[proxy]
+# Enable TCP/UDP proxy
+enabled = true
+# Connection pool per backend
+pool_size = 1000
+# Connection timeout
+connect_timeout = "10s"
+# Idle timeout
+idle_timeout = "300s"
+
+[logging]
+# Log level
+level = "info"
+# Log format
+format = "json"
+
+[tracing]
+enabled = true
+endpoint = "http://otel-collector:4317"
+service_name = "pistonprotection-worker"
+sample_rate = 0.1
+```
+
+## Environment Variables
+
+| Variable | Config Path | Description |
+|----------|-------------|-------------|
+| `WORKER_HTTP_ADDR` | `server.http_addr` | HTTP listen address |
+| `EBPF_PROGRAMS_PATH` | `ebpf.programs_path` | eBPF programs directory |
+| `EBPF_INTERFACE` | `ebpf.interface` | Network interface |
+| `EBPF_XDP_MODE` | `ebpf.xdp_mode` | XDP attach mode |
+| `REDIS_URL` | `redis.url` | Redis URL |
+| `CONFIG_MGR_URL` | `config.config_mgr_url` | Config Manager URL |
+| `GATEWAY_URL` | `gateway.url` | Gateway gRPC URL |
+
+## XDP Modes
+
+| Mode | Description | Performance |
+|------|-------------|-------------|
+| `native` | Driver-level XDP | Best |
+| `skb` | Generic XDP (sk_buff) | Medium |
+| `generic` | Kernel fallback | Lowest |
+
+Check driver support:
+
+```bash
+# Check if driver supports XDP
+ethtool -i eth0 | grep driver
+ip link show eth0 | grep xdp
+```
+
+## eBPF Map Sizes
+
+Configure map sizes based on expected load:
+
+```toml
+[ebpf.map_sizes]
+# Connection tracking map (per-connection state)
+connections = 1000000
+# Rate limit counters
+rate_limits = 100000
+# Blocked IP list
+blocked_ips = 100000
+# Backend configuration
+backends = 1000
+# Filter rules
+rules = 10000
+```
+
+## Kernel Requirements
+
+Minimum kernel version: 5.15 (6.1+ recommended)
+
+Required kernel config:
+
+```
+CONFIG_BPF=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_XDP_SOCKETS=y
+CONFIG_BPF_JIT=y
+CONFIG_BPF_JIT_ALWAYS_ON=y
+CONFIG_CGROUP_BPF=y
+```
+
+## Capabilities
+
+The worker needs these capabilities:
+
+```yaml
+capabilities:
+  add:
+    - NET_ADMIN    # Network administration
+    - SYS_ADMIN    # BPF operations
+    - BPF          # eBPF specific (kernel 5.8+)
+    - PERFMON      # Performance monitoring (kernel 5.8+)
+```
+
+Or run as privileged:
+
+```yaml
+securityContext:
+  privileged: true
+```
+
+## Performance Tuning
+
+```toml
+[ebpf]
+# Enable batch processing
+batch_size = 64
+# Ring buffer size
+ring_buffer_size = 16777216  # 16MB
+
+[proxy]
+# Increase connection pool
+pool_size = 5000
+# Enable TCP fastopen
+tcp_fastopen = true
+# Enable SO_REUSEPORT
+reuseport = true
+```
+
+## Monitoring
+
+Worker exposes these metrics:
+
+| Metric | Description |
+|--------|-------------|
+| `xdp_packets_total` | Total packets processed |
+| `xdp_packets_dropped` | Packets dropped by XDP |
+| `xdp_packets_passed` | Packets passed to stack |
+| `xdp_processing_time_ns` | Processing time per packet |
+| `ebpf_map_entries` | Entries in eBPF maps |
+| `connections_active` | Active connections |

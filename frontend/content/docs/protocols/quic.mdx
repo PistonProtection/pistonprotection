@@ -1,0 +1,144 @@
+---
+title: QUIC Protection
+description: Protection for QUIC and HTTP/3 traffic.
+---
+
+# QUIC Protection
+
+PistonProtection provides protection for QUIC-based protocols including HTTP/3.
+
+## QUIC Overview
+
+QUIC is a UDP-based transport protocol that provides:
+- Multiplexed streams
+- Built-in encryption (TLS 1.3)
+- Reduced connection establishment latency
+- Connection migration
+
+## Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: http3-server
+spec:
+  protocol: quic
+  upstream:
+    host: 192.168.1.100
+    port: 443
+  protection:
+    quic:
+      # Connection limits
+      maxConnectionsPerIp: 100
+      # Initial packet validation
+      validateInitialPackets: true
+      # Version negotiation
+      supportedVersions: [1, 2]  # QUIC v1, v2
+```
+
+## Attack Detection
+
+### Initial Flood
+
+QUIC Initial packets can be used for amplification:
+
+```yaml
+initialFlood:
+  enabled: true
+  # Max Initial packets per second per IP
+  threshold: 100
+  # Require retry token after threshold
+  retryAfterThreshold: true
+```
+
+### Retry Token Validation
+
+QUIC uses retry tokens to prevent spoofing:
+
+```yaml
+retry:
+  enabled: true
+  # Always require retry for new connections
+  alwaysRetry: false
+  # Token lifetime
+  tokenLifetime: 60s
+  # Token encryption key (auto-generated if empty)
+  tokenKey: ""
+```
+
+### Version Negotiation Attack
+
+Attackers may send unknown versions to trigger version negotiation:
+
+```yaml
+versionNegotiation:
+  # Rate limit version negotiation responses
+  rateLimit: 10
+  # Block repeated version negotiation from same IP
+  blockRepeated: true
+```
+
+### Connection Migration Abuse
+
+QUIC allows connection migration, which can be abused:
+
+```yaml
+connectionMigration:
+  # Allow connection migration
+  enabled: true
+  # Maximum migrations per connection
+  maxMigrations: 3
+  # Validate migration with path challenge
+  pathValidation: true
+```
+
+## Amplification Protection
+
+QUIC has built-in amplification limits, but additional protection:
+
+```yaml
+amplification:
+  # Maximum response amplification ratio
+  maxRatio: 3
+  # Require address validation before sending large responses
+  addressValidation: true
+```
+
+## HTTP/3 Specific
+
+When protocol is set to `http3`:
+
+```yaml
+http3:
+  # HTTP/3 specific settings
+  maxHeaderListSize: 65536
+  maxTableCapacity: 4096
+  blockedStreams: 100
+  # Same HTTP protections as HTTP/1-2
+  requestsPerSecond: 100
+  wafEnabled: true
+```
+
+## Performance Tuning
+
+```yaml
+performance:
+  # UDP receive buffer size
+  udpReceiveBuffer: 8388608
+  # Connection pool size
+  connectionPoolSize: 10000
+  # Keep-alive interval
+  keepAliveInterval: 30s
+```
+
+## Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `quic_connections_total` | Total QUIC connections |
+| `quic_handshakes_total` | Completed handshakes |
+| `quic_retry_sent` | Retry tokens sent |
+| `quic_version_negotiation` | Version negotiations |
+| `quic_migrations` | Connection migrations |
+| `quic_bandwidth_bytes` | Bandwidth usage |

@@ -1,0 +1,301 @@
+---
+title: Backends API
+description: API endpoints for managing protected backends.
+---
+
+# Backends API
+
+Manage your protected backend servers.
+
+## List Backends
+
+```bash
+GET /api/v1/backends
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number (default: 1) |
+| `per_page` | integer | Items per page (default: 20, max: 100) |
+| `protocol` | string | Filter by protocol |
+| `status` | string | Filter by status (active, inactive, error) |
+| `sort` | string | Sort field (name, created_at, -created_at) |
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "backend_abc123",
+      "name": "minecraft-server",
+      "protocol": "minecraft_java",
+      "status": "active",
+      "upstream": {
+        "host": "192.168.1.100",
+        "port": 25565
+      },
+      "protection": {
+        "enabled": true,
+        "rate_limit": 100
+      },
+      "stats": {
+        "connections": 150,
+        "bandwidth_in": 1048576,
+        "bandwidth_out": 5242880,
+        "attacks_blocked": 42
+      },
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-15T12:30:00Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 5
+  }
+}
+```
+
+## Get Backend
+
+```bash
+GET /api/v1/backends/:id
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "backend_abc123",
+    "name": "minecraft-server",
+    "protocol": "minecraft_java",
+    "status": "active",
+    "upstream": {
+      "host": "192.168.1.100",
+      "port": 25565,
+      "proxy_protocol": "v2"
+    },
+    "protection": {
+      "enabled": true,
+      "rate_limit": {
+        "requests_per_second": 100,
+        "burst_size": 200
+      },
+      "bot_detection": {
+        "enabled": true,
+        "sensitivity": "medium"
+      },
+      "geo_blocking": {
+        "enabled": false,
+        "mode": "blocklist",
+        "countries": []
+      }
+    },
+    "dns": {
+      "subdomain": "play",
+      "domain": "example.pistonprotection.net",
+      "full": "play.example.pistonprotection.net"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T12:30:00Z"
+  }
+}
+```
+
+## Create Backend
+
+```bash
+POST /api/v1/backends
+Content-Type: application/json
+
+{
+  "name": "minecraft-server",
+  "protocol": "minecraft_java",
+  "upstream": {
+    "host": "192.168.1.100",
+    "port": 25565,
+    "proxy_protocol": "v2"
+  },
+  "protection": {
+    "enabled": true,
+    "rate_limit": {
+      "requests_per_second": 100,
+      "burst_size": 200
+    },
+    "bot_detection": {
+      "enabled": true,
+      "sensitivity": "medium"
+    }
+  }
+}
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Unique backend name |
+| `protocol` | string | Yes | Protocol type |
+| `upstream.host` | string | Yes | Backend server IP/hostname |
+| `upstream.port` | integer | Yes | Backend server port |
+| `upstream.proxy_protocol` | string | No | HAProxy protocol version (v1, v2) |
+| `protection.enabled` | boolean | No | Enable protection (default: true) |
+| `protection.rate_limit` | object | No | Rate limiting config |
+| `protection.bot_detection` | object | No | Bot detection config |
+| `protection.geo_blocking` | object | No | Geographic blocking config |
+
+### Protocol Types
+
+| Protocol | Description |
+|----------|-------------|
+| `minecraft_java` | Minecraft Java Edition |
+| `minecraft_bedrock` | Minecraft Bedrock Edition |
+| `http` | HTTP/1.1 and HTTP/2 |
+| `http3` | HTTP/3 (QUIC) |
+| `tcp` | Generic TCP |
+| `udp` | Generic UDP |
+
+## Update Backend
+
+```bash
+PUT /api/v1/backends/:id
+Content-Type: application/json
+
+{
+  "protection": {
+    "rate_limit": {
+      "requests_per_second": 200
+    }
+  }
+}
+```
+
+Partial updates are supported - only include fields you want to change.
+
+## Delete Backend
+
+```bash
+DELETE /api/v1/backends/:id
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Backend deleted successfully"
+  }
+}
+```
+
+## Backend Statistics
+
+```bash
+GET /api/v1/backends/:id/stats
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | string | Time period (1h, 24h, 7d, 30d) |
+| `resolution` | string | Data resolution (1m, 5m, 1h, 1d) |
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "connections_total": 15000,
+      "bandwidth_in_bytes": 104857600,
+      "bandwidth_out_bytes": 524288000,
+      "attacks_blocked": 420,
+      "unique_ips": 1500
+    },
+    "timeseries": {
+      "connections": [
+        {"timestamp": "2024-01-15T12:00:00Z", "value": 150},
+        {"timestamp": "2024-01-15T12:01:00Z", "value": 145}
+      ],
+      "bandwidth_in": [...],
+      "bandwidth_out": [...],
+      "attacks": [...]
+    }
+  }
+}
+```
+
+## Backend Health
+
+```bash
+GET /api/v1/backends/:id/health
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "latency_ms": 5,
+    "last_check": "2024-01-15T12:30:00Z",
+    "uptime_percentage": 99.99,
+    "checks": [
+      {
+        "type": "tcp_connect",
+        "status": "pass",
+        "latency_ms": 5
+      },
+      {
+        "type": "protocol_handshake",
+        "status": "pass",
+        "latency_ms": 12
+      }
+    ]
+  }
+}
+```
+
+## Recent Attacks
+
+```bash
+GET /api/v1/backends/:id/attacks
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number |
+| `per_page` | integer | Items per page |
+| `type` | string | Attack type filter |
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "attack_xyz789",
+      "type": "syn_flood",
+      "source_ips": ["203.0.113.1", "203.0.113.2"],
+      "packets_blocked": 50000,
+      "bytes_blocked": 2500000,
+      "started_at": "2024-01-15T12:00:00Z",
+      "ended_at": "2024-01-15T12:05:00Z",
+      "status": "mitigated"
+    }
+  ]
+}
+```

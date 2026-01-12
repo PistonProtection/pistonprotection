@@ -1,0 +1,167 @@
+---
+title: Gateway Configuration
+description: Configure the PistonProtection Gateway service.
+---
+
+# Gateway Configuration
+
+The Gateway is the central API and routing component.
+
+## Configuration File
+
+```toml
+# /etc/pistonprotection/gateway.toml
+
+[server]
+# HTTP API address
+http_addr = "0.0.0.0:8080"
+# gRPC API address
+grpc_addr = "0.0.0.0:9090"
+# Metrics endpoint
+metrics_addr = "0.0.0.0:9091"
+# Request timeout
+request_timeout = "30s"
+# Maximum request body size
+max_body_size = "10MB"
+
+[database]
+# PostgreSQL connection URL
+url = "postgres://user:pass@localhost/pistonprotection"
+# Connection pool size
+max_connections = 100
+min_connections = 10
+# Connection timeout
+connect_timeout = "30s"
+# Idle connection timeout
+idle_timeout = "10m"
+
+[redis]
+# Redis connection URL
+url = "redis://localhost:6379"
+# Connection pool size
+pool_size = 50
+# Connection timeout
+connect_timeout = "5s"
+
+[auth]
+# JWT signing secret (minimum 32 characters)
+jwt_secret = "your-super-secret-key-minimum-32-chars"
+# Access token expiry
+access_token_expiry = "15m"
+# Refresh token expiry
+refresh_token_expiry = "7d"
+# Enable API key authentication
+api_key_enabled = true
+
+[services]
+# Config Manager URL
+config_mgr_url = "http://config-mgr:8080"
+# Auth Service URL
+auth_service_url = "http://auth:8080"
+# Metrics Service URL
+metrics_service_url = "http://metrics:8080"
+
+[proxy]
+# Enable proxy functionality
+enabled = true
+# Connection pool per upstream
+upstream_pool_size = 100
+# Upstream connection timeout
+upstream_timeout = "30s"
+# Enable HAProxy protocol
+haproxy_protocol = true
+
+[rate_limit]
+# Global rate limit
+enabled = true
+requests_per_second = 10000
+burst_size = 20000
+
+[cors]
+# Allowed origins
+allowed_origins = ["https://example.com"]
+# Allowed methods
+allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+# Allowed headers
+allowed_headers = ["Authorization", "Content-Type"]
+
+[logging]
+# Log level
+level = "info"
+# Log format: json or text
+format = "json"
+
+[tracing]
+# Enable OpenTelemetry tracing
+enabled = true
+# OTLP endpoint
+endpoint = "http://otel-collector:4317"
+# Service name
+service_name = "pistonprotection-gateway"
+# Sample rate (0.0 to 1.0)
+sample_rate = 0.1
+```
+
+## Environment Variables
+
+| Variable | Config Path | Description |
+|----------|-------------|-------------|
+| `GATEWAY_HTTP_ADDR` | `server.http_addr` | HTTP listen address |
+| `GATEWAY_GRPC_ADDR` | `server.grpc_addr` | gRPC listen address |
+| `DATABASE_URL` | `database.url` | PostgreSQL URL |
+| `REDIS_URL` | `redis.url` | Redis URL |
+| `JWT_SECRET` | `auth.jwt_secret` | JWT signing secret |
+| `CONFIG_MGR_URL` | `services.config_mgr_url` | Config Manager URL |
+| `AUTH_SERVICE_URL` | `services.auth_service_url` | Auth Service URL |
+
+## API Endpoints
+
+### Health Check
+
+```bash
+GET /health
+```
+
+### API v1
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/backends` | GET, POST | List/create backends |
+| `/api/v1/backends/:id` | GET, PUT, DELETE | Manage backend |
+| `/api/v1/backends/:id/stats` | GET | Backend statistics |
+| `/api/v1/rules` | GET, POST | List/create rules |
+| `/api/v1/rules/:id` | GET, PUT, DELETE | Manage rule |
+| `/api/v1/users` | GET, POST | List/create users |
+| `/api/v1/metrics` | GET | Query metrics |
+
+### Authentication
+
+```bash
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+```
+
+## Performance Tuning
+
+For high-traffic deployments:
+
+```toml
+[server]
+# Increase worker threads
+worker_threads = 16
+# Enable TCP keepalive
+tcp_keepalive = "60s"
+
+[database]
+# Increase connection pool
+max_connections = 200
+# Enable prepared statements
+prepared_statements = true
+
+[proxy]
+# Increase upstream pool
+upstream_pool_size = 500
+# Enable HTTP/2
+http2_enabled = true
+```

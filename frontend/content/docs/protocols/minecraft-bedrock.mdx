@@ -1,0 +1,146 @@
+---
+title: Minecraft Bedrock Edition
+description: RakNet-based protection for Minecraft Bedrock Edition servers.
+---
+
+# Minecraft Bedrock Edition Protection
+
+PistonProtection provides protection for Minecraft Bedrock Edition servers using the RakNet protocol.
+
+## RakNet Protocol
+
+Bedrock Edition uses RakNet, a UDP-based reliable protocol:
+
+```
+Unconnected Ping → Unconnected Pong (MOTD)
+Open Connection Request 1 → Open Connection Reply 1
+Open Connection Request 2 → Open Connection Reply 2
+Connection established → Game packets
+```
+
+## Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: bedrock-server
+spec:
+  protocol: minecraft_bedrock
+  upstream:
+    host: 192.168.1.100
+    port: 19132
+  protection:
+    raknet:
+      # Rate limit unconnected pings (MOTD requests)
+      pingsPerSecond: 20
+      # Maximum connections per IP
+      connectionsPerIp: 3
+      # Enable amplification protection
+      amplificationProtection: true
+      # Maximum packet size
+      maxPacketSize: 1492
+```
+
+## Attack Detection
+
+### RakNet Amplification
+
+RakNet's Unconnected Pong (MOTD) response can be larger than the request, enabling amplification attacks.
+
+Protection measures:
+- Rate limit Unconnected Ping packets
+- Verify source IP isn't spoofed
+- Limit MOTD response size
+- Track ping/pong ratio per IP
+
+```yaml
+amplificationProtection:
+  enabled: true
+  # Max pings before requiring connection
+  maxUnconnectedPings: 5
+  # Suspicious ping ratio threshold
+  pingRatioThreshold: 10
+```
+
+### Connection Flood
+
+Detects rapid connection attempts:
+
+```yaml
+connectionFlood:
+  # Max new connections per second per IP
+  threshold: 10
+  # Block duration after threshold exceeded
+  blockDuration: 60s
+```
+
+### Packet Size Abuse
+
+RakNet allows custom MTU negotiation. Attackers may request large MTU to waste bandwidth:
+
+```yaml
+mtuProtection:
+  # Minimum allowed MTU
+  minMtu: 400
+  # Maximum allowed MTU
+  maxMtu: 1492
+  # Block IPs requesting invalid MTU
+  blockInvalidMtu: true
+```
+
+## MOTD Caching
+
+Cache MOTD responses to reduce backend load:
+
+```yaml
+motdCache:
+  enabled: true
+  # Cache duration
+  ttl: 5s
+  # Maximum cached entries
+  maxEntries: 1000
+```
+
+## Backend Fallback
+
+Respond when backend is offline:
+
+```yaml
+fallback:
+  enabled: true
+  motd: "PistonProtection Server"
+  gameType: "Survival"
+  protocol: "748"
+  version: "1.21.0"
+  players:
+    online: 0
+    max: 20
+```
+
+## Xbox Live Integration
+
+Bedrock uses Xbox Live for authentication. PistonProtection can:
+
+- Pass through Xbox Live tokens
+- Validate XUID format
+- Block invalid authentication packets
+
+```yaml
+xbox:
+  # Require valid Xbox Live authentication
+  requireAuth: true
+  # Block known banned XUIDs
+  banList:
+    - "1234567890123456"
+```
+
+## Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `bedrock_connections_total` | Total connection attempts |
+| `bedrock_players_online` | Current online players |
+| `bedrock_amplification_blocked` | Amplification attempts blocked |
+| `bedrock_motd_requests` | MOTD request rate |
+| `bedrock_bandwidth_bytes` | Bandwidth usage |

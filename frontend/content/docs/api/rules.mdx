@@ -1,0 +1,375 @@
+---
+title: Rules API
+description: API endpoints for managing filter rules.
+---
+
+# Rules API
+
+Manage custom filter rules for fine-grained traffic control.
+
+## List Rules
+
+```bash
+GET /api/v1/rules
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number |
+| `per_page` | integer | Items per page |
+| `enabled` | boolean | Filter by enabled status |
+| `backend` | string | Filter by backend ID |
+| `sort` | string | Sort field (priority, name, created_at) |
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "rule_abc123",
+      "name": "block-bad-actors",
+      "priority": 100,
+      "enabled": true,
+      "match": {
+        "source": {
+          "ips": ["203.0.113.0/24"]
+        }
+      },
+      "action": {
+        "type": "block"
+      },
+      "stats": {
+        "matches_total": 5000,
+        "last_match": "2024-01-15T12:30:00Z"
+      },
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-10T08:00:00Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 15
+  }
+}
+```
+
+## Get Rule
+
+```bash
+GET /api/v1/rules/:id
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "rule_abc123",
+    "name": "block-bad-actors",
+    "description": "Block known malicious IP ranges",
+    "priority": 100,
+    "enabled": true,
+    "match": {
+      "source": {
+        "ips": ["203.0.113.0/24", "198.51.100.0/24"],
+        "countries": ["CN"],
+        "asns": [12345]
+      },
+      "destination": {
+        "backends": ["backend_xyz789"],
+        "ports": [25565]
+      },
+      "protocol": {
+        "types": ["tcp"],
+        "l7": ["minecraft_java"]
+      }
+    },
+    "action": {
+      "type": "block",
+      "log": true,
+      "reason": "Known malicious source"
+    },
+    "stats": {
+      "matches_total": 5000,
+      "matches_24h": 150,
+      "last_match": "2024-01-15T12:30:00Z"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-10T08:00:00Z"
+  }
+}
+```
+
+## Create Rule
+
+```bash
+POST /api/v1/rules
+Content-Type: application/json
+
+{
+  "name": "rate-limit-high-risk",
+  "description": "Rate limit connections from high-risk countries",
+  "priority": 50,
+  "enabled": true,
+  "match": {
+    "source": {
+      "countries": ["CN", "RU", "BR"]
+    }
+  },
+  "action": {
+    "type": "rate_limit",
+    "rate_limit": {
+      "requests_per_second": 10,
+      "burst_size": 20
+    }
+  }
+}
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Unique rule name |
+| `description` | string | No | Rule description |
+| `priority` | integer | Yes | Rule priority (1-1000, lower = higher priority) |
+| `enabled` | boolean | No | Enable rule (default: true) |
+| `match` | object | Yes | Match conditions |
+| `action` | object | Yes | Action to take |
+
+### Match Object
+
+```json
+{
+  "source": {
+    "ips": ["1.2.3.4", "5.6.7.0/24"],
+    "exclude_ips": ["1.2.3.5"],
+    "countries": ["US", "CA"],
+    "exclude_countries": ["XX"],
+    "asns": [12345],
+    "exclude_asns": [67890]
+  },
+  "destination": {
+    "backends": ["backend_abc123"],
+    "ports": [25565, "8000-9000"]
+  },
+  "protocol": {
+    "types": ["tcp", "udp"],
+    "l7": ["minecraft_java", "http"]
+  },
+  "time": {
+    "days": ["monday", "tuesday"],
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "timezone": "UTC"
+  },
+  "packet": {
+    "min_size": 64,
+    "max_size": 1500,
+    "tcp_flags": ["SYN"]
+  }
+}
+```
+
+### Action Object
+
+```json
+// Block action
+{
+  "type": "block",
+  "log": true,
+  "reason": "Blocked by rule"
+}
+
+// Allow action
+{
+  "type": "allow",
+  "skip_rate_limit": true
+}
+
+// Rate limit action
+{
+  "type": "rate_limit",
+  "rate_limit": {
+    "requests_per_second": 100,
+    "burst_size": 200,
+    "key": "ip"  // ip, subnet, backend, global
+  }
+}
+
+// Challenge action
+{
+  "type": "challenge",
+  "challenge": {
+    "type": "captcha",  // captcha, javascript, proof_of_work
+    "difficulty": "medium",
+    "cookie_duration": "1h"
+  }
+}
+
+// Redirect action
+{
+  "type": "redirect",
+  "redirect": {
+    "backend": "fallback-server"
+  }
+}
+```
+
+## Update Rule
+
+```bash
+PUT /api/v1/rules/:id
+Content-Type: application/json
+
+{
+  "enabled": false
+}
+```
+
+Partial updates are supported.
+
+## Delete Rule
+
+```bash
+DELETE /api/v1/rules/:id
+```
+
+## Test Rule
+
+Test a rule against sample traffic without applying it:
+
+```bash
+POST /api/v1/rules/:id/test
+Content-Type: application/json
+
+{
+  "source_ip": "203.0.113.1",
+  "destination_port": 25565,
+  "protocol": "tcp"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "matched": true,
+    "action": {
+      "type": "block",
+      "reason": "Known malicious source"
+    },
+    "match_details": {
+      "matched_conditions": ["source.ips"],
+      "rule_priority": 100
+    }
+  }
+}
+```
+
+## Rule Statistics
+
+```bash
+GET /api/v1/rules/:id/stats
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | string | Time period (1h, 24h, 7d, 30d) |
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "matches_total": 5000,
+    "matches_by_period": {
+      "1h": 50,
+      "24h": 500,
+      "7d": 2500,
+      "30d": 5000
+    },
+    "top_source_ips": [
+      {"ip": "203.0.113.1", "count": 1000},
+      {"ip": "203.0.113.2", "count": 500}
+    ],
+    "top_countries": [
+      {"country": "CN", "count": 3000},
+      {"country": "RU", "count": 1500}
+    ],
+    "matches_by_action": {
+      "blocked": 4500,
+      "rate_limited": 500
+    }
+  }
+}
+```
+
+## Bulk Operations
+
+### Enable/Disable Multiple Rules
+
+```bash
+POST /api/v1/rules/bulk/enable
+Content-Type: application/json
+
+{
+  "rule_ids": ["rule_abc123", "rule_def456"],
+  "enabled": false
+}
+```
+
+### Delete Multiple Rules
+
+```bash
+POST /api/v1/rules/bulk/delete
+Content-Type: application/json
+
+{
+  "rule_ids": ["rule_abc123", "rule_def456"]
+}
+```
+
+### Import Rules
+
+```bash
+POST /api/v1/rules/import
+Content-Type: application/json
+
+{
+  "rules": [
+    {
+      "name": "rule-1",
+      "priority": 100,
+      "match": {...},
+      "action": {...}
+    },
+    {
+      "name": "rule-2",
+      "priority": 200,
+      "match": {...},
+      "action": {...}
+    }
+  ],
+  "overwrite": false
+}
+```
+
+### Export Rules
+
+```bash
+GET /api/v1/rules/export
+```
+
+Returns all rules in a format suitable for import.

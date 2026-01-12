@@ -1,0 +1,184 @@
+---
+title: Docker Deployment
+description: Deploy PistonProtection using Docker Compose.
+---
+
+# Docker Deployment
+
+Docker Compose is the fastest way to get PistonProtection running for development or single-node deployments.
+
+## Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/PistonProtection/pistonprotection.git
+cd pistonprotection
+
+# Start all services
+docker compose up -d
+```
+
+## Service URLs
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Frontend | http://localhost:3000 | - |
+| Gateway API | http://localhost:8080 | - |
+| Grafana | http://localhost:3001 | admin/admin |
+| Prometheus | http://localhost:9099 | - |
+| pgAdmin | http://localhost:5050 | admin@pistonprotection.local/admin |
+| Redis Commander | http://localhost:8085 | - |
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# Database
+POSTGRES_USER=pistonprotection
+POSTGRES_PASSWORD=secure-password-here
+POSTGRES_DB=pistonprotection
+
+# Redis
+REDIS_PASSWORD=redis-password-here
+
+# Auth
+JWT_SECRET=your-jwt-secret-key-minimum-32-chars
+
+# Observability
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+```
+
+### Custom docker-compose.override.yml
+
+Create overrides for your environment:
+
+```yaml
+# docker-compose.override.yml
+services:
+  gateway:
+    environment:
+      RUST_LOG: debug,pistonprotection=trace
+
+  worker:
+    environment:
+      RUST_LOG: debug
+    # Mount custom eBPF programs
+    volumes:
+      - ./custom-ebpf:/opt/pistonprotection/ebpf:ro
+```
+
+## Production Considerations
+
+### Resource Limits
+
+Add resource limits to prevent runaway containers:
+
+```yaml
+# docker-compose.prod.yml
+services:
+  gateway:
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  worker:
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+        reservations:
+          cpus: '4'
+          memory: 8G
+```
+
+### Persistent Storage
+
+Ensure data survives container restarts:
+
+```yaml
+volumes:
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/pistonprotection/postgres
+```
+
+### External Database
+
+For production, use managed databases:
+
+```yaml
+services:
+  gateway:
+    environment:
+      DATABASE_URL: postgres://user:pass@your-rds-instance:5432/pistonprotection
+      REDIS_URL: redis://:pass@your-elasticache:6379
+```
+
+## Useful Commands
+
+```bash
+# View logs
+docker compose logs -f gateway worker
+
+# Restart a service
+docker compose restart gateway
+
+# Rebuild and restart
+docker compose up -d --build gateway
+
+# Scale workers
+docker compose up -d --scale worker=3
+
+# Stop everything
+docker compose down
+
+# Stop and remove volumes (data loss!)
+docker compose down -v
+
+# Start with development tools
+docker compose --profile tools up -d
+```
+
+## Troubleshooting
+
+### Container Not Starting
+
+```bash
+# Check container status
+docker compose ps
+
+# View logs
+docker compose logs <service-name>
+```
+
+### Database Connection Issues
+
+```bash
+# Test database connectivity
+docker compose exec gateway \
+  pg_isready -h postgres -U pistonprotection
+```
+
+### Worker eBPF Issues
+
+The worker needs privileged access for eBPF:
+
+```bash
+# Check if eBPF is loading
+docker compose logs worker | grep -i ebpf
+
+# Verify kernel version
+uname -r  # Should be 5.15+
+```

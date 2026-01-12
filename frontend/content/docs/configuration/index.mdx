@@ -1,0 +1,102 @@
+---
+title: Configuration Overview
+description: Configure PistonProtection components.
+---
+
+# Configuration
+
+PistonProtection components are configured via environment variables, configuration files, or Kubernetes ConfigMaps.
+
+## Configuration Methods
+
+1. **Environment Variables**: Highest priority, useful for secrets
+2. **Configuration Files**: TOML files for detailed configuration
+3. **ConfigMaps**: Kubernetes-native configuration
+
+## Service Configuration
+
+<Cards>
+  <Card title="Gateway" description="API gateway and proxy configuration" href="/docs/configuration/gateway" />
+  <Card title="Worker" description="XDP/eBPF worker configuration" href="/docs/configuration/worker" />
+  <Card title="Filter Rules" description="Custom filtering rules" href="/docs/configuration/filters" />
+</Cards>
+
+## Common Environment Variables
+
+All services support these variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RUST_LOG` | Log level (trace, debug, info, warn, error) | `info` |
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `REDIS_URL` | Redis connection string | Required |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector | Optional |
+
+## Database Configuration
+
+PostgreSQL connection string format:
+
+```
+postgres://user:password@host:port/database?sslmode=require
+```
+
+Connection pool settings:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_MAX_CONNECTIONS` | Max pool size | `100` |
+| `DATABASE_MIN_CONNECTIONS` | Min pool size | `10` |
+| `DATABASE_CONNECT_TIMEOUT` | Connection timeout | `30s` |
+
+## Redis Configuration
+
+Redis connection string format:
+
+```
+redis://:password@host:port/db
+```
+
+Or for Redis Cluster:
+
+```
+redis+cluster://:password@host1:port1,host2:port2/
+```
+
+## Secrets Management
+
+For production, use proper secrets management:
+
+### Kubernetes Secrets
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pistonprotection-secrets
+type: Opaque
+stringData:
+  database-url: "postgres://user:pass@host/db"
+  redis-url: "redis://:pass@host:6379"
+  jwt-secret: "your-32-char-minimum-secret"
+```
+
+### External Secrets Operator
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: pistonprotection-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: pistonprotection-secrets
+  data:
+    - secretKey: database-url
+      remoteRef:
+        key: pistonprotection/database
+        property: url
+```

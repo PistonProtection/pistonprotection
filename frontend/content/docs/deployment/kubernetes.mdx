@@ -1,0 +1,224 @@
+---
+title: Kubernetes Deployment
+description: Deploy PistonProtection on Kubernetes with Helm and Cilium.
+---
+
+# Kubernetes Deployment
+
+This guide covers deploying PistonProtection on Kubernetes with Cilium CNI.
+
+## Prerequisites
+
+- Kubernetes 1.28+
+- Cilium CNI installed
+- Helm 3.x
+- `kubectl` configured
+
+## Install Cilium
+
+PistonProtection requires Cilium for XDP integration:
+
+```bash
+# Install Cilium CLI
+curl -L --fail --remote-name-all \
+  https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz
+sudo tar xzvfC cilium-linux-amd64.tar.gz /usr/local/bin
+
+# Install Cilium with XDP enabled
+cilium install --version 1.16.0 \
+  --set kubeProxyReplacement=true \
+  --set devices='{eth0}' \
+  --set loadBalancer.acceleration=native
+```
+
+## Install PistonProtection
+
+### Add Helm Repository
+
+```bash
+helm repo add pistonprotection https://pistonprotection.github.io/charts
+helm repo update
+```
+
+### Create Namespace
+
+```bash
+kubectl create namespace pistonprotection
+```
+
+### Configure Values
+
+Create a `values.yaml` file:
+
+```yaml
+# values.yaml
+gateway:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+worker:
+  # Deploy on specific nodes with XDP support
+  nodeSelector:
+    pistonprotection.io/role: edge
+  tolerations:
+    - key: "pistonprotection.io/edge"
+      operator: "Exists"
+      effect: "NoSchedule"
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 8000m
+      memory: 16Gi
+  # XDP requires privileged containers
+  securityContext:
+    privileged: true
+    capabilities:
+      add:
+        - NET_ADMIN
+        - SYS_ADMIN
+        - BPF
+
+configManager:
+  replicas: 2
+
+metrics:
+  replicas: 2
+
+auth:
+  replicas: 2
+
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 100Gi
+
+redis:
+  enabled: true
+  architecture: replication
+  replica:
+    replicaCount: 2
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: protection.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: protection-tls
+      hosts:
+        - protection.example.com
+```
+
+### Install Chart
+
+```bash
+helm install pistonprotection pistonprotection/pistonprotection \
+  --namespace pistonprotection \
+  --values values.yaml
+```
+
+## Verify Installation
+
+```bash
+# Check pods
+kubectl get pods -n pistonprotection
+
+# Check services
+kubectl get svc -n pistonprotection
+
+# Check gateway health
+kubectl port-forward svc/pistonprotection-gateway 8080:8080 -n pistonprotection
+curl http://localhost:8080/health
+```
+
+## Configure ProtectedBackend
+
+Create a custom resource for your backend:
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: minecraft-server
+  namespace: pistonprotection
+spec:
+  protocol: minecraft_java
+  upstream:
+    service: minecraft-svc
+    namespace: minecraft
+    port: 25565
+  protection:
+    enabled: true
+    rateLimit:
+      requestsPerSecond: 100
+      burstSize: 200
+    botDetection:
+      enabled: true
+      sensitivity: medium
+    geoBlocking:
+      enabled: false
+      allowedCountries: []
+      blockedCountries: []
+```
+
+```bash
+kubectl apply -f protected-backend.yaml
+```
+
+## High Availability
+
+For production, ensure:
+
+1. **Multiple replicas** of Gateway, Config Manager, Metrics, Auth
+2. **Worker DaemonSet** on all edge nodes
+3. **PostgreSQL replication** with automatic failover
+4. **Redis Sentinel** for Redis HA
+5. **Pod Disruption Budgets** to prevent simultaneous restarts
+
+```yaml
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-pdb
+  namespace: pistonprotection
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pistonprotection-gateway
+```
+
+## Monitoring
+
+PistonProtection exports Prometheus metrics. Configure ServiceMonitor:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pistonprotection
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pistonprotection
+  namespaceSelector:
+    matchNames:
+      - pistonprotection
+  endpoints:
+    - port: metrics
+      interval: 15s
+```

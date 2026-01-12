@@ -1,0 +1,141 @@
+---
+title: Minecraft Java Edition
+description: Protocol-aware protection for Minecraft Java Edition servers.
+---
+
+# Minecraft Java Edition Protection
+
+PistonProtection provides comprehensive protection for Minecraft Java Edition servers with full protocol awareness.
+
+## Protocol State Machine
+
+The Minecraft Java protocol uses a state machine for connections:
+
+```
+NONE → HANDSHAKE → STATUS (server list ping)
+                 → LOGIN → CONFIGURATION (1.20.2+) → PLAY
+                 → TRANSFER (1.20.5+)
+```
+
+PistonProtection tracks each connection's state and validates transitions:
+
+- **HANDSHAKE**: Initial connection, validates protocol version
+- **STATUS**: Server list ping (MOTD), rate limited
+- **LOGIN**: Authentication flow, bot detection active
+- **CONFIGURATION**: Resource pack and registry sync (1.20.2+)
+- **PLAY**: Active gameplay, packet validation
+- **TRANSFER**: Server transfer (1.20.5+)
+
+## Configuration
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: ProtectedBackend
+metadata:
+  name: minecraft-server
+spec:
+  protocol: minecraft_java
+  upstream:
+    host: 192.168.1.100
+    port: 25565
+  protection:
+    minecraft:
+      # Minimum supported protocol version (1.7.x = 4)
+      minProtocolVersion: 47  # 1.8.x
+      # Maximum supported protocol version
+      maxProtocolVersion: 769 # 1.21.x
+      # Rate limit status pings
+      statusPingsPerSecond: 10
+      # Rate limit login attempts
+      loginsPerSecond: 5
+      # Enable bot detection
+      botDetection:
+        enabled: true
+        # Block known bot user agents
+        blockKnownBots: true
+        # Require valid username format
+        validateUsername: true
+        # Challenge suspicious connections
+        challengeMode: captcha
+```
+
+## Attack Detection
+
+### Handshake Flood
+
+Detects rapid handshake packets from a single IP:
+
+```yaml
+handshakeFlood:
+  threshold: 50  # Max handshakes per second
+  blockDuration: 60s
+```
+
+### Bot Detection
+
+Identifies automated connections:
+
+- Invalid or missing username
+- Abnormal packet timing
+- Known bot signatures
+- Rapid reconnection patterns
+
+### Packet Spam
+
+Rate limits packets in each state:
+
+```yaml
+packetLimits:
+  login: 20     # Packets/sec in LOGIN state
+  play: 500     # Packets/sec in PLAY state
+  status: 10    # Packets/sec in STATUS state
+```
+
+### Protocol Exploitation
+
+Validates packet structure:
+
+- Correct packet IDs for current state
+- Valid VarInt encoding
+- Proper packet length
+- Protocol version consistency
+
+## HAProxy Protocol
+
+Preserve real client IPs with HAProxy protocol:
+
+```yaml
+upstream:
+  host: 192.168.1.100
+  port: 25565
+  proxyProtocol: v2  # v1 or v2
+```
+
+Your Minecraft server needs HAProxy protocol support. Popular plugins:
+- **BungeeCord/Velocity**: Built-in support
+- **Paper/Spigot**: Use plugins like RealIP or HAProxyDetector
+
+## Backend Fallback
+
+Show a custom message when the backend is offline:
+
+```yaml
+fallback:
+  enabled: true
+  motd: "&cServer is currently offline"
+  maxPlayers: 0
+  kickMessage: "Server is under maintenance. Please try again later."
+```
+
+## Metrics
+
+Exported metrics for Minecraft backends:
+
+| Metric | Description |
+|--------|-------------|
+| `minecraft_connections_total` | Total connection attempts |
+| `minecraft_players_online` | Current online players |
+| `minecraft_bots_blocked` | Bot connections blocked |
+| `minecraft_attacks_mitigated` | Attack events mitigated |
+| `minecraft_packet_rate` | Packets per second |
+| `minecraft_bandwidth_bytes` | Bandwidth usage |

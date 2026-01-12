@@ -1,0 +1,47 @@
+---
+title: Getting Started
+description: Learn how to set up PistonProtection for your infrastructure.
+---
+
+# Getting Started
+
+This guide will help you get PistonProtection up and running quickly.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- **Linux server** with kernel 5.15+ (for eBPF/XDP support)
+- **Docker** and **Docker Compose** (for local development)
+- **Kubernetes cluster** (for production deployment)
+- **Rust toolchain** (if building from source)
+
+## System Requirements
+
+### Minimum Requirements
+
+| Component | Specification |
+|-----------|--------------|
+| CPU | 4 cores |
+| RAM | 8 GB |
+| Storage | 50 GB SSD |
+| Network | 1 Gbps |
+| Kernel | Linux 5.15+ |
+
+### Recommended for Production
+
+| Component | Specification |
+|-----------|--------------|
+| CPU | 16+ cores |
+| RAM | 32 GB+ |
+| Storage | 200 GB NVMe SSD |
+| Network | 10 Gbps+ |
+| Kernel | Linux 6.1+ |
+
+## Choose Your Path
+
+<Cards>
+  <Card title="Quick Start" description="Get up and running in 5 minutes with Docker" href="/docs/getting-started/quick-start" />
+  <Card title="Production Installation" description="Deploy on Kubernetes for production use" href="/docs/deployment" />
+  <Card title="Build from Source" description="Compile PistonProtection from source code" href="/docs/getting-started/installation" />
+</Cards>

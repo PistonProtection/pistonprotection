@@ -1,0 +1,199 @@
+---
+title: Authentication
+description: API authentication methods and token management.
+---
+
+# Authentication
+
+PistonProtection supports multiple authentication methods.
+
+## JWT Authentication
+
+### Login
+
+```bash
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 900,
+    "token_type": "Bearer"
+  }
+}
+```
+
+### Using the Token
+
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  https://api.pistonprotection.com/api/v1/backends
+```
+
+### Refresh Token
+
+```bash
+POST /api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+### Logout
+
+```bash
+POST /api/v1/auth/logout
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+## API Keys
+
+API keys provide long-lived authentication for automation.
+
+### Create API Key
+
+```bash
+POST /api/v1/auth/api-keys
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "name": "CI/CD Pipeline",
+  "permissions": ["backends:read", "backends:write", "rules:read"],
+  "expires_at": "2025-12-31T23:59:59Z"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "key_abc123",
+    "name": "CI/CD Pipeline",
+    "key": "pp_live_sk_abc123xyz...",
+    "permissions": ["backends:read", "backends:write", "rules:read"],
+    "created_at": "2024-01-01T00:00:00Z",
+    "expires_at": "2025-12-31T23:59:59Z"
+  }
+}
+```
+
+> **Important**: The `key` is only shown once. Store it securely.
+
+### Using API Keys
+
+```bash
+curl -H "X-API-Key: pp_live_sk_abc123xyz..." \
+  https://api.pistonprotection.com/api/v1/backends
+```
+
+### List API Keys
+
+```bash
+GET /api/v1/auth/api-keys
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+### Revoke API Key
+
+```bash
+DELETE /api/v1/auth/api-keys/key_abc123
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+## Permissions
+
+Available permissions for API keys:
+
+| Permission | Description |
+|------------|-------------|
+| `backends:read` | View backends |
+| `backends:write` | Create/update/delete backends |
+| `rules:read` | View filter rules |
+| `rules:write` | Create/update/delete rules |
+| `metrics:read` | View metrics and analytics |
+| `users:read` | View users (admin only) |
+| `users:write` | Manage users (admin only) |
+
+## Two-Factor Authentication
+
+### Enable 2FA
+
+```bash
+POST /api/v1/auth/2fa/enable
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qr_code": "data:image/png;base64,..."
+  }
+}
+```
+
+### Verify 2FA Setup
+
+```bash
+POST /api/v1/auth/2fa/verify
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+```
+
+### Login with 2FA
+
+```bash
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your-password",
+  "totp_code": "123456"
+}
+```
+
+## OAuth2 (Enterprise)
+
+Enterprise plans support OAuth2/OIDC integration:
+
+```bash
+GET /api/v1/auth/oauth/authorize?
+  client_id=your-client-id&
+  redirect_uri=https://your-app.com/callback&
+  response_type=code&
+  scope=backends:read+backends:write
+```
+
+## Security Best Practices
+
+1. **Store tokens securely**: Never expose tokens in client-side code
+2. **Use short-lived tokens**: Access tokens expire in 15 minutes
+3. **Rotate API keys**: Regularly rotate API keys for production
+4. **Limit permissions**: Only grant necessary permissions
+5. **Enable 2FA**: Require 2FA for sensitive accounts
+6. **Monitor access**: Review API key usage regularly

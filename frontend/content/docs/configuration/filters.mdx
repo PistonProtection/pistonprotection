@@ -1,0 +1,300 @@
+---
+title: Filter Rules
+description: Create custom filtering rules for fine-grained traffic control.
+---
+
+# Filter Rules
+
+PistonProtection supports custom filter rules for fine-grained traffic control.
+
+## Rule Structure
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: FilterRule
+metadata:
+  name: block-bad-actors
+spec:
+  # Rule priority (lower = higher priority)
+  priority: 100
+  # Enable/disable rule
+  enabled: true
+  # Match conditions
+  match:
+    # Source IP conditions
+    source:
+      ips: ["1.2.3.4", "5.6.7.0/24"]
+      countries: ["CN", "RU"]
+      asns: [12345, 67890]
+    # Destination conditions
+    destination:
+      backends: ["minecraft-server"]
+      ports: [25565]
+    # Protocol conditions
+    protocol:
+      types: ["tcp", "udp"]
+      l7: ["minecraft_java"]
+  # Action to take
+  action:
+    type: block  # block, allow, rate_limit, challenge
+    # For rate_limit action
+    rateLimit:
+      requestsPerSecond: 10
+    # For challenge action
+    challenge:
+      type: captcha
+```
+
+## Match Conditions
+
+### IP Matching
+
+```yaml
+match:
+  source:
+    # Specific IPs
+    ips:
+      - "192.168.1.1"
+      - "10.0.0.0/8"
+    # IP ranges
+    ranges:
+      - start: "1.0.0.0"
+        end: "1.255.255.255"
+    # Exclude IPs (whitelist)
+    exclude:
+      - "192.168.1.100"
+```
+
+### Geographic Matching
+
+```yaml
+match:
+  source:
+    # Country codes (ISO 3166-1 alpha-2)
+    countries: ["US", "CA", "GB"]
+    # Continents
+    continents: ["NA", "EU"]
+    # Exclude countries
+    excludeCountries: ["CN"]
+```
+
+### ASN Matching
+
+```yaml
+match:
+  source:
+    # AS numbers
+    asns: [15169, 32934]  # Google, Facebook
+    # Exclude ASNs
+    excludeAsns: [12345]
+```
+
+### Time-based Matching
+
+```yaml
+match:
+  time:
+    # Days of week
+    days: ["monday", "tuesday", "wednesday"]
+    # Time range (UTC)
+    startTime: "09:00"
+    endTime: "17:00"
+    # Timezone
+    timezone: "America/New_York"
+```
+
+### Protocol Matching
+
+```yaml
+match:
+  protocol:
+    # L4 protocols
+    types: ["tcp", "udp"]
+    # L7 protocols
+    l7: ["minecraft_java", "http"]
+    # Port ranges
+    ports: [25565, "8000-9000"]
+```
+
+### Packet Matching
+
+```yaml
+match:
+  packet:
+    # Minimum packet size
+    minSize: 64
+    # Maximum packet size
+    maxSize: 1500
+    # TCP flags
+    tcpFlags: ["SYN", "ACK"]
+    # Payload patterns (hex)
+    payloadPrefix: "0x4d43"
+```
+
+## Actions
+
+### Block
+
+Drop matching traffic:
+
+```yaml
+action:
+  type: block
+  # Log blocked packets
+  log: true
+  # Custom block reason
+  reason: "Suspicious traffic pattern"
+```
+
+### Allow
+
+Explicitly allow (bypass other rules):
+
+```yaml
+action:
+  type: allow
+  # Skip rate limiting
+  skipRateLimit: true
+```
+
+### Rate Limit
+
+Apply rate limiting:
+
+```yaml
+action:
+  type: rate_limit
+  rateLimit:
+    # Requests/packets per second
+    requestsPerSecond: 100
+    # Burst allowance
+    burstSize: 200
+    # Rate limit key
+    key: ip  # ip, subnet, backend, global
+```
+
+### Challenge
+
+Require proof of humanity:
+
+```yaml
+action:
+  type: challenge
+  challenge:
+    # Challenge type
+    type: captcha  # captcha, javascript, proof_of_work
+    # Challenge difficulty
+    difficulty: medium
+    # Cookie duration after passing
+    cookieDuration: "1h"
+```
+
+### Redirect
+
+Redirect traffic:
+
+```yaml
+action:
+  type: redirect
+  redirect:
+    # Target backend
+    backend: "fallback-server"
+    # Or external URL (HTTP only)
+    url: "https://maintenance.example.com"
+```
+
+## Rule Examples
+
+### Block Known Bad IPs
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: FilterRule
+metadata:
+  name: block-bad-ips
+spec:
+  priority: 10
+  match:
+    source:
+      ips:
+        - "203.0.113.0/24"
+        - "198.51.100.0/24"
+  action:
+    type: block
+    reason: "Known malicious IP range"
+```
+
+### Rate Limit by Country
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: FilterRule
+metadata:
+  name: rate-limit-high-risk
+spec:
+  priority: 50
+  match:
+    source:
+      countries: ["CN", "RU", "BR"]
+  action:
+    type: rate_limit
+    rateLimit:
+      requestsPerSecond: 10
+      burstSize: 20
+```
+
+### Allow VIP IPs
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: FilterRule
+metadata:
+  name: allow-vip
+spec:
+  priority: 1
+  match:
+    source:
+      ips: ["10.0.0.0/8"]
+  action:
+    type: allow
+    skipRateLimit: true
+```
+
+### Block During Maintenance
+
+```yaml
+apiVersion: pistonprotection.io/v1
+kind: FilterRule
+metadata:
+  name: maintenance-window
+spec:
+  priority: 5
+  enabled: true  # Toggle during maintenance
+  match:
+    source:
+      excludeCountries: []  # Match all
+  action:
+    type: redirect
+    redirect:
+      url: "https://status.example.com/maintenance"
+```
+
+## Rule Management API
+
+```bash
+# List rules
+curl http://gateway:8080/api/v1/rules
+
+# Create rule
+curl -X POST http://gateway:8080/api/v1/rules \
+  -H "Content-Type: application/json" \
+  -d '{"name": "block-test", "priority": 100, ...}'
+
+# Update rule
+curl -X PUT http://gateway:8080/api/v1/rules/block-test \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+
+# Delete rule
+curl -X DELETE http://gateway:8080/api/v1/rules/block-test
+```

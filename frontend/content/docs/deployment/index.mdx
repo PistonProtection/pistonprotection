@@ -1,0 +1,64 @@
+---
+title: Deployment Overview
+description: Deploy PistonProtection in various environments.
+---
+
+# Deployment
+
+PistonProtection supports multiple deployment methods to fit your infrastructure needs.
+
+## Deployment Options
+
+<Cards>
+  <Card title="Kubernetes" description="Production deployment with Helm and Cilium CNI" href="/docs/deployment/kubernetes" />
+  <Card title="Docker Compose" description="Single-node or development deployment" href="/docs/deployment/docker" />
+  <Card title="Bare Metal" description="Direct installation on Linux servers" href="/docs/deployment/bare-metal" />
+</Cards>
+
+## Recommended Architecture
+
+### Small Scale (< 1 Gbps)
+
+Single node deployment with Docker Compose:
+- 1 Gateway + Worker combined node
+- External PostgreSQL and Redis
+
+### Medium Scale (1-10 Gbps)
+
+3-5 node Kubernetes cluster:
+- 2 dedicated Gateway replicas
+- 3 Worker nodes with XDP
+- Managed PostgreSQL and Redis
+
+### Large Scale (10+ Gbps)
+
+Multi-region deployment:
+- GeoDNS for global routing
+- Multiple Kubernetes clusters per region
+- Dedicated database clusters
+- CDN integration for static assets
+
+## Hardware Requirements
+
+### Worker Nodes (XDP Processing)
+
+| Traffic | CPU | RAM | NIC |
+|---------|-----|-----|-----|
+| 1 Gbps | 4 cores | 8 GB | 10G NIC |
+| 10 Gbps | 16 cores | 32 GB | 25G NIC |
+| 40 Gbps | 32 cores | 64 GB | 100G NIC |
+
+### Gateway Nodes
+
+| Requests/sec | CPU | RAM |
+|--------------|-----|-----|
+| 10,000 | 2 cores | 4 GB |
+| 50,000 | 8 cores | 16 GB |
+| 100,000+ | 16 cores | 32 GB |
+
+## Network Requirements
+
+- Public IP addresses for edge nodes
+- Low-latency connection to backend servers
+- Anycast or GeoDNS for global distribution
+- BGP peering (optional, for large deployments)
