@@ -527,12 +527,12 @@ impl MetricsService {
         .await?;
 
         // Return updated alert
-        self.get_alert(&alert.id)
-            .await?
-            .ok_or_else(|| pistonprotection_common::error::Error::NotFound {
+        self.get_alert(&alert.id).await?.ok_or_else(|| {
+            pistonprotection_common::error::Error::NotFound {
                 entity: "Alert".to_string(),
                 id: alert.id.clone(),
-            })
+            }
+        })
     }
 
     /// Delete an alert

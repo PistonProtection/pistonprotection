@@ -8,8 +8,8 @@ use pistonprotection_proto::common::HealthStatus;
 use sqlx::Row;
 use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio_stream::Stream;
 use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::Stream;
 use tracing::{info, instrument, warn};
 use uuid::Uuid;
 
@@ -109,7 +109,12 @@ impl BackendService {
     /// List backends for an organization with pagination
     /// Returns (backends, total_count)
     #[instrument(skip(self))]
-    pub async fn list(&self, org_id: &str, page: u32, page_size: u32) -> Result<(Vec<Backend>, u64)> {
+    pub async fn list(
+        &self,
+        org_id: &str,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<Backend>, u64)> {
         let db = self.state.db()?;
 
         let offset = (page.saturating_sub(1)) * page_size;

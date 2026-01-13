@@ -1,6 +1,8 @@
 //! Integration tests for gRPC services
 
-use super::test_utils::{assert_grpc_status_code, constants, create_test_app_state, create_test_request};
+use super::test_utils::{
+    assert_grpc_status_code, constants, create_test_app_state, create_test_request,
+};
 use pistonprotection_proto::backend::*;
 use pistonprotection_proto::filter::*;
 use pistonprotection_proto::metrics::*;

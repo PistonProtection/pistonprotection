@@ -4,7 +4,7 @@ use crate::config::TelemetryConfig;
 use crate::error::Result;
 use tracing::info;
 use tracing_subscriber::{
-    EnvFilter, Layer, Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt,
+    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer, Registry,
 };
 
 /// Initialize telemetry (tracing and logging)

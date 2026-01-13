@@ -1,7 +1,7 @@
 //! HTTP and gRPC handlers for config-mgr
 
 use crate::{config_store::ConfigStore, distributor::ConfigDistributor};
-use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
 use pistonprotection_common::config::Config;
 use pistonprotection_proto::worker::{
     worker_service_server::{WorkerService, WorkerServiceServer},
@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::Stream;
-use tonic::{Request, Response, Status, transport::Server};
+use tonic::{transport::Server, Request, Response, Status};
 use tonic_health::server::health_reporter;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -546,11 +546,11 @@ impl WorkerService for WorkerGrpcService {
         per_cpu_stats.insert("cpu0_dropped".to_string(), 0u64);
 
         Ok(Response::new(GetXdpStatsResponse {
-            packets_processed: 0, // Would be sum of all packet counters
-            packets_passed: 0,    // Would come from XDP_PASS counter
-            packets_dropped: 0,   // Would come from XDP_DROP counter
+            packets_processed: 0,  // Would be sum of all packet counters
+            packets_passed: 0,     // Would come from XDP_PASS counter
+            packets_dropped: 0,    // Would come from XDP_DROP counter
             packets_redirected: 0, // Would come from XDP_REDIRECT counter
-            packets_aborted: 0,   // Would come from XDP_ABORTED counter
+            packets_aborted: 0,    // Would come from XDP_ABORTED counter
             per_cpu_stats,
         }))
     }
