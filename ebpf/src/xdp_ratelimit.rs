@@ -288,9 +288,11 @@ fn check_subnet_bucket(subnet: &SubnetKey, packet_size: u64, config: &RateLimitC
         let bucket = unsafe { &mut *bucket };
 
         let elapsed = now.saturating_sub(bucket.last_update);
-        // Avoid 128-bit multiply: first convert to seconds (>> 30 ≈ /1B), then multiply
-        let elapsed_secs = elapsed >> 30;
-        let tokens_to_add = elapsed_secs.saturating_mul(subnet_tokens_per_sec);
+        // Avoid 128-bit multiply: use u32 multiplication (values are small enough)
+        // elapsed_secs is typically 0-60, subnet_tokens_per_sec is typically < 1M
+        let elapsed_secs = (elapsed >> 30) as u32;
+        let rate = subnet_tokens_per_sec as u32;
+        let tokens_to_add = (elapsed_secs * rate) as u64;
 
         bucket.tokens = core::cmp::min(bucket.tokens + tokens_to_add, subnet_bucket_size);
         bucket.last_update = now;
@@ -325,10 +327,11 @@ fn process_bucket(
     config: &RateLimitConfig,
 ) -> bool {
     // Calculate tokens to add based on elapsed time
-    // Avoid 128-bit multiply: first convert to seconds (>> 30 ≈ /1B), then multiply
+    // Avoid 128-bit multiply: use u32 multiplication (values are small enough)
     let elapsed = now.saturating_sub(bucket.last_update);
-    let elapsed_secs = elapsed >> 30;
-    let tokens_to_add = elapsed_secs.saturating_mul(config.tokens_per_second);
+    let elapsed_secs = (elapsed >> 30) as u32;
+    let rate = config.tokens_per_second as u32;
+    let tokens_to_add = (elapsed_secs * rate) as u64;
 
     // Refill bucket (capped at bucket_size)
     bucket.tokens = core::cmp::min(bucket.tokens + tokens_to_add, config.bucket_size);
