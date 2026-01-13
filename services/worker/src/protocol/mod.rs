@@ -3,11 +3,15 @@
 pub mod haproxy;
 pub mod http;
 pub mod minecraft;
+pub mod minecraft_fallback;
 pub mod quic;
 pub mod tcp;
 pub mod udp;
 
 pub use haproxy::{ProxyHeader, ProxyProtocolVersion};
+pub use minecraft_fallback::{
+    BedrockPacketBuilder, FallbackConfig, MinecraftPacketBuilder, MinecraftState,
+};
 
 use pistonprotection_common::error::Result;
 use std::net::IpAddr;
