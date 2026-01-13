@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   Activity,
-  ArrowDown,
   ArrowUp,
   BarChart3,
   Clock,
   Cpu,
   Database,
-  Globe,
   HardDrive,
   Network,
   RefreshCw,
@@ -17,6 +14,8 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -33,8 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/admin/metrics")({
   component: AdminMetricsPage,
@@ -153,7 +151,8 @@ function AdminMetricsPage() {
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes >= 1000000000000) return `${(bytes / 1000000000000).toFixed(1)} TB`;
+    if (bytes >= 1000000000000)
+      return `${(bytes / 1000000000000).toFixed(1)} TB`;
     if (bytes >= 1000000000) return `${(bytes / 1000000000).toFixed(1)} GB`;
     if (bytes >= 1000000) return `${(bytes / 1000000).toFixed(1)} MB`;
     return `${bytes} bytes`;
@@ -187,7 +186,9 @@ function AdminMetricsPage() {
             size="sm"
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${autoRefresh ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${autoRefresh ? "animate-spin" : ""}`}
+            />
             {autoRefresh ? "Live" : "Paused"}
           </Button>
         </div>
@@ -206,7 +207,9 @@ function AdminMetricsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Current RPS</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Current RPS
+                </CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -221,7 +224,9 @@ function AdminMetricsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg Latency
+                </CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -235,7 +240,9 @@ function AdminMetricsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Worker Health</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Worker Health
+                </CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -243,7 +250,11 @@ function AdminMetricsPage() {
                   {systemMetrics.workers.healthy}/{systemMetrics.workers.total}
                 </div>
                 <Progress
-                  value={(systemMetrics.workers.healthy / systemMetrics.workers.total) * 100}
+                  value={
+                    (systemMetrics.workers.healthy /
+                      systemMetrics.workers.total) *
+                    100
+                  }
                   className="mt-2"
                 />
               </CardContent>
@@ -255,7 +266,12 @@ function AdminMetricsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {((systemMetrics.ebpf.packetsDropped / systemMetrics.ebpf.packetsProcessed) * 100).toFixed(2)}%
+                  {(
+                    (systemMetrics.ebpf.packetsDropped /
+                      systemMetrics.ebpf.packetsProcessed) *
+                    100
+                  ).toFixed(2)}
+                  %
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {formatNumber(systemMetrics.ebpf.packetsDropped)} dropped
@@ -273,19 +289,25 @@ function AdminMetricsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Packets Processed (24h)</span>
+                  <span className="text-sm text-muted-foreground">
+                    Packets Processed (24h)
+                  </span>
                   <span className="font-mono font-medium">
                     {formatNumber(systemMetrics.ebpf.packetsProcessed)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">XDP Programs Loaded</span>
+                  <span className="text-sm text-muted-foreground">
+                    XDP Programs Loaded
+                  </span>
                   <span className="font-mono font-medium">
                     {systemMetrics.ebpf.xdpProgramsLoaded}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Avg Processing Time</span>
+                  <span className="text-sm text-muted-foreground">
+                    Avg Processing Time
+                  </span>
                   <span className="font-mono font-medium">
                     {systemMetrics.ebpf.avgProcessingTime}µs
                   </span>
@@ -301,28 +323,44 @@ function AdminMetricsPage() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">PostgreSQL Connections</span>
+                    <span className="text-sm text-muted-foreground">
+                      PostgreSQL Connections
+                    </span>
                     <span className="font-mono font-medium">
-                      {systemMetrics.database.connections}/{systemMetrics.database.maxConnections}
+                      {systemMetrics.database.connections}/
+                      {systemMetrics.database.maxConnections}
                     </span>
                   </div>
                   <Progress
-                    value={(systemMetrics.database.connections / systemMetrics.database.maxConnections) * 100}
+                    value={
+                      (systemMetrics.database.connections /
+                        systemMetrics.database.maxConnections) *
+                      100
+                    }
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Redis Memory</span>
+                    <span className="text-sm text-muted-foreground">
+                      Redis Memory
+                    </span>
                     <span className="font-mono font-medium">
-                      {systemMetrics.redis.memoryUsed}GB / {systemMetrics.redis.memoryMax}GB
+                      {systemMetrics.redis.memoryUsed}GB /{" "}
+                      {systemMetrics.redis.memoryMax}GB
                     </span>
                   </div>
                   <Progress
-                    value={(systemMetrics.redis.memoryUsed / systemMetrics.redis.memoryMax) * 100}
+                    value={
+                      (systemMetrics.redis.memoryUsed /
+                        systemMetrics.redis.memoryMax) *
+                      100
+                    }
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Cache Hit Rate</span>
+                  <span className="text-sm text-muted-foreground">
+                    Cache Hit Rate
+                  </span>
                   <span className="font-mono font-medium text-green-600">
                     {systemMetrics.redis.hitRate}%
                   </span>
@@ -353,7 +391,9 @@ function AdminMetricsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Workers</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Workers
+                </CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -362,22 +402,36 @@ function AdminMetricsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg CPU Usage</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg CPU Usage
+                </CardTitle>
                 <Cpu className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{systemMetrics.workers.avgCpu}%</div>
-                <Progress value={systemMetrics.workers.avgCpu} className="mt-2" />
+                <div className="text-2xl font-bold">
+                  {systemMetrics.workers.avgCpu}%
+                </div>
+                <Progress
+                  value={systemMetrics.workers.avgCpu}
+                  className="mt-2"
+                />
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Memory Usage</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg Memory Usage
+                </CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{systemMetrics.workers.avgMemory}%</div>
-                <Progress value={systemMetrics.workers.avgMemory} className="mt-2" />
+                <div className="text-2xl font-bold">
+                  {systemMetrics.workers.avgMemory}%
+                </div>
+                <Progress
+                  value={systemMetrics.workers.avgMemory}
+                  className="mt-2"
+                />
               </CardContent>
             </Card>
           </div>
@@ -385,7 +439,9 @@ function AdminMetricsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Worker Nodes</CardTitle>
-              <CardDescription>XDP worker status across regions</CardDescription>
+              <CardDescription>
+                XDP worker status across regions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -421,8 +477,12 @@ function AdminMetricsPage() {
                         <p className="text-xs text-muted-foreground">Memory</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium">{worker.networkIn} Gbps</p>
-                        <p className="text-xs text-muted-foreground">Network In</p>
+                        <p className="text-sm font-medium">
+                          {worker.networkIn} Gbps
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Network In
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium font-mono">
@@ -431,7 +491,11 @@ function AdminMetricsPage() {
                         <p className="text-xs text-muted-foreground">pps</p>
                       </div>
                       <Badge
-                        variant={worker.status === "healthy" ? "default" : "destructive"}
+                        variant={
+                          worker.status === "healthy"
+                            ? "default"
+                            : "destructive"
+                        }
                       >
                         {worker.status}
                       </Badge>
@@ -454,36 +518,48 @@ function AdminMetricsPage() {
                 <div className="text-2xl font-bold">
                   {formatNumber(systemMetrics.traffic.peakRps)}
                 </div>
-                <div className="text-xs text-muted-foreground">Last 24 hours</div>
+                <div className="text-xs text-muted-foreground">
+                  Last 24 hours
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Requests
+                </CardTitle>
                 <Network className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatNumber(systemMetrics.traffic.totalRequests24h)}
                 </div>
-                <div className="text-xs text-muted-foreground">Last 24 hours</div>
+                <div className="text-xs text-muted-foreground">
+                  Last 24 hours
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Bandwidth</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Bandwidth
+                </CardTitle>
                 <Wifi className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatBytes(systemMetrics.traffic.totalBytes24h)}
                 </div>
-                <div className="text-xs text-muted-foreground">Last 24 hours</div>
+                <div className="text-xs text-muted-foreground">
+                  Last 24 hours
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">p99 Latency</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  p99 Latency
+                </CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -502,15 +578,33 @@ function AdminMetricsPage() {
               <div className="space-y-4">
                 {[
                   { protocol: "HTTP/2", percentage: 45, color: "bg-blue-500" },
-                  { protocol: "HTTP/3 (QUIC)", percentage: 25, color: "bg-purple-500" },
-                  { protocol: "HTTP/1.1", percentage: 15, color: "bg-gray-500" },
-                  { protocol: "Minecraft Java", percentage: 10, color: "bg-green-500" },
-                  { protocol: "Minecraft Bedrock", percentage: 5, color: "bg-orange-500" },
+                  {
+                    protocol: "HTTP/3 (QUIC)",
+                    percentage: 25,
+                    color: "bg-purple-500",
+                  },
+                  {
+                    protocol: "HTTP/1.1",
+                    percentage: 15,
+                    color: "bg-gray-500",
+                  },
+                  {
+                    protocol: "Minecraft Java",
+                    percentage: 10,
+                    color: "bg-green-500",
+                  },
+                  {
+                    protocol: "Minecraft Bedrock",
+                    percentage: 5,
+                    color: "bg-orange-500",
+                  },
                 ].map((item) => (
                   <div key={item.protocol}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm">{item.protocol}</span>
-                      <span className="text-sm font-medium">{item.percentage}%</span>
+                      <span className="text-sm font-medium">
+                        {item.percentage}%
+                      </span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       <div
@@ -537,21 +631,34 @@ function AdminMetricsPage() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Connections</span>
+                    <span className="text-sm text-muted-foreground">
+                      Connections
+                    </span>
                     <span className="font-mono">
-                      {systemMetrics.database.connections}/{systemMetrics.database.maxConnections}
+                      {systemMetrics.database.connections}/
+                      {systemMetrics.database.maxConnections}
                     </span>
                   </div>
                   <Progress
-                    value={(systemMetrics.database.connections / systemMetrics.database.maxConnections) * 100}
+                    value={
+                      (systemMetrics.database.connections /
+                        systemMetrics.database.maxConnections) *
+                      100
+                    }
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Query Latency</span>
-                  <span className="font-mono">{systemMetrics.database.queryLatency}ms</span>
+                  <span className="text-sm text-muted-foreground">
+                    Query Latency
+                  </span>
+                  <span className="font-mono">
+                    {systemMetrics.database.queryLatency}ms
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Cache Hit Rate</span>
+                  <span className="text-sm text-muted-foreground">
+                    Cache Hit Rate
+                  </span>
                   <span className="font-mono text-green-600">
                     {systemMetrics.database.cacheHitRate}%
                   </span>
@@ -569,26 +676,45 @@ function AdminMetricsPage() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Memory</span>
+                    <span className="text-sm text-muted-foreground">
+                      Memory
+                    </span>
                     <span className="font-mono">
-                      {systemMetrics.redis.memoryUsed}GB / {systemMetrics.redis.memoryMax}GB
+                      {systemMetrics.redis.memoryUsed}GB /{" "}
+                      {systemMetrics.redis.memoryMax}GB
                     </span>
                   </div>
                   <Progress
-                    value={(systemMetrics.redis.memoryUsed / systemMetrics.redis.memoryMax) * 100}
+                    value={
+                      (systemMetrics.redis.memoryUsed /
+                        systemMetrics.redis.memoryMax) *
+                      100
+                    }
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Hit Rate</span>
-                  <span className="font-mono text-green-600">{systemMetrics.redis.hitRate}%</span>
+                  <span className="text-sm text-muted-foreground">
+                    Hit Rate
+                  </span>
+                  <span className="font-mono text-green-600">
+                    {systemMetrics.redis.hitRate}%
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Operations/sec</span>
-                  <span className="font-mono">{formatNumber(systemMetrics.redis.opsPerSec)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Operations/sec
+                  </span>
+                  <span className="font-mono">
+                    {formatNumber(systemMetrics.redis.opsPerSec)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Connections</span>
-                  <span className="font-mono">{systemMetrics.redis.connections}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Connections
+                  </span>
+                  <span className="font-mono">
+                    {systemMetrics.redis.connections}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -602,14 +728,35 @@ function AdminMetricsPage() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 {[
-                  { region: "EU-West", workers: 2, traffic: "35%", status: "healthy" },
-                  { region: "US-East", workers: 2, traffic: "45%", status: "degraded" },
-                  { region: "Asia-Pacific", workers: 1, traffic: "20%", status: "healthy" },
+                  {
+                    region: "EU-West",
+                    workers: 2,
+                    traffic: "35%",
+                    status: "healthy",
+                  },
+                  {
+                    region: "US-East",
+                    workers: 2,
+                    traffic: "45%",
+                    status: "degraded",
+                  },
+                  {
+                    region: "Asia-Pacific",
+                    workers: 1,
+                    traffic: "20%",
+                    status: "healthy",
+                  },
                 ].map((region) => (
                   <div key={region.region} className="p-4 rounded-lg border">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{region.region}</span>
-                      <Badge variant={region.status === "healthy" ? "default" : "destructive"}>
+                      <Badge
+                        variant={
+                          region.status === "healthy"
+                            ? "default"
+                            : "destructive"
+                        }
+                      >
                         {region.status}
                       </Badge>
                     </div>

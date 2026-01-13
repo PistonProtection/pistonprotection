@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -11,16 +10,13 @@ import {
   Mail,
   RefreshCw,
   Save,
-  Server,
-  Settings,
   Shield,
   Webhook,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -28,16 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +33,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/admin/settings")({
   component: AdminSettingsPage,
@@ -69,7 +67,9 @@ function AdminSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Platform Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Platform Settings
+          </h1>
           <p className="text-muted-foreground">
             Configure global platform settings and integrations
           </p>
@@ -148,7 +148,9 @@ function AdminSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Default Limits</CardTitle>
-              <CardDescription>Default resource limits for new organizations</CardDescription>
+              <CardDescription>
+                Default resource limits for new organizations
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -200,7 +202,9 @@ function AdminSettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="font-medium">Require Two-Factor Authentication</p>
+                  <p className="font-medium">
+                    Require Two-Factor Authentication
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     Force all users to enable 2FA
                   </p>
@@ -227,7 +231,12 @@ function AdminSettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="session-timeout">Session Timeout (hours)</Label>
-                <Input id="session-timeout" type="number" defaultValue="24" className="w-32" />
+                <Input
+                  id="session-timeout"
+                  type="number"
+                  defaultValue="24"
+                  className="w-32"
+                />
               </div>
             </CardContent>
           </Card>
@@ -356,7 +365,10 @@ function AdminSettingsPage() {
                 { label: "Attack alerts", enabled: true },
                 { label: "Weekly usage reports", enabled: false },
               ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between"
+                >
                   <span>{item.label}</span>
                   <Switch defaultChecked={item.enabled} />
                 </div>
@@ -437,11 +449,18 @@ function AdminSettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="trial-days">Trial Duration (days)</Label>
-                <Input id="trial-days" type="number" defaultValue="14" className="w-32" />
+                <Input
+                  id="trial-days"
+                  type="number"
+                  defaultValue="14"
+                  className="w-32"
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="font-medium">Require Payment Method for Trial</p>
+                  <p className="font-medium">
+                    Require Payment Method for Trial
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     Require credit card before starting trial
                   </p>
@@ -474,7 +493,9 @@ function AdminSettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="default">Active</Badge>
-                    <Button variant="ghost" size="sm">Edit</Button>
+                    <Button variant="ghost" size="sm">
+                      Edit
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -513,17 +534,26 @@ function AdminSettingsPage() {
                   url: null,
                 },
               ].map((service) => (
-                <div key={service.name} className="flex items-center justify-between p-4 rounded-lg border">
+                <div
+                  key={service.name}
+                  className="flex items-center justify-between p-4 rounded-lg border"
+                >
                   <div>
                     <p className="font-medium">{service.name}</p>
                     {service.url && (
-                      <p className="text-sm text-muted-foreground">{service.url}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {service.url}
+                      </p>
                     )}
                   </div>
                   <Badge
-                    variant={service.status === "connected" ? "default" : "secondary"}
+                    variant={
+                      service.status === "connected" ? "default" : "secondary"
+                    }
                   >
-                    {service.status === "connected" ? "Connected" : "Not Configured"}
+                    {service.status === "connected"
+                      ? "Connected"
+                      : "Not Configured"}
                   </Badge>
                 </div>
               ))}
@@ -543,14 +573,18 @@ function AdminSettingsPage() {
               <div className="flex items-center justify-between p-4 rounded-lg border">
                 <div>
                   <p className="font-medium">PostgreSQL</p>
-                  <p className="text-sm text-muted-foreground">Primary database</p>
+                  <p className="text-sm text-muted-foreground">
+                    Primary database
+                  </p>
                 </div>
                 <Badge variant="default">Connected</Badge>
               </div>
               <div className="flex items-center justify-between p-4 rounded-lg border">
                 <div>
                   <p className="font-medium">Redis</p>
-                  <p className="text-sm text-muted-foreground">Cache and sessions</p>
+                  <p className="text-sm text-muted-foreground">
+                    Cache and sessions
+                  </p>
                 </div>
                 <Badge variant="default">Connected</Badge>
               </div>
@@ -574,14 +608,16 @@ function AdminSettingsPage() {
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="destructive" size="sm">Purge Cache</Button>
+                    <Button variant="destructive" size="sm">
+                      Purge Cache
+                    </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Purge All Cache?</DialogTitle>
                       <DialogDescription>
-                        This will clear all cached data. This action cannot be undone
-                        and may temporarily affect performance.
+                        This will clear all cached data. This action cannot be
+                        undone and may temporarily affect performance.
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -599,7 +635,9 @@ function AdminSettingsPage() {
                     Clear all rate limiting counters
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">Reset Limits</Button>
+                <Button variant="destructive" size="sm">
+                  Reset Limits
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -2,6 +2,7 @@ import {
   createFileRoute,
   Link,
   Outlet,
+  redirect,
   useLocation,
 } from "@tanstack/react-router";
 import {
@@ -27,9 +28,32 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { auth } from "@/server/auth";
 
 export const Route = createFileRoute("/admin/")({
+  beforeLoad: async ({ context }) => {
+    // Server-side session and admin role check
+    const session = await auth.api.getSession({
+      headers: context.request?.headers ?? new Headers(),
+    });
+
+    if (!session?.user) {
+      throw redirect({
+        to: "/auth/login",
+        search: {
+          redirect: "/admin",
+        },
+      });
+    }
+
+    if (session.user.role !== "admin") {
+      throw redirect({
+        to: "/dashboard",
+      });
+    }
+
+    return { session };
+  },
   component: AdminLayout,
 });
 
@@ -77,32 +101,8 @@ const adminNavItems = [
 ];
 
 function AdminLayout() {
-  const { data: session, isPending } = authClient.useSession();
+  // Session is already verified in beforeLoad
   const location = useLocation();
-
-  // Check if user is admin
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (!session?.user || session.user.role !== "admin") {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Shield className="h-16 w-16 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Access Denied</h1>
-        <p className="text-muted-foreground">
-          You don't have permission to access this area.
-        </p>
-        <Link to="/dashboard" className="text-primary hover:underline">
-          Return to Dashboard
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider>

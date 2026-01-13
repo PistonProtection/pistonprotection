@@ -1,12 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   AlertTriangle,
-  ArrowDown,
-  ArrowUp,
   Ban,
-  Calendar,
-  ChevronDown,
   Clock,
   Eye,
   Filter,
@@ -15,15 +10,14 @@ import {
   Network,
   RefreshCw,
   Search,
-  Server,
   Shield,
   ShieldAlert,
   ShieldCheck,
-  TrendingUp,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -32,14 +26,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -56,14 +49,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/admin/attacks")({
   component: AdminAttacksPage,
@@ -186,7 +179,9 @@ function AdminAttacksPage() {
   const filteredAttacks = mockAttacks.filter((attack) => {
     const matchesSearch =
       attack.backendName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      attack.organizationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      attack.organizationName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       attack.type.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || attack.status === statusFilter;
@@ -280,7 +275,8 @@ function AdminAttacksPage() {
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes >= 1000000000000) return `${(bytes / 1000000000000).toFixed(1)} TB`;
+    if (bytes >= 1000000000000)
+      return `${(bytes / 1000000000000).toFixed(1)} TB`;
     if (bytes >= 1000000000) return `${(bytes / 1000000000).toFixed(1)} GB`;
     if (bytes >= 1000000) return `${(bytes / 1000000).toFixed(1)} MB`;
     return `${bytes} bytes`;
@@ -308,7 +304,8 @@ function AdminAttacksPage() {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-red-900 dark:text-red-100">
-                {stats.ongoing} Active Attack{stats.ongoing > 1 ? "s" : ""} Detected
+                {stats.ongoing} Active Attack{stats.ongoing > 1 ? "s" : ""}{" "}
+                Detected
               </p>
               <p className="text-sm text-red-700 dark:text-red-300">
                 Mitigation in progress. All systems are actively defending.
@@ -337,7 +334,9 @@ function AdminAttacksPage() {
             <Zap className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats.ongoing > 0 ? "text-red-600" : ""}`}>
+            <div
+              className={`text-2xl font-bold ${stats.ongoing > 0 ? "text-red-600" : ""}`}
+            >
               {stats.ongoing}
             </div>
           </CardContent>
@@ -348,7 +347,9 @@ function AdminAttacksPage() {
             <ShieldCheck className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.mitigated}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.mitigated}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -357,7 +358,9 @@ function AdminAttacksPage() {
             <Ban className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.blocked}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.blocked}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -366,7 +369,9 @@ function AdminAttacksPage() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.critical}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -375,7 +380,9 @@ function AdminAttacksPage() {
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPps(stats.totalPackets)}</div>
+            <div className="text-2xl font-bold">
+              {formatPps(stats.totalPackets)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -456,7 +463,11 @@ function AdminAttacksPage() {
                 {filteredAttacks.map((attack) => (
                   <TableRow
                     key={attack.id}
-                    className={attack.status === "ongoing" ? "bg-red-50 dark:bg-red-950/20" : ""}
+                    className={
+                      attack.status === "ongoing"
+                        ? "bg-red-50 dark:bg-red-950/20"
+                        : ""
+                    }
                   >
                     <TableCell>
                       <span className="font-medium">{attack.type}</span>
@@ -490,7 +501,9 @@ function AdminAttacksPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="text-sm">{formatTime(attack.startedAt)}</span>
+                        <span className="text-sm">
+                          {formatTime(attack.startedAt)}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           {attack.duration}m duration
                         </span>
@@ -543,7 +556,8 @@ function AdminAttacksPage() {
               {selectedAttack?.type} Attack
             </DialogTitle>
             <DialogDescription>
-              Target: {selectedAttack?.backendName} ({selectedAttack?.organizationName})
+              Target: {selectedAttack?.backendName} (
+              {selectedAttack?.organizationName})
             </DialogDescription>
           </DialogHeader>
 
@@ -589,7 +603,9 @@ function AdminAttacksPage() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Top Source Country</CardTitle>
+                      <CardTitle className="text-sm">
+                        Top Source Country
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
@@ -637,7 +653,9 @@ function AdminAttacksPage() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Peak Packet Rate</CardTitle>
+                      <CardTitle className="text-sm">
+                        Peak Packet Rate
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
@@ -673,14 +691,17 @@ function AdminAttacksPage() {
                   <CardHeader>
                     <CardTitle>Source IPs</CardTitle>
                     <CardDescription>
-                      {selectedAttack.sourceCount.toLocaleString()} unique source IPs detected
+                      {selectedAttack.sourceCount.toLocaleString()} unique
+                      source IPs detected
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-center h-48 text-muted-foreground">
                       <div className="text-center">
                         <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>Source IP distribution map would be displayed here</p>
+                        <p>
+                          Source IP distribution map would be displayed here
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -694,7 +715,9 @@ function AdminAttacksPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="p-4 rounded-lg bg-muted">
-                      <p className="font-mono text-sm">{selectedAttack.mitigationRule}</p>
+                      <p className="font-mono text-sm">
+                        {selectedAttack.mitigationRule}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,11 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   Activity,
   AlertTriangle,
   ArrowUpDown,
   CheckCircle,
-  ChevronDown,
   ExternalLink,
   Eye,
   MoreHorizontal,
@@ -19,8 +17,9 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -29,14 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +42,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -53,14 +52,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/admin/backends")({
   component: AdminBackendsPage,
@@ -177,9 +176,11 @@ function AdminBackendsPage() {
   const filteredBackends = mockBackends.filter((backend) => {
     const matchesSearch =
       backend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      backend.organizationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      backend.organizationName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       backend.domains.some((d) =>
-        d.toLowerCase().includes(searchQuery.toLowerCase())
+        d.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     const matchesStatus =
       statusFilter === "all" || backend.status === statusFilter;
@@ -227,11 +228,15 @@ function AdminBackendsPage() {
 
   const getProtocolBadge = (protocol: string) => {
     const colors: Record<string, string> = {
-      "HTTP/1.1": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+      "HTTP/1.1":
+        "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
       "HTTP/2": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      "HTTP/3": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      "Minecraft Java": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      "Minecraft Bedrock": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+      "HTTP/3":
+        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      "Minecraft Java":
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "Minecraft Bedrock":
+        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     };
     return (
       <Badge className={colors[protocol] || "bg-gray-100 text-gray-800"}>
@@ -249,7 +254,9 @@ function AdminBackendsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Backend Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Backend Management
+        </h1>
         <p className="text-muted-foreground">
           Monitor and manage all backends across organizations
         </p>
@@ -259,7 +266,9 @@ function AdminBackendsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Backends</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Backends
+            </CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -272,7 +281,9 @@ function AdminBackendsPage() {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.healthy}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.healthy}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -281,7 +292,9 @@ function AdminBackendsPage() {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.degraded}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.degraded}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -290,25 +303,35 @@ function AdminBackendsPage() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.offline}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.offline}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Requests Today</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Requests Today
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(stats.totalRequests)}</div>
+            <div className="text-2xl font-bold">
+              {formatNumber(stats.totalRequests)}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bandwidth Today</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Bandwidth Today
+            </CardTitle>
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBandwidth.toFixed(1)} GB</div>
+            <div className="text-2xl font-bold">
+              {stats.totalBandwidth.toFixed(1)} GB
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -353,7 +376,9 @@ function AdminBackendsPage() {
                 <SelectItem value="HTTP/2">HTTP/2</SelectItem>
                 <SelectItem value="HTTP/3">HTTP/3</SelectItem>
                 <SelectItem value="Minecraft Java">Minecraft Java</SelectItem>
-                <SelectItem value="Minecraft Bedrock">Minecraft Bedrock</SelectItem>
+                <SelectItem value="Minecraft Bedrock">
+                  Minecraft Bedrock
+                </SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon">
@@ -384,7 +409,8 @@ function AdminBackendsPage() {
                         <span className="font-medium">{backend.name}</span>
                         <span className="text-xs text-muted-foreground">
                           {backend.domains[0]}
-                          {backend.domains.length > 1 && ` +${backend.domains.length - 1}`}
+                          {backend.domains.length > 1 &&
+                            ` +${backend.domains.length - 1}`}
                         </span>
                       </div>
                     </TableCell>
@@ -401,7 +427,9 @@ function AdminBackendsPage() {
                       {formatNumber(backend.activeConnections)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {backend.avgLatencyMs > 0 ? `${backend.avgLatencyMs}ms` : "-"}
+                      {backend.avgLatencyMs > 0
+                        ? `${backend.avgLatencyMs}ms`
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -499,7 +527,9 @@ function AdminBackendsPage() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Active Connections</CardTitle>
+                      <CardTitle className="text-sm">
+                        Active Connections
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
@@ -527,16 +557,30 @@ function AdminBackendsPage() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Requests</span>
-                        <span>{formatNumber(selectedBackend.requestsToday)}</span>
+                        <span>
+                          {formatNumber(selectedBackend.requestsToday)}
+                        </span>
                       </div>
-                      <Progress value={Math.min(100, (selectedBackend.requestsToday / 10000000) * 100)} />
+                      <Progress
+                        value={Math.min(
+                          100,
+                          (selectedBackend.requestsToday / 10000000) * 100,
+                        )}
+                      />
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Bandwidth</span>
-                        <span>{selectedBackend.bandwidthToday.toFixed(1)} GB</span>
+                        <span>
+                          {selectedBackend.bandwidthToday.toFixed(1)} GB
+                        </span>
                       </div>
-                      <Progress value={Math.min(100, (selectedBackend.bandwidthToday / 1000) * 100)} />
+                      <Progress
+                        value={Math.min(
+                          100,
+                          (selectedBackend.bandwidthToday / 1000) * 100,
+                        )}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -567,7 +611,9 @@ function AdminBackendsPage() {
                               {origin.host}:{origin.port}
                             </span>
                           </div>
-                          <Badge variant={origin.healthy ? "default" : "destructive"}>
+                          <Badge
+                            variant={origin.healthy ? "default" : "destructive"}
+                          >
                             {origin.healthy ? "Healthy" : "Unhealthy"}
                           </Badge>
                         </div>
