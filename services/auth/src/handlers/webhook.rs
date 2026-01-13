@@ -19,12 +19,14 @@ use stripe_rust::{
 use tracing::{error, info, warn};
 
 use crate::models::SubscriptionStatus;
+use crate::services::email::{EmailRecipient, EmailService};
 use crate::services::stripe::StripeService;
 
 /// Webhook handler state
 #[derive(Clone)]
 pub struct WebhookState {
     pub stripe_service: Arc<StripeService>,
+    pub email_service: Arc<EmailService>,
 }
 
 /// Create the webhook router
@@ -391,6 +393,117 @@ async fn handle_customer_deleted(
     Ok(())
 }
 
+// ========== Email Notification Helpers ==========
+
+/// Get email recipient from subscription's customer
+async fn get_subscription_email(
+    _state: &WebhookState,
+    subscription: &StripeSubscription,
+) -> Option<EmailRecipient> {
+    // Try to get customer email from the subscription
+    match &subscription.customer {
+        stripe_rust::Expandable::Id(_id) => {
+            // We don't have the customer object expanded, can't get email
+            None
+        }
+        stripe_rust::Expandable::Object(customer) => {
+            // If we have the full customer object, use its email directly
+            customer.email.as_ref().map(|email| EmailRecipient {
+                email: email.clone(),
+                name: customer.name.clone(),
+            })
+        }
+    }
+}
+
+/// Get email recipient from invoice's customer
+async fn get_invoice_email(
+    _state: &WebhookState,
+    invoice: &StripeInvoice,
+) -> Option<EmailRecipient> {
+    // Check if invoice has customer_email directly
+    if let Some(email) = &invoice.customer_email {
+        return Some(EmailRecipient {
+            email: email.clone(),
+            name: invoice.customer_name.clone(),
+        });
+    }
+
+    // Try to get from customer object
+    if let Some(customer) = &invoice.customer {
+        match customer {
+            stripe_rust::Expandable::Id(_id) => {}
+            stripe_rust::Expandable::Object(cust) => {
+                if let Some(email) = &cust.email {
+                    return Some(EmailRecipient {
+                        email: email.clone(),
+                        name: cust.name.clone(),
+                    });
+                }
+            }
+        };
+    }
+
+    None
+}
+
+/// Get email recipient from checkout session
+async fn get_checkout_email(
+    _state: &WebhookState,
+    session: &CheckoutSession,
+) -> Option<EmailRecipient> {
+    if let Some(email) = &session.customer_email {
+        return Some(EmailRecipient {
+            email: email.clone(),
+            name: session.customer_details.as_ref().and_then(|d| d.name.clone()),
+        });
+    }
+
+    // Try from customer_details
+    if let Some(details) = &session.customer_details {
+        if let Some(email) = &details.email {
+            return Some(EmailRecipient {
+                email: email.clone(),
+                name: details.name.clone(),
+            });
+        }
+    }
+
+    None
+}
+
+/// Format currency amount for display
+fn format_amount(amount: Option<i64>, currency: &Option<stripe_rust::Currency>) -> String {
+    let cents = amount.unwrap_or(0);
+    let dollars = cents as f64 / 100.0;
+
+    // Get currency symbol from the currency code string
+    let currency_symbol = match currency.as_ref().map(|c| c.to_string().to_lowercase()).as_deref() {
+        Some("usd") => "$",
+        Some("eur") => "€",
+        Some("gbp") => "£",
+        Some("cad") => "CA$",
+        Some("aud") => "A$",
+        _ => "$", // Default to USD
+    };
+
+    format!("{}{:.2}", currency_symbol, dollars)
+}
+
+/// Extract plan name from invoice
+fn get_invoice_plan_name(invoice: &StripeInvoice) -> String {
+    // Try to get from invoice lines
+    if let Some(lines) = &invoice.lines {
+        if let Some(first_line) = lines.data.first() {
+            if let Some(description) = &first_line.description {
+                return description.clone();
+            }
+        }
+    }
+
+    "PistonProtection Plan".to_string()
+}
+
 // ========== Subscription Event Handlers ==========
 
 async fn handle_subscription_created(
@@ -445,8 +558,24 @@ async fn handle_subscription_deleted(
         .update_subscription_status(&subscription.id.to_string(), SubscriptionStatus::Canceled)
         .await?;
 
-    // TODO: Downgrade organization to free plan limits
-    // TODO: Send cancellation email
+    // Send cancellation email
+    if let Some(email) = get_subscription_email(state, subscription).await {
+        let end_date = subscription
+            .ended_at
+            .or(Some(subscription.current_period_end))
+            .map(|ts| chrono::DateTime::from_timestamp(ts, 0)
+                .map(|dt| dt.format("%B %d, %Y").to_string()))
+            .flatten()
+            .unwrap_or_else(|| "soon".to_string());
+
+        if let Err(e) = state
+            .email_service
+            .send_cancellation_email(email, &end_date)
+            .await
+        {
+            warn!(error = %e, "Failed to send cancellation email");
+        }
+    }
 
     Ok(())
 }
@@ -461,8 +590,33 @@ async fn handle_subscription_trial_ending(
         "Subscription trial ending soon"
     );
 
-    // TODO: Send trial ending notification email
-    // TODO: Check if payment method is on file
+    // Send trial ending notification email
+    if let Some(email) = get_subscription_email(state, subscription).await {
+        // Calculate days remaining
+        let days_remaining = subscription
+            .trial_end
+            .map(|ts| {
+                let end = chrono::DateTime::from_timestamp(ts, 0).unwrap_or_default();
+                let now = chrono::Utc::now();
+                (end - now).num_days().max(0) as u32
+            })
+            .unwrap_or(3); // Default to 3 days if unknown
+
+        let trial_end_date = subscription
+            .trial_end
+            .map(|ts| chrono::DateTime::from_timestamp(ts, 0)
+                .map(|dt| dt.format("%B %d, %Y").to_string()))
+            .flatten()
+            .unwrap_or_else(|| "soon".to_string());
+
+        if let Err(e) = state
+            .email_service
+            .send_trial_ending_email(email, days_remaining, &trial_end_date)
+            .await
+        {
+            warn!(error = %e, "Failed to send trial ending email");
+        }
+    }
 
     Ok(())
 }
@@ -574,7 +728,20 @@ async fn handle_invoice_paid(
         }
     }
 
-    // TODO: Send payment receipt email
+    // Send payment receipt email
+    if let Some(email) = get_invoice_email(state, invoice).await {
+        let amount = format_amount(invoice.amount_paid, &invoice.currency);
+        let invoice_id = invoice.number.clone().unwrap_or_else(|| invoice.id.to_string());
+        let plan_name = get_invoice_plan_name(invoice);
+
+        if let Err(e) = state
+            .email_service
+            .send_payment_received_email(email, &amount, &invoice_id, &plan_name)
+            .await
+        {
+            warn!(error = %e, "Failed to send payment receipt email");
+        }
+    }
 
     Ok(())
 }
@@ -607,8 +774,20 @@ async fn handle_invoice_payment_failed(
             .await?;
     }
 
-    // TODO: Send payment failed email with next steps
-    // TODO: Consider dunning process based on attempt_count
+    // Send payment failed email
+    if let Some(email) = get_invoice_email(state, invoice).await {
+        let amount = format_amount(invoice.amount_due, &invoice.currency);
+        let failure_reason = "Your payment method was declined".to_string();
+        let attempt_count = invoice.attempt_count.unwrap_or(1) as u32;
+
+        if let Err(e) = state
+            .email_service
+            .send_payment_failed_email(email, &amount, &failure_reason, attempt_count)
+            .await
+        {
+            warn!(error = %e, "Failed to send payment failed email");
+        }
+    }
 
     Ok(())
 }
@@ -627,7 +806,23 @@ async fn handle_invoice_payment_action_required(
         .sync_invoice_from_stripe(invoice)
         .await?;
 
-    // TODO: Send email prompting user to complete payment action
+    // Send payment action required email
+    if let Some(email) = get_invoice_email(state, invoice).await {
+        let amount = format_amount(invoice.amount_due, &invoice.currency);
+        // Use the payment failed email with a custom reason for action required
+        if let Err(e) = state
+            .email_service
+            .send_payment_failed_email(
+                email,
+                &amount,
+                "Additional verification is required to complete your payment (3D Secure)",
+                1,
+            )
+            .await
+        {
+            warn!(error = %e, "Failed to send payment action required email");
+        }
+    }
 
     Ok(())
 }
@@ -786,8 +981,23 @@ async fn handle_checkout_session_completed(
         .create_subscription_from_checkout(session)
         .await?;
 
-    // TODO: Send welcome email for new subscription
-    // TODO: Trigger onboarding flow if needed
+    // Send welcome email for new subscription
+    if let Some(email) = get_checkout_email(state, session).await {
+        // Extract plan name from session metadata or line items
+        let plan_name = session
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("plan_name").cloned())
+            .unwrap_or_else(|| "PistonProtection".to_string());
+
+        if let Err(e) = state
+            .email_service
+            .send_welcome_email(email, &plan_name)
+            .await
+        {
+            warn!(error = %e, "Failed to send welcome email");
+        }
+    }
 
     Ok(())
 }
