@@ -548,28 +548,63 @@ impl BackendService {
 
     /// Check DNS TXT record for domain verification
     async fn check_dns_txt_record(&self, domain: &str, expected_value: &str) -> bool {
-        // In production, use a DNS resolver like hickory-resolver
-        // For now, we'll implement a placeholder that can be replaced
-        use std::net::ToSocketAddrs;
+        use hickory_resolver::TokioResolver;
 
         let lookup_domain = format!("_piston-verify.{}", domain);
 
-        // Attempt DNS resolution (simplified check)
-        // In production, use hickory-resolver for TXT record lookup
-        match format!("{}:443", lookup_domain).to_socket_addrs() {
-            Ok(_) => {
-                // Would need actual TXT record lookup here
-                // For now, check Redis for manually set verification
-                if let Some(cache) = &self.state.cache {
-                    let key = format!("domain_verify:{}", domain);
-                    if let Ok(Some(token)) = cache.get::<String>(&key).await {
-                        return token == expected_value;
+        // Create a resolver using the builder pattern (hickory-resolver 0.25+)
+        let resolver = match TokioResolver::builder_tokio() {
+            Ok(builder) => builder.build(),
+            Err(e) => {
+                tracing::warn!(error = %e, domain = %domain, "Failed to create DNS resolver");
+                return self.check_redis_verification(domain, expected_value).await;
+            }
+        };
+
+        // Look up TXT records
+        match resolver.txt_lookup(&lookup_domain).await {
+            Ok(txt_lookup) => {
+                // Iterate through all TXT records - iter() returns &TXT items directly
+                for txt_record in txt_lookup.iter() {
+                    let txt_str = txt_record.to_string();
+                    // Remove surrounding quotes if present
+                    let txt_clean = txt_str.trim_matches('"').trim();
+                    if txt_clean == expected_value {
+                        tracing::info!(domain = %domain, "Domain verification successful via DNS TXT");
+                        return true;
                     }
                 }
+                tracing::debug!(
+                    domain = %domain,
+                    expected = %expected_value,
+                    "No matching TXT record found"
+                );
                 false
             }
-            Err(_) => false,
+            Err(e) => {
+                tracing::debug!(
+                    error = %e,
+                    domain = %domain,
+                    "DNS TXT lookup failed, checking Redis fallback"
+                );
+                // Fall back to Redis for manually set verification (dev/testing)
+                self.check_redis_verification(domain, expected_value).await
+            }
         }
+    }
+
+    /// Fallback verification check using Redis (for development/testing)
+    async fn check_redis_verification(&self, domain: &str, expected_value: &str) -> bool {
+        if let Some(cache) = &self.state.cache {
+            let key = format!("domain_verify:{}", domain);
+            if let Ok(Some(token)) = cache.get::<String>(&key).await {
+                if token == expected_value {
+                    tracing::info!(domain = %domain, "Domain verification successful via Redis");
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Validate domain format
