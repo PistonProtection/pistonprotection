@@ -85,9 +85,9 @@ RUN rustup install nightly-2024-10-01 && \
     rustup default nightly-2024-10-01 && \
     rustup component add rust-src
 
-# Install bpf-linker using Rust's built-in LLVM (no external LLVM needed)
-# This avoids LLVM version mismatches since bpf-linker uses rustc's LLVM
-RUN cargo install bpf-linker --locked
+# Install bpf-linker v0.9.13 which supports LLVM 19 (bundled with nightly-2024-10-01)
+# Latest bpf-linker (v0.9.15) requires LLVM 21 which is incompatible
+RUN cargo install bpf-linker@0.9.13 --locked
 
 # Copy eBPF source
 COPY ebpf ./ebpf
