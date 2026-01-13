@@ -308,11 +308,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires mock cache implementation"]
     fn test_detect_device_type() {
-        let config = SessionConfig::default();
-        let cache = todo!(); // Would need mock
+        let _config = SessionConfig::default();
+        // This test requires a mock cache to be implemented
+        // let cache = MockCache::new();
         // let service = SessionService::new(cache, config);
-
         // Test cases would go here with a mock cache
     }
 }

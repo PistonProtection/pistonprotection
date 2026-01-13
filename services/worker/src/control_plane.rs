@@ -9,8 +9,9 @@ use crate::ebpf::{interface::NetworkInterface, loader::EbpfLoader};
 use parking_lot::RwLock;
 use pistonprotection_common::error::{Error, Result};
 use pistonprotection_proto::worker::{
-    BackendMetrics, DeregisterRequest, FilterConfig, GetConfigRequest, HeartbeatRequest, InterfaceMetrics, RegisterRequest, ReportAttackRequest,
-    ReportMetricsRequest, StreamConfigRequest, Worker, WorkerCapabilities, WorkerStatus,
+    BackendMetrics, DeregisterRequest, FilterConfig, GetConfigRequest, HeartbeatRequest,
+    InterfaceMetrics, RegisterRequest, ReportAttackRequest, ReportMetricsRequest,
+    StreamConfigRequest, Worker, WorkerCapabilities, WorkerStatus,
     worker_service_client::WorkerServiceClient,
 };
 use std::collections::HashMap;

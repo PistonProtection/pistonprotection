@@ -345,9 +345,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Flush ClickHouse events
     if let Some(ref ch) = clickhouse
-        && let Err(e) = ch.flush_all().await {
-            error!("Failed to flush ClickHouse events during shutdown: {}", e);
-        }
+        && let Err(e) = ch.flush_all().await
+    {
+        error!("Failed to flush ClickHouse events during shutdown: {}", e);
+    }
 
     telemetry::shutdown();
 

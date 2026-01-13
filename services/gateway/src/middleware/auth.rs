@@ -126,7 +126,10 @@ impl ApiKeyValidator {
 
     /// Validate an API key and return auth context
     pub async fn validate(&self, api_key: &str) -> Result<AuthContext, AuthError> {
-        let pool = self.db_pool.as_ref().ok_or(AuthError::DatabaseNotAvailable)?;
+        let pool = self
+            .db_pool
+            .as_ref()
+            .ok_or(AuthError::DatabaseNotAvailable)?;
 
         // Query the database for the API key
         let result = sqlx::query_as::<_, ApiKeyRow>(
@@ -235,9 +238,7 @@ impl From<AuthError> for tonic::Status {
             AuthError::DatabaseNotAvailable => {
                 tonic::Status::unavailable("Authentication service unavailable")
             }
-            AuthError::DatabaseError(_) => {
-                tonic::Status::internal("Authentication error")
-            }
+            AuthError::DatabaseError(_) => tonic::Status::internal("Authentication error"),
         }
     }
 }
@@ -254,7 +255,11 @@ pub struct AuthState {
 
 impl AuthState {
     /// Create a new auth state
-    pub fn new(config: Option<&AuthConfig>, db_pool: Option<Arc<PgPool>>, is_production: bool) -> Self {
+    pub fn new(
+        config: Option<&AuthConfig>,
+        db_pool: Option<Arc<PgPool>>,
+        is_production: bool,
+    ) -> Self {
         let (jwt_validator, public_paths, skip_auth) = match config {
             Some(cfg) => {
                 let validator = Arc::new(JwtValidator::new(cfg));
@@ -263,7 +268,9 @@ impl AuthState {
                 (Some(validator), paths, skip)
             }
             None => {
-                warn!("No auth configuration provided, authentication will be skipped in development");
+                warn!(
+                    "No auth configuration provided, authentication will be skipped in development"
+                );
                 (None, HashSet::new(), !is_production)
             }
         };
@@ -283,28 +290,33 @@ impl AuthState {
     }
 
     /// Validate the request and return auth context
-    async fn authenticate(&self, headers: &http::HeaderMap) -> Result<Option<AuthContext>, AuthError> {
+    async fn authenticate(
+        &self,
+        headers: &http::HeaderMap,
+    ) -> Result<Option<AuthContext>, AuthError> {
         // Try JWT first (Authorization: Bearer <token>)
         if let Some(auth_header) = headers.get("authorization")
             && let Ok(auth_str) = auth_header.to_str()
-                && let Some(token) = auth_str.strip_prefix("Bearer ")
-                    && let Some(ref validator) = self.jwt_validator {
-                        let claims = validator.validate(token)?;
-                        return Ok(Some(AuthContext {
-                            user_id: claims.sub,
-                            email: claims.email,
-                            role: claims.role,
-                            organizations: claims.orgs,
-                            auth_method: AuthMethod::Jwt,
-                        }));
-                    }
+            && let Some(token) = auth_str.strip_prefix("Bearer ")
+            && let Some(ref validator) = self.jwt_validator
+        {
+            let claims = validator.validate(token)?;
+            return Ok(Some(AuthContext {
+                user_id: claims.sub,
+                email: claims.email,
+                role: claims.role,
+                organizations: claims.orgs,
+                auth_method: AuthMethod::Jwt,
+            }));
+        }
 
         // Try API key (x-api-key header)
         if let Some(api_key_header) = headers.get("x-api-key")
-            && let Ok(api_key) = api_key_header.to_str() {
-                let context = self.api_key_validator.validate(api_key).await?;
-                return Ok(Some(context));
-            }
+            && let Ok(api_key) = api_key_header.to_str()
+        {
+            let context = self.api_key_validator.validate(api_key).await?;
+            return Ok(Some(context));
+        }
 
         // No authentication provided
         Ok(None)
@@ -417,7 +429,11 @@ pub struct AuthLayer {
 
 impl AuthLayer {
     /// Create a new auth layer with the given configuration
-    pub fn new(config: Option<&AuthConfig>, db_pool: Option<Arc<PgPool>>, is_production: bool) -> Self {
+    pub fn new(
+        config: Option<&AuthConfig>,
+        db_pool: Option<Arc<PgPool>>,
+        is_production: bool,
+    ) -> Self {
         Self {
             state: AuthState::new(config, db_pool, is_production),
         }

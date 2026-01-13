@@ -114,6 +114,13 @@ fn read_varint(buf: &[u8]) -> Option<(i32, usize)> {
     let mut position = 0;
 
     for (i, &byte) in buf.iter().take(MAX_VARINT_BYTES).enumerate() {
+        // For the 5th byte (i == 4), we've accumulated 28 bits so far
+        // We can only accept 4 more bits (bits 28-31) without overflowing i32
+        // The high nibble of byte 5 (bits 4-7) would shift to bits 32-35, causing overflow
+        if i == 4 && (byte & 0xf0) != 0 {
+            return None; // Malformed 5th byte - high nibble set would overflow i32
+        }
+
         value |= ((byte & 0x7f) as i32) << position;
 
         if byte & 0x80 == 0 {
@@ -122,21 +129,10 @@ fn read_varint(buf: &[u8]) -> Option<(i32, usize)> {
 
         position += 7;
 
-        // VarInt overflow check for 32-bit values
-        // After reading 4 bytes (28 bits), we can only have 4 more bits
-        // The 5th byte must have its high nibble clear (only uses bits 0-3)
-        if position >= 32 {
-            // For the 5th byte: only 4 bits are valid (bits 28-31)
-            // The remaining bits in the 5th byte must be zero or it's malformed
-            // Note: We already added the bits above, so check if this is the 5th byte
-            if i == 4 && (byte & 0xf0) != 0 {
-                return None; // Malformed 5th byte - high nibble set
-            }
-            // If we reach here with position >= 32 and haven't returned,
-            // the VarInt is still continuing which is invalid
-            if byte & 0x80 != 0 {
-                return None; // VarInt too long (more than 5 bytes)
-            }
+        // If we've reached 5 bytes and the continuation bit is still set,
+        // the VarInt is too long
+        if i == 4 {
+            return None; // VarInt too long (more than 5 bytes)
         }
     }
 
@@ -354,16 +350,15 @@ impl ProtocolAnalyzer for MinecraftBedrockAnalyzer {
         let packet_type = self.parse_packet_type(payload);
 
         // Validate magic
-        if self.validate_magic
-            && !self.validate_magic(payload, packet_type) {
-                debug!(
-                    src = %meta.src_ip,
-                    packet_type = ?packet_type,
-                    "Invalid RakNet magic"
-                );
-                stats.packets_dropped += 1;
-                return Ok(Verdict::Drop);
-            }
+        if self.validate_magic && !self.validate_magic(payload, packet_type) {
+            debug!(
+                src = %meta.src_ip,
+                packet_type = ?packet_type,
+                "Invalid RakNet magic"
+            );
+            stats.packets_dropped += 1;
+            return Ok(Verdict::Drop);
+        }
 
         stats.packets_passed += 1;
         Ok(Verdict::Pass)
@@ -421,10 +416,7 @@ mod tests {
     #[test]
     fn test_read_varint_too_long() {
         // 6 bytes is always invalid
-        assert_eq!(
-            read_varint(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x01]),
-            None
-        );
+        assert_eq!(read_varint(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x01]), None);
     }
 
     #[test]

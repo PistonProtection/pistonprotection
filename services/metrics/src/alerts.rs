@@ -516,9 +516,10 @@ impl AlertManager {
                 }
 
                 if let Some(ref condition) = alert.condition
-                    && let Some(&current_value) = metrics.get(&condition.metric) {
-                        self.evaluate_single_alert(&alert, current_value).await?;
-                    }
+                    && let Some(&current_value) = metrics.get(&condition.metric)
+                {
+                    self.evaluate_single_alert(&alert, current_value).await?;
+                }
             }
         }
 
@@ -1016,8 +1017,8 @@ impl AlertManager {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_check_condition_greater_than() {
+    #[tokio::test]
+    async fn test_check_condition_greater_than() {
         let manager = AlertManager::new(None, AlertConfig::default());
         let condition = AlertCondition {
             metric: "rps".to_string(),
@@ -1031,8 +1032,8 @@ mod tests {
         assert!(!manager.check_condition(100.0, &condition));
     }
 
-    #[test]
-    fn test_check_condition_less_than() {
+    #[tokio::test]
+    async fn test_check_condition_less_than() {
         let manager = AlertManager::new(None, AlertConfig::default());
         let condition = AlertCondition {
             metric: "uptime".to_string(),
@@ -1045,8 +1046,8 @@ mod tests {
         assert!(!manager.check_condition(99.5, &condition));
     }
 
-    #[test]
-    fn test_validate_alert() {
+    #[tokio::test]
+    async fn test_validate_alert() {
         let manager = AlertManager::new(None, AlertConfig::default());
 
         // Valid alert

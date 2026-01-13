@@ -1,10 +1,10 @@
 //! Rate limiting middleware for gRPC
 
+use bytes::Bytes;
+use http_body_util::combinators::UnsyncBoxBody;
 use pistonprotection_common::ratelimit::{GlobalRateLimiter, RateLimitConfig};
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use bytes::Bytes;
-use http_body_util::combinators::UnsyncBoxBody;
 
 type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
 use http_body_util::BodyExt;

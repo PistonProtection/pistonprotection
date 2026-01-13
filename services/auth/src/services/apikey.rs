@@ -150,9 +150,10 @@ impl ApiKeyService {
 
         // Check expiration
         if let Some(expires_at) = key.expires_at
-            && expires_at < chrono::Utc::now() {
-                return Err(ApiKeyError::KeyExpired);
-            }
+            && expires_at < chrono::Utc::now()
+        {
+            return Err(ApiKeyError::KeyExpired);
+        }
 
         // Validate IP if restrictions exist
         if !key.allowed_ips.is_empty() {
@@ -190,10 +191,11 @@ impl ApiKeyService {
             // Check for CIDR range
             if allowed.contains('/')
                 && let Ok(network) = allowed.parse::<ipnetwork::IpNetwork>()
-                    && let Ok(ip_addr) = ip.parse::<std::net::IpAddr>()
-                        && network.contains(ip_addr) {
-                            return true;
-                        }
+                && let Ok(ip_addr) = ip.parse::<std::net::IpAddr>()
+                && network.contains(ip_addr)
+            {
+                return true;
+            }
         }
 
         false

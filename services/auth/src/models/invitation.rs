@@ -19,7 +19,6 @@ pub enum InvitationStatus {
     Revoked,
 }
 
-
 impl From<InvitationStatus> for i32 {
     fn from(status: InvitationStatus) -> Self {
         match status {

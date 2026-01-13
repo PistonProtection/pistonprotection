@@ -275,7 +275,10 @@ impl EmailService {
         let body = self.render_template(&message)?;
 
         match self.config.provider {
-            EmailProvider::Resend => self.send_via_resend(&message.to, subject, &body, &message).await,
+            EmailProvider::Resend => {
+                self.send_via_resend(&message.to, subject, &body, &message)
+                    .await
+            }
             EmailProvider::Smtp => self.send_via_smtp(&message.to.email, subject, &body).await,
             EmailProvider::Disabled => {
                 info!(
@@ -471,7 +474,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::SubscriptionCanceled => format!(
                 r#"<!DOCTYPE html>
@@ -490,7 +495,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::TrialEnding => format!(
                 r#"<!DOCTYPE html>
@@ -509,7 +516,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::PaymentReceived => format!(
                 r#"<!DOCTYPE html>
@@ -533,7 +542,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::PaymentFailed => format!(
                 r#"<!DOCTYPE html>
@@ -555,7 +566,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, danger_btn_style),
+</html>"#,
+                base_style, danger_btn_style
+            ),
 
             EmailTemplate::PaymentFailedFinal => format!(
                 r#"<!DOCTYPE html>
@@ -579,7 +592,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, danger_btn_style),
+</html>"#,
+                base_style, danger_btn_style
+            ),
 
             EmailTemplate::AccountDowngraded => format!(
                 r#"<!DOCTYPE html>
@@ -603,7 +618,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::PasswordReset => format!(
                 r#"<!DOCTYPE html>
@@ -622,7 +639,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::EmailVerification => format!(
                 r#"<!DOCTYPE html>
@@ -640,7 +659,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::InvitationSent => format!(
                 r#"<!DOCTYPE html>
@@ -659,7 +680,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::AttackDetected => format!(
                 r#"<!DOCTYPE html>
@@ -686,7 +709,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             EmailTemplate::AttackMitigated => format!(
                 r#"<!DOCTYPE html>
@@ -712,7 +737,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
 
             // Default template for other types
             _ => format!(
@@ -730,7 +757,9 @@ impl EmailService {
     <p style="color: #6b7280;">Best regards,<br>The PistonProtection Team</p>
 </div>
 </body>
-</html>"#, base_style, btn_style),
+</html>"#,
+                base_style, btn_style
+            ),
         }
     }
 
@@ -813,7 +842,10 @@ impl EmailService {
     }
 
     /// Send account downgraded email
-    pub async fn send_account_downgraded_email(&self, recipient: EmailRecipient) -> Result<EmailResult> {
+    pub async fn send_account_downgraded_email(
+        &self,
+        recipient: EmailRecipient,
+    ) -> Result<EmailResult> {
         let message = EmailMessage::new(recipient, EmailTemplate::AccountDowngraded);
         self.send(message).await
     }
@@ -871,7 +903,12 @@ impl EmailService {
             .with_variable("attack_type", attack_type)
             .with_variable("pps", pps)
             .with_variable("bps", bps)
-            .with_variable("timestamp", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string());
+            .with_variable(
+                "timestamp",
+                chrono::Utc::now()
+                    .format("%Y-%m-%d %H:%M:%S UTC")
+                    .to_string(),
+            );
         self.send(message).await
     }
 

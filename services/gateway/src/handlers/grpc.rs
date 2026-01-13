@@ -88,11 +88,7 @@ impl BackendServiceTrait for BackendGrpcService {
             .backend
             .ok_or_else(|| Status::invalid_argument("Backend is required"))?;
 
-        let updated = self
-            .service
-            .update(backend)
-            .await
-            .map_err(Status::from)?;
+        let updated = self.service.update(backend).await.map_err(Status::from)?;
 
         Ok(Response::new(UpdateBackendResponse {
             backend: Some(updated),
@@ -393,11 +389,7 @@ impl FilterServiceTrait for FilterGrpcService {
     ) -> Result<Response<GetRuleResponse>, Status> {
         let req = request.into_inner();
 
-        let rule = self
-            .service
-            .get(&req.rule_id)
-            .await
-            .map_err(Status::from)?;
+        let rule = self.service.get(&req.rule_id).await.map_err(Status::from)?;
 
         Ok(Response::new(GetRuleResponse { rule: Some(rule) }))
     }
@@ -412,11 +404,7 @@ impl FilterServiceTrait for FilterGrpcService {
             .rule
             .ok_or_else(|| Status::invalid_argument("Rule is required"))?;
 
-        let updated = self
-            .service
-            .update(rule)
-            .await
-            .map_err(Status::from)?;
+        let updated = self.service.update(rule).await.map_err(Status::from)?;
 
         Ok(Response::new(UpdateRuleResponse {
             rule: Some(updated),
@@ -654,14 +642,20 @@ impl MetricsServiceTrait for MetricsGrpcService {
             .map(chrono::DateTime::from)
             .ok_or_else(|| Status::invalid_argument("end_time is required"))?;
 
-        let granularity = TimeGranularity::try_from(req.granularity)
-            .unwrap_or(TimeGranularity::FiveMinutes);
+        let granularity =
+            TimeGranularity::try_from(req.granularity).unwrap_or(TimeGranularity::FiveMinutes);
 
         let mut series = Vec::new();
         for metric_name in &req.metrics {
             let ts = self
                 .service
-                .get_time_series(&req.backend_id, metric_name, start_time, end_time, granularity)
+                .get_time_series(
+                    &req.backend_id,
+                    metric_name,
+                    start_time,
+                    end_time,
+                    granularity,
+                )
                 .await
                 .map_err(Status::from)?;
             series.push(ts);
@@ -733,14 +727,20 @@ impl MetricsServiceTrait for MetricsGrpcService {
             .map(chrono::DateTime::from)
             .ok_or_else(|| Status::invalid_argument("end_time is required"))?;
 
-        let granularity = TimeGranularity::try_from(req.granularity)
-            .unwrap_or(TimeGranularity::FiveMinutes);
+        let granularity =
+            TimeGranularity::try_from(req.granularity).unwrap_or(TimeGranularity::FiveMinutes);
 
         let mut series = Vec::new();
         for metric_name in &req.metrics {
             let ts = self
                 .service
-                .get_time_series(&req.backend_id, metric_name, start_time, end_time, granularity)
+                .get_time_series(
+                    &req.backend_id,
+                    metric_name,
+                    start_time,
+                    end_time,
+                    granularity,
+                )
                 .await
                 .map_err(Status::from)?;
             series.push(ts);
@@ -876,35 +876,45 @@ impl MetricsServiceTrait for MetricsGrpcService {
         _request: Request<CreateAlertRequest>,
     ) -> Result<Response<CreateAlertResponse>, Status> {
         // TODO: Implement alert service
-        Err(Status::unimplemented("Alert management not yet implemented"))
+        Err(Status::unimplemented(
+            "Alert management not yet implemented",
+        ))
     }
 
     async fn get_alert(
         &self,
         _request: Request<GetAlertRequest>,
     ) -> Result<Response<GetAlertResponse>, Status> {
-        Err(Status::unimplemented("Alert management not yet implemented"))
+        Err(Status::unimplemented(
+            "Alert management not yet implemented",
+        ))
     }
 
     async fn update_alert(
         &self,
         _request: Request<UpdateAlertRequest>,
     ) -> Result<Response<UpdateAlertResponse>, Status> {
-        Err(Status::unimplemented("Alert management not yet implemented"))
+        Err(Status::unimplemented(
+            "Alert management not yet implemented",
+        ))
     }
 
     async fn delete_alert(
         &self,
         _request: Request<DeleteAlertRequest>,
     ) -> Result<Response<DeleteAlertResponse>, Status> {
-        Err(Status::unimplemented("Alert management not yet implemented"))
+        Err(Status::unimplemented(
+            "Alert management not yet implemented",
+        ))
     }
 
     async fn list_alerts(
         &self,
         _request: Request<ListAlertsRequest>,
     ) -> Result<Response<ListAlertsResponse>, Status> {
-        Err(Status::unimplemented("Alert management not yet implemented"))
+        Err(Status::unimplemented(
+            "Alert management not yet implemented",
+        ))
     }
 
     #[instrument(skip(self, request))]

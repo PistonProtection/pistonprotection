@@ -1,9 +1,9 @@
 //! Logging middleware for gRPC
 
-use std::task::{Context, Poll};
-use std::time::Instant;
 use bytes::Bytes;
 use http_body_util::combinators::UnsyncBoxBody;
+use std::task::{Context, Poll};
+use std::time::Instant;
 
 type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
 use tower::{Layer, Service};
@@ -23,7 +23,10 @@ impl<S> LoggingMiddleware<S> {
 
 impl<S, ReqBody, E> Service<http::Request<ReqBody>> for LoggingMiddleware<S>
 where
-    S: Service<http::Request<ReqBody>, Response = http::Response<BoxBody>, Error = E> + Clone + Send + 'static,
+    S: Service<http::Request<ReqBody>, Response = http::Response<BoxBody>, Error = E>
+        + Clone
+        + Send
+        + 'static,
     S::Future: Send + 'static,
     ReqBody: Send + 'static,
     E: Send + 'static,

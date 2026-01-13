@@ -18,7 +18,6 @@ pub enum SubscriptionStatus {
     Unpaid,
 }
 
-
 impl From<SubscriptionStatus> for i32 {
     fn from(status: SubscriptionStatus) -> Self {
         match status {
@@ -57,7 +56,6 @@ pub enum OrganizationRole {
     Member,
     Viewer,
 }
-
 
 impl From<OrganizationRole> for i32 {
     fn from(role: OrganizationRole) -> Self {
@@ -260,11 +258,7 @@ pub struct UpdateOrganizationRequest {
 /// Validate slug format
 fn validate_slug(slug: &str) -> Result<(), validator::ValidationError> {
     // Slug must start with a letter
-    if !slug
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_lowercase())
-    {
+    if !slug.chars().next().is_some_and(|c| c.is_ascii_lowercase()) {
         return Err(validator::ValidationError::new("slug_start_letter"));
     }
 

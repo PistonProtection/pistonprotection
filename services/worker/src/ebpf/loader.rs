@@ -245,8 +245,9 @@ mod tests {
 
     #[test]
     fn test_xdp_mode_flags() {
-        assert_eq!(XdpMode::Generic.to_flags(), XdpFlags::SKB_MODE);
-        assert_eq!(XdpMode::Driver.to_flags(), XdpFlags::DRV_MODE);
-        assert_eq!(XdpMode::Offload.to_flags(), XdpFlags::HW_MODE);
+        // XdpFlags doesn't implement PartialEq, so compare the underlying bits
+        assert_eq!(XdpMode::Generic.to_flags().bits(), XdpFlags::SKB_MODE.bits());
+        assert_eq!(XdpMode::Driver.to_flags().bits(), XdpFlags::DRV_MODE.bits());
+        assert_eq!(XdpMode::Offload.to_flags().bits(), XdpFlags::HW_MODE.bits());
     }
 }

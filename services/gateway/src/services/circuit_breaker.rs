@@ -170,9 +170,9 @@ impl CircuitBreaker {
 
         match current_state {
             CircuitState::Closed => {
-                // Reset failure tracking on success
+                // Reset failure tracking on success - clear all accumulated failures
                 state.failure_count = 0;
-                self.prune_old_failures(&mut state);
+                state.failure_timestamps.clear();
             }
             CircuitState::HalfOpen => {
                 state.success_count += 1;

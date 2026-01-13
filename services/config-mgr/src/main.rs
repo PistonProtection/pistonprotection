@@ -92,7 +92,10 @@ async fn main() -> Result<(), BoxError> {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     // Start HTTP server
-    let http_addr: SocketAddr = config.http_addr().parse().map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
+    let http_addr: SocketAddr = config
+        .http_addr()
+        .parse()
+        .map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
     let http_server = handlers::create_router(state.clone());
     let http_shutdown_rx = shutdown_rx.clone();
     let http_handle = tokio::spawn(async move {
@@ -122,7 +125,10 @@ async fn main() -> Result<(), BoxError> {
     });
 
     // Start gRPC server
-    let grpc_addr: SocketAddr = config.grpc_addr().parse().map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
+    let grpc_addr: SocketAddr = config
+        .grpc_addr()
+        .parse()
+        .map_err(|e: std::net::AddrParseError| Box::new(e) as BoxError)?;
     let grpc_server = handlers::create_grpc_server(state.clone()).await?;
     let grpc_shutdown_rx = shutdown_rx.clone();
     let grpc_handle = tokio::spawn(async move {

@@ -4,8 +4,7 @@ use serde::Deserialize;
 use std::env;
 
 /// Auth-specific configuration
-#[derive(Debug, Clone, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct AuthConfig {
     /// JWT configuration
     #[serde(default)]
@@ -35,7 +34,6 @@ pub struct AuthConfig {
     #[serde(default)]
     pub stripe: StripeConfig,
 }
-
 
 /// JWT configuration
 #[derive(Debug, Clone, Deserialize)]

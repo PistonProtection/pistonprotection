@@ -597,10 +597,11 @@ impl FilterService {
                         .get::<String>(&format!("filter_update:{}", backend_id))
                         .await
                         && let Ok(update) = serde_json::from_str::<RuleUpdate>(&update_json)
-                            && tx.send(update).is_err() {
-                                // No receivers left
-                                break;
-                            }
+                        && tx.send(update).is_err()
+                    {
+                        // No receivers left
+                        break;
+                    }
                 }
             }
         });

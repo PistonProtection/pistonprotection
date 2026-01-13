@@ -17,7 +17,6 @@ pub enum PlanType {
     Enterprise,
 }
 
-
 impl fmt::Display for PlanType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -160,7 +159,6 @@ pub enum BillingPeriod {
     Yearly,
 }
 
-
 impl From<BillingPeriod> for i32 {
     fn from(period: BillingPeriod) -> Self {
         match period {
@@ -194,7 +192,6 @@ pub enum InvoiceStatus {
     Uncollectible,
     Void,
 }
-
 
 impl From<InvoiceStatus> for i32 {
     fn from(status: InvoiceStatus) -> Self {
@@ -251,7 +248,6 @@ pub enum PaymentStatus {
     Canceled,
     RequiresCapture,
 }
-
 
 impl PaymentStatus {
     /// Convert from Stripe payment intent status string
@@ -374,7 +370,6 @@ pub enum UsageMetricType {
     ChallengesServed,
 }
 
-
 impl From<UsageMetricType> for i32 {
     fn from(metric: UsageMetricType) -> Self {
         match metric {
@@ -463,15 +458,13 @@ pub struct UpdateSubscriptionRequest {
 }
 
 /// Proration behavior for subscription changes
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ProrationBehavior {
     #[default]
     CreateProrations,
     None,
     AlwaysInvoice,
 }
-
 
 impl ProrationBehavior {
     pub fn as_stripe_str(&self) -> &'static str {

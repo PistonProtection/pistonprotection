@@ -1,10 +1,10 @@
 //! gRPC handlers implementing the AuthService
 
+use pistonprotection_proto::PaginationInfo;
 use pistonprotection_proto::auth::{
     auth_service_server::{AuthService as ProtoAuthService, AuthServiceServer},
     *,
 };
-use pistonprotection_proto::PaginationInfo;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
@@ -686,13 +686,10 @@ impl ProtoAuthService for AuthServiceImpl {
 
         let req = request.into_inner();
 
-        let plans = stripe_service
-            .list_plans()
-            .await
-            .map_err(|e| {
-                error!("Failed to list plans: {}", e);
-                Status::internal("Failed to list plans")
-            })?;
+        let plans = stripe_service.list_plans().await.map_err(|e| {
+            error!("Failed to list plans: {}", e);
+            Status::internal("Failed to list plans")
+        })?;
 
         // Filter inactive plans if not requested
         let plans: Vec<_> = if req.include_inactive {
@@ -1117,9 +1114,7 @@ impl ProtoAuthService for AuthServiceImpl {
             number: stripe_invoice.number.unwrap_or_default(),
             status: stripe_invoice
                 .status
-                .map(|s| {
-                    crate::models::subscription::InvoiceStatus::from_stripe_status(s.as_ref())
-                })
+                .map(|s| crate::models::subscription::InvoiceStatus::from_stripe_status(s.as_ref()))
                 .map(i32::from)
                 .unwrap_or(0),
             currency: stripe_invoice
@@ -1134,31 +1129,31 @@ impl ProtoAuthService for AuthServiceImpl {
             description: stripe_invoice.description.unwrap_or_default(),
             invoice_pdf_url: stripe_invoice.invoice_pdf.unwrap_or_default(),
             hosted_invoice_url: stripe_invoice.hosted_invoice_url.unwrap_or_default(),
-            period_start: stripe_invoice.period_start.map(|ts| {
-                pistonprotection_proto::Timestamp {
+            period_start: stripe_invoice
+                .period_start
+                .map(|ts| pistonprotection_proto::Timestamp {
                     seconds: ts,
                     nanos: 0,
-                }
-            }),
-            period_end: stripe_invoice.period_end.map(|ts| {
-                pistonprotection_proto::Timestamp {
+                }),
+            period_end: stripe_invoice
+                .period_end
+                .map(|ts| pistonprotection_proto::Timestamp {
                     seconds: ts,
                     nanos: 0,
-                }
-            }),
-            due_date: stripe_invoice.due_date.map(|ts| {
-                pistonprotection_proto::Timestamp {
+                }),
+            due_date: stripe_invoice
+                .due_date
+                .map(|ts| pistonprotection_proto::Timestamp {
                     seconds: ts,
                     nanos: 0,
-                }
-            }),
+                }),
             paid_at: None,
-            created_at: stripe_invoice.created.map(|ts| {
-                pistonprotection_proto::Timestamp {
+            created_at: stripe_invoice
+                .created
+                .map(|ts| pistonprotection_proto::Timestamp {
                     seconds: ts,
                     nanos: 0,
-                }
-            }),
+                }),
         };
 
         Ok(Response::new(GetInvoiceResponse {

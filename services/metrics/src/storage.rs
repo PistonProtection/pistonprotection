@@ -6,11 +6,11 @@
 use crate::aggregator::{GeoTrafficData, RawAttackMetrics, RawTrafficMetrics, RawWorkerMetrics};
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use deadpool_redis::Pool as RedisPool;
+use deadpool_redis::redis::AsyncCommands;
 use pistonprotection_proto::{
     common::{Pagination, PaginationInfo, Timestamp},
     metrics::*,
 };
-use deadpool_redis::redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgPool;

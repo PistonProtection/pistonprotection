@@ -24,9 +24,9 @@ impl MetricsService {
             && let Ok(Some(metrics)) = cache
                 .get::<TrafficMetrics>(&format!("metrics:traffic:{}", backend_id))
                 .await
-            {
-                return Ok(metrics);
-            }
+        {
+            return Ok(metrics);
+        }
 
         // Fallback to default/empty metrics
         Ok(TrafficMetrics {
@@ -43,9 +43,9 @@ impl MetricsService {
             && let Ok(Some(metrics)) = cache
                 .get::<AttackMetrics>(&format!("metrics:attack:{}", backend_id))
                 .await
-            {
-                return Ok(metrics);
-            }
+        {
+            return Ok(metrics);
+        }
 
         Ok(AttackMetrics {
             backend_id: backend_id.to_string(),
@@ -291,14 +291,18 @@ impl MetricsService {
 
     /// Get origin health metrics
     #[instrument(skip(self))]
-    pub async fn get_origin_metrics(&self, backend_id: &str, origin_id: &str) -> Result<OriginMetrics> {
+    pub async fn get_origin_metrics(
+        &self,
+        backend_id: &str,
+        origin_id: &str,
+    ) -> Result<OriginMetrics> {
         if let Some(cache) = &self.state.cache
             && let Ok(Some(metrics)) = cache
                 .get::<OriginMetrics>(&format!("metrics:origin:{}:{}", backend_id, origin_id))
                 .await
-            {
-                return Ok(metrics);
-            }
+        {
+            return Ok(metrics);
+        }
 
         Ok(OriginMetrics {
             backend_id: backend_id.to_string(),
@@ -315,9 +319,9 @@ impl MetricsService {
             && let Ok(Some(metrics)) = cache
                 .get::<WorkerMetrics>(&format!("metrics:worker:{}", worker_id))
                 .await
-            {
-                return Ok(metrics);
-            }
+        {
+            return Ok(metrics);
+        }
 
         Ok(WorkerMetrics {
             worker_id: worker_id.to_string(),
@@ -328,13 +332,14 @@ impl MetricsService {
 
     /// List all worker metrics
     #[instrument(skip(self))]
-    pub async fn list_worker_metrics(&self, _page: u32, _page_size: u32) -> Result<Vec<WorkerMetrics>> {
+    pub async fn list_worker_metrics(
+        &self,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<WorkerMetrics>> {
         if let Some(cache) = &self.state.cache {
             // Get all worker IDs from cache
-            if let Ok(Some(worker_ids)) = cache
-                .get::<Vec<String>>("workers:active")
-                .await
-            {
+            if let Ok(Some(worker_ids)) = cache.get::<Vec<String>>("workers:active").await {
                 let mut workers = Vec::new();
                 for id in &worker_ids {
                     if let Ok(metrics) = self.get_worker_metrics(id).await {

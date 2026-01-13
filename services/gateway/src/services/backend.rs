@@ -64,9 +64,10 @@ impl BackendService {
     pub async fn get(&self, id: &str) -> Result<Backend> {
         // Try cache first
         if let Some(cache) = &self.state.cache
-            && let Ok(Some(backend)) = cache.get::<Backend>(&format!("backend:{}", id)).await {
-                return Ok(backend);
-            }
+            && let Ok(Some(backend)) = cache.get::<Backend>(&format!("backend:{}", id)).await
+        {
+            return Ok(backend);
+        }
 
         let db = self.state.db()?;
 
@@ -597,10 +598,11 @@ impl BackendService {
         if let Some(cache) = &self.state.cache {
             let key = format!("domain_verify:{}", domain);
             if let Ok(Some(token)) = cache.get::<String>(&key).await
-                && token == expected_value {
-                    tracing::info!(domain = %domain, "Domain verification successful via Redis");
-                    return true;
-                }
+                && token == expected_value
+            {
+                tracing::info!(domain = %domain, "Domain verification successful via Redis");
+                return true;
+            }
         }
         false
     }
@@ -804,9 +806,9 @@ impl BackendService {
             && let Ok(Some(status)) = cache
                 .get::<BackendStatus>(&format!("backend_status:{}", backend_id))
                 .await
-            {
-                return Ok(status);
-            }
+        {
+            return Ok(status);
+        }
 
         // Get origin health info from database
         let db = self.state.db()?;
@@ -873,10 +875,11 @@ impl BackendService {
                     && let Ok(Some(status)) = cache
                         .get::<BackendStatus>(&format!("backend_status:{}", backend_id))
                         .await
-                        && tx.send(status).is_err() {
-                            // No receivers left, stop the task
-                            break;
-                        }
+                    && tx.send(status).is_err()
+                {
+                    // No receivers left, stop the task
+                    break;
+                }
             }
         });
 

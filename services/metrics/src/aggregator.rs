@@ -352,35 +352,48 @@ impl MetricsAggregator {
             });
 
         // Aggregate metrics from this worker
-        entry.metrics.requests_total = entry.metrics.requests_total.saturating_add(raw.requests_total);
-        entry.metrics.requests_per_second = entry.metrics
+        entry.metrics.requests_total = entry
+            .metrics
+            .requests_total
+            .saturating_add(raw.requests_total);
+        entry.metrics.requests_per_second = entry
+            .metrics
             .requests_per_second
             .saturating_add(raw.requests_per_second);
         entry.metrics.bytes_in = entry.metrics.bytes_in.saturating_add(raw.bytes_in);
         entry.metrics.bytes_out = entry.metrics.bytes_out.saturating_add(raw.bytes_out);
-        entry.metrics.bytes_per_second_in = entry.metrics
+        entry.metrics.bytes_per_second_in = entry
+            .metrics
             .bytes_per_second_in
             .saturating_add(raw.bytes_per_second_in);
-        entry.metrics.bytes_per_second_out = entry.metrics
+        entry.metrics.bytes_per_second_out = entry
+            .metrics
             .bytes_per_second_out
             .saturating_add(raw.bytes_per_second_out);
         entry.metrics.packets_in = entry.metrics.packets_in.saturating_add(raw.packets_in);
         entry.metrics.packets_out = entry.metrics.packets_out.saturating_add(raw.packets_out);
-        entry.metrics.packets_per_second = entry.metrics
+        entry.metrics.packets_per_second = entry
+            .metrics
             .packets_per_second
             .saturating_add(raw.packets_per_second);
-        entry.metrics.active_connections = entry.metrics
+        entry.metrics.active_connections = entry
+            .metrics
             .active_connections
             .saturating_add(raw.active_connections);
-        entry.metrics.new_connections = entry.metrics.new_connections.saturating_add(raw.new_connections);
-        entry.metrics.closed_connections = entry.metrics
+        entry.metrics.new_connections = entry
+            .metrics
+            .new_connections
+            .saturating_add(raw.new_connections);
+        entry.metrics.closed_connections = entry
+            .metrics
             .closed_connections
             .saturating_add(raw.closed_connections);
         entry.metrics.timestamp = Some(Timestamp::from(raw.timestamp));
 
         // Merge protocol breakdown
         for (protocol, count) in &raw.requests_by_protocol {
-            *entry.metrics
+            *entry
+                .metrics
                 .requests_by_protocol
                 .entry(protocol.clone())
                 .or_insert(0) += count;
@@ -598,9 +611,10 @@ impl MetricsAggregator {
     ) -> Result<TrafficMetrics, AggregatorError> {
         // Check in-memory cache first
         if let Some(entry) = self.traffic_metrics.get(backend_id)
-            && !entry.is_stale(self.config.stale_threshold) {
-                return Ok(entry.metrics.clone());
-            }
+            && !entry.is_stale(self.config.stale_threshold)
+        {
+            return Ok(entry.metrics.clone());
+        }
 
         // Check Redis cache
         if let Some(ref cache) = self.cache {
@@ -628,9 +642,10 @@ impl MetricsAggregator {
     ) -> Result<AttackMetrics, AggregatorError> {
         // Check in-memory cache
         if let Some(entry) = self.attack_metrics.get(backend_id)
-            && !entry.is_stale(self.config.stale_threshold) {
-                return Ok(entry.metrics.clone());
-            }
+            && !entry.is_stale(self.config.stale_threshold)
+        {
+            return Ok(entry.metrics.clone());
+        }
 
         // Check Redis cache
         if let Some(ref cache) = self.cache {
@@ -661,9 +676,10 @@ impl MetricsAggregator {
 
         // Check in-memory cache
         if let Some(entry) = self.origin_metrics.get(&key)
-            && !entry.is_stale(self.config.stale_threshold) {
-                return Ok(entry.metrics.clone());
-            }
+            && !entry.is_stale(self.config.stale_threshold)
+        {
+            return Ok(entry.metrics.clone());
+        }
 
         // Check Redis cache
         if let Some(ref cache) = self.cache {
@@ -692,9 +708,10 @@ impl MetricsAggregator {
     ) -> Result<WorkerMetrics, AggregatorError> {
         // Check in-memory cache
         if let Some(entry) = self.worker_metrics.get(worker_id)
-            && !entry.is_stale(self.config.stale_threshold) {
-                return Ok(entry.metrics.clone());
-            }
+            && !entry.is_stale(self.config.stale_threshold)
+        {
+            return Ok(entry.metrics.clone());
+        }
 
         // Check Redis cache
         if let Some(ref cache) = self.cache {
@@ -826,9 +843,9 @@ impl MetricsAggregator {
                     .storage
                     .store_geo_traffic(parts[0], parts[1], entry.value())
                     .await
-                {
-                    warn!(key = %key, "Failed to flush geo traffic: {}", e);
-                }
+            {
+                warn!(key = %key, "Failed to flush geo traffic: {}", e);
+            }
         }
 
         Ok(())

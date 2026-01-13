@@ -57,7 +57,10 @@ impl ConfigDistributor {
 
     /// Notify all subscribers of a config update
     pub fn notify_update(&self, version: u32, backend_id: Option<String>) {
-        let _ = self.config_tx.send(ConfigUpdate { version, backend_id });
+        let _ = self.config_tx.send(ConfigUpdate {
+            version,
+            backend_id,
+        });
     }
 
     /// Register a worker

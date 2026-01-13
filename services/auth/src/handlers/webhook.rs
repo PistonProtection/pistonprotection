@@ -455,18 +455,22 @@ async fn get_checkout_email(
     if let Some(email) = &session.customer_email {
         return Some(EmailRecipient {
             email: email.clone(),
-            name: session.customer_details.as_ref().and_then(|d| d.name.clone()),
+            name: session
+                .customer_details
+                .as_ref()
+                .and_then(|d| d.name.clone()),
         });
     }
 
     // Try from customer_details
     if let Some(details) = &session.customer_details
-        && let Some(email) = &details.email {
-            return Some(EmailRecipient {
-                email: email.clone(),
-                name: details.name.clone(),
-            });
-        }
+        && let Some(email) = &details.email
+    {
+        return Some(EmailRecipient {
+            email: email.clone(),
+            name: details.name.clone(),
+        });
+    }
 
     None
 }
@@ -477,7 +481,11 @@ fn format_amount(amount: Option<i64>, currency: &Option<stripe_rust::Currency>) 
     let dollars = cents as f64 / 100.0;
 
     // Get currency symbol from the currency code string
-    let currency_symbol = match currency.as_ref().map(|c| c.to_string().to_lowercase()).as_deref() {
+    let currency_symbol = match currency
+        .as_ref()
+        .map(|c| c.to_string().to_lowercase())
+        .as_deref()
+    {
         Some("usd") => "$",
         Some("eur") => "€",
         Some("gbp") => "£",
@@ -494,9 +502,10 @@ fn get_invoice_plan_name(invoice: &StripeInvoice) -> String {
     // Try to get from invoice lines
     if let Some(lines) = &invoice.lines
         && let Some(first_line) = lines.data.first()
-            && let Some(description) = &first_line.description {
-                return description.clone();
-            }
+        && let Some(description) = &first_line.description
+    {
+        return description.clone();
+    }
 
     "PistonProtection Plan".to_string()
 }
@@ -560,8 +569,9 @@ async fn handle_subscription_deleted(
         let end_date = subscription
             .ended_at
             .or(Some(subscription.current_period_end))
-            .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0)
-                .map(|dt| dt.format("%B %d, %Y").to_string()))
+            .and_then(|ts| {
+                chrono::DateTime::from_timestamp(ts, 0).map(|dt| dt.format("%B %d, %Y").to_string())
+            })
             .unwrap_or_else(|| "soon".to_string());
 
         if let Err(e) = state
@@ -600,8 +610,9 @@ async fn handle_subscription_trial_ending(
 
         let trial_end_date = subscription
             .trial_end
-            .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0)
-                .map(|dt| dt.format("%B %d, %Y").to_string()))
+            .and_then(|ts| {
+                chrono::DateTime::from_timestamp(ts, 0).map(|dt| dt.format("%B %d, %Y").to_string())
+            })
             .unwrap_or_else(|| "soon".to_string());
 
         if let Err(e) = state
@@ -713,18 +724,22 @@ async fn handle_invoice_paid(
             .stripe_service
             .get_subscription_by_stripe_id(&sub_id)
             .await
-            && local_sub.status == SubscriptionStatus::PastDue {
-                state
-                    .stripe_service
-                    .update_subscription_status(&sub_id, SubscriptionStatus::Active)
-                    .await?;
-            }
+            && local_sub.status == SubscriptionStatus::PastDue
+        {
+            state
+                .stripe_service
+                .update_subscription_status(&sub_id, SubscriptionStatus::Active)
+                .await?;
+        }
     }
 
     // Send payment receipt email
     if let Some(email) = get_invoice_email(state, invoice).await {
         let amount = format_amount(invoice.amount_paid, &invoice.currency);
-        let invoice_id = invoice.number.clone().unwrap_or_else(|| invoice.id.to_string());
+        let invoice_id = invoice
+            .number
+            .clone()
+            .unwrap_or_else(|| invoice.id.to_string());
         let plan_name = get_invoice_plan_name(invoice);
 
         if let Err(e) = state
