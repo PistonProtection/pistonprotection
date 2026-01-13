@@ -31,19 +31,18 @@ pub struct FallbackConfig {
 impl Default for FallbackConfig {
     fn default() -> Self {
         Self {
-            disconnect_message: "§cServer is currently offline.\n§7Please try again later.".to_string(),
+            disconnect_message: "§cServer is currently offline.\n§7Please try again later."
+                .to_string(),
             motd: "§c§lOFFLINE §8| §7Server maintenance in progress".to_string(),
             protocol_version: 767, // 1.21
             version_name: "Maintenance".to_string(),
             max_players: 0,
             online_players: 0,
             favicon: None,
-            sample_players: vec![
-                SamplePlayer {
-                    name: "§7Server is offline".to_string(),
-                    id: "00000000-0000-0000-0000-000000000000".to_string(),
-                },
-            ],
+            sample_players: vec![SamplePlayer {
+                name: "§7Server is offline".to_string(),
+                id: "00000000-0000-0000-0000-000000000000".to_string(),
+            }],
         }
     }
 }
@@ -135,9 +134,8 @@ impl MinecraftPacketBuilder {
         let json_message = serde_json::json!({
             "text": message
         });
-        let json_str = serde_json::to_string(&json_message).unwrap_or_else(|_| {
-            format!(r#"{{"text":"{}"}}"#, message)
-        });
+        let json_str = serde_json::to_string(&json_message)
+            .unwrap_or_else(|_| format!(r#"{{"text":"{}"}}"#, message));
 
         let data = Self::write_string(&json_str);
 
@@ -216,8 +214,8 @@ pub struct BedrockPacketBuilder;
 impl BedrockPacketBuilder {
     /// RakNet magic bytes.
     const MAGIC: [u8; 16] = [
-        0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe,
-        0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
+        0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56,
+        0x78,
     ];
 
     /// Build an Unconnected Pong response (0x1c).
@@ -408,7 +406,10 @@ mod tests {
         assert_eq!(MinecraftPacketBuilder::write_varint(127), vec![0x7f]);
         assert_eq!(MinecraftPacketBuilder::write_varint(128), vec![0x80, 0x01]);
         assert_eq!(MinecraftPacketBuilder::write_varint(255), vec![0xff, 0x01]);
-        assert_eq!(MinecraftPacketBuilder::write_varint(25565), vec![0xdd, 0xc7, 0x01]);
+        assert_eq!(
+            MinecraftPacketBuilder::write_varint(25565),
+            vec![0xdd, 0xc7, 0x01]
+        );
     }
 
     #[test]
@@ -439,7 +440,8 @@ mod tests {
         let json_start = len_size + 1; // +1 for packet ID
         if packet.len() > json_start {
             let (json_len, json_len_size) = read_varint(&packet[json_start..]).unwrap();
-            let json_bytes = &packet[json_start + json_len_size..json_start + json_len_size + json_len as usize];
+            let json_bytes =
+                &packet[json_start + json_len_size..json_start + json_len_size + json_len as usize];
             let json: serde_json::Value = serde_json::from_slice(json_bytes).unwrap();
             assert!(json.get("version").is_some());
             assert!(json.get("players").is_some());
@@ -483,8 +485,14 @@ mod tests {
     fn test_state_from_next_state() {
         assert_eq!(MinecraftState::from_next_state(1), MinecraftState::Status);
         assert_eq!(MinecraftState::from_next_state(2), MinecraftState::Login);
-        assert_eq!(MinecraftState::from_next_state(3), MinecraftState::Configuration);
-        assert_eq!(MinecraftState::from_next_state(0), MinecraftState::Handshake);
+        assert_eq!(
+            MinecraftState::from_next_state(3),
+            MinecraftState::Configuration
+        );
+        assert_eq!(
+            MinecraftState::from_next_state(0),
+            MinecraftState::Handshake
+        );
     }
 
     #[test]

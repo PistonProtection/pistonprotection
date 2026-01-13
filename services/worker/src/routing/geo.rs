@@ -141,7 +141,11 @@ impl GeoDatabase {
             let mut cache = self.cache.write();
             if cache.len() >= self.max_cache_size {
                 // Simple eviction: clear half the cache
-                let to_remove: Vec<_> = cache.keys().take(self.max_cache_size / 2).cloned().collect();
+                let to_remove: Vec<_> = cache
+                    .keys()
+                    .take(self.max_cache_size / 2)
+                    .cloned()
+                    .collect();
                 for key in to_remove {
                     cache.remove(&key);
                 }
@@ -246,12 +250,12 @@ impl GeoDatabase {
     fn estimate_location_v6(&self, segments: [u16; 8]) -> GeoLocation {
         // Very basic estimation based on first segment
         let (country, continent) = match segments[0] {
-            0x2001 => ("US", "NA"),  // Various, including 6to4
-            0x2400..=0x24ff => ("JP", "AS"),  // APNIC
-            0x2600..=0x26ff => ("US", "NA"),  // ARIN
-            0x2800..=0x28ff => ("BR", "SA"),  // LACNIC
-            0x2a00..=0x2aff => ("EU", "EU"),  // RIPE
-            0x2c00..=0x2cff => ("ZA", "AF"),  // AFRINIC
+            0x2001 => ("US", "NA"),          // Various, including 6to4
+            0x2400..=0x24ff => ("JP", "AS"), // APNIC
+            0x2600..=0x26ff => ("US", "NA"), // ARIN
+            0x2800..=0x28ff => ("BR", "SA"), // LACNIC
+            0x2a00..=0x2aff => ("EU", "EU"), // RIPE
+            0x2c00..=0x2cff => ("ZA", "AF"), // AFRINIC
             _ => ("XX", "XX"),
         };
 
@@ -267,32 +271,55 @@ impl GeoDatabase {
         let mut map = HashMap::new();
 
         // North America
-        for c in ["US", "CA", "MX", "GT", "CU", "HT", "DO", "HN", "NI", "CR", "PA", "JM", "TT", "BS", "BB", "LC", "VC", "GD", "AG", "DM", "KN", "BZ", "SV"] {
+        for c in [
+            "US", "CA", "MX", "GT", "CU", "HT", "DO", "HN", "NI", "CR", "PA", "JM", "TT", "BS",
+            "BB", "LC", "VC", "GD", "AG", "DM", "KN", "BZ", "SV",
+        ] {
             map.insert(c.to_string(), "NA".to_string());
         }
 
         // South America
-        for c in ["BR", "AR", "CL", "CO", "PE", "VE", "EC", "BO", "PY", "UY", "GY", "SR", "GF"] {
+        for c in [
+            "BR", "AR", "CL", "CO", "PE", "VE", "EC", "BO", "PY", "UY", "GY", "SR", "GF",
+        ] {
             map.insert(c.to_string(), "SA".to_string());
         }
 
         // Europe
-        for c in ["GB", "DE", "FR", "IT", "ES", "PT", "NL", "BE", "AT", "CH", "PL", "CZ", "SK", "HU", "RO", "BG", "GR", "SE", "NO", "DK", "FI", "IE", "LT", "LV", "EE", "HR", "SI", "RS", "UA", "BY", "MD", "AL", "MK", "BA", "ME", "XK", "IS", "LU", "MT", "CY", "MC", "SM", "VA", "AD", "LI"] {
+        for c in [
+            "GB", "DE", "FR", "IT", "ES", "PT", "NL", "BE", "AT", "CH", "PL", "CZ", "SK", "HU",
+            "RO", "BG", "GR", "SE", "NO", "DK", "FI", "IE", "LT", "LV", "EE", "HR", "SI", "RS",
+            "UA", "BY", "MD", "AL", "MK", "BA", "ME", "XK", "IS", "LU", "MT", "CY", "MC", "SM",
+            "VA", "AD", "LI",
+        ] {
             map.insert(c.to_string(), "EU".to_string());
         }
 
         // Asia
-        for c in ["CN", "JP", "KR", "IN", "ID", "TH", "VN", "PH", "MY", "SG", "TW", "HK", "MO", "BD", "PK", "LK", "NP", "MM", "KH", "LA", "BN", "MN", "KZ", "UZ", "TM", "TJ", "KG", "AF", "IR", "IQ", "SA", "AE", "QA", "KW", "BH", "OM", "YE", "JO", "LB", "SY", "IL", "PS", "TR", "AM", "GE", "AZ"] {
+        for c in [
+            "CN", "JP", "KR", "IN", "ID", "TH", "VN", "PH", "MY", "SG", "TW", "HK", "MO", "BD",
+            "PK", "LK", "NP", "MM", "KH", "LA", "BN", "MN", "KZ", "UZ", "TM", "TJ", "KG", "AF",
+            "IR", "IQ", "SA", "AE", "QA", "KW", "BH", "OM", "YE", "JO", "LB", "SY", "IL", "PS",
+            "TR", "AM", "GE", "AZ",
+        ] {
             map.insert(c.to_string(), "AS".to_string());
         }
 
         // Oceania
-        for c in ["AU", "NZ", "FJ", "PG", "SB", "VU", "NC", "PF", "WS", "TO", "FM", "PW", "MH", "NR", "TV", "KI", "GU", "AS", "CK", "NU", "TK", "WF"] {
+        for c in [
+            "AU", "NZ", "FJ", "PG", "SB", "VU", "NC", "PF", "WS", "TO", "FM", "PW", "MH", "NR",
+            "TV", "KI", "GU", "AS", "CK", "NU", "TK", "WF",
+        ] {
             map.insert(c.to_string(), "OC".to_string());
         }
 
         // Africa
-        for c in ["ZA", "EG", "NG", "KE", "GH", "TZ", "UG", "ET", "MA", "DZ", "TN", "LY", "SD", "SS", "CD", "AO", "MZ", "ZW", "ZM", "MW", "RW", "BI", "BJ", "TG", "CI", "SN", "ML", "BF", "NE", "TD", "CM", "GA", "CG", "CF", "GQ", "ST", "CV", "MR", "GM", "GW", "SL", "LR", "NA", "BW", "SZ", "LS", "SC", "MU", "MG", "KM", "DJ", "ER", "SO"] {
+        for c in [
+            "ZA", "EG", "NG", "KE", "GH", "TZ", "UG", "ET", "MA", "DZ", "TN", "LY", "SD", "SS",
+            "CD", "AO", "MZ", "ZW", "ZM", "MW", "RW", "BI", "BJ", "TG", "CI", "SN", "ML", "BF",
+            "NE", "TD", "CM", "GA", "CG", "CF", "GQ", "ST", "CV", "MR", "GM", "GW", "SL", "LR",
+            "NA", "BW", "SZ", "LS", "SC", "MU", "MG", "KM", "DJ", "ER", "SO",
+        ] {
             map.insert(c.to_string(), "AF".to_string());
         }
 

@@ -440,10 +440,18 @@ fn parse_v1(data: &[u8]) -> Result<(ProxyHeader, usize), ProxyProtocolError> {
         return Err(ProxyProtocolError::InvalidFormat);
     }
 
-    let src_ip: IpAddr = parts[1].parse().map_err(|_| ProxyProtocolError::InvalidAddress)?;
-    let dst_ip: IpAddr = parts[2].parse().map_err(|_| ProxyProtocolError::InvalidAddress)?;
-    let src_port: u16 = parts[3].parse().map_err(|_| ProxyProtocolError::InvalidPort)?;
-    let dst_port: u16 = parts[4].parse().map_err(|_| ProxyProtocolError::InvalidPort)?;
+    let src_ip: IpAddr = parts[1]
+        .parse()
+        .map_err(|_| ProxyProtocolError::InvalidAddress)?;
+    let dst_ip: IpAddr = parts[2]
+        .parse()
+        .map_err(|_| ProxyProtocolError::InvalidAddress)?;
+    let src_port: u16 = parts[3]
+        .parse()
+        .map_err(|_| ProxyProtocolError::InvalidPort)?;
+    let dst_port: u16 = parts[4]
+        .parse()
+        .map_err(|_| ProxyProtocolError::InvalidPort)?;
 
     trace!(
         src = %src_ip,
@@ -692,10 +700,7 @@ mod tests {
         assert!(!header.is_local);
         assert_eq!(header.family, AddressFamily::Inet);
         assert_eq!(header.protocol, TransportProtocol::Stream);
-        assert_eq!(
-            header.source.unwrap().to_string(),
-            "192.168.1.100:12345"
-        );
+        assert_eq!(header.source.unwrap().to_string(), "192.168.1.100:12345");
         assert_eq!(header.destination.unwrap().to_string(), "10.0.0.1:80");
         assert_eq!(consumed, 44);
     }

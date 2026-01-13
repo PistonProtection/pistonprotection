@@ -202,14 +202,14 @@ impl OriginSelector {
         }
 
         // Fall back to load balancer
-        self.load_balancer.select(Some(client_ip)).map(|origin_id| {
-            SelectedOrigin {
+        self.load_balancer
+            .select(Some(client_ip))
+            .map(|origin_id| SelectedOrigin {
                 origin_id,
                 selection_reason: SelectionReason::LoadBalancer,
                 client_location,
                 distance_km: None,
-            }
-        })
+            })
     }
 
     /// Select origin using geographic routing.
@@ -254,13 +254,11 @@ impl OriginSelector {
             .collect();
 
         // Sort by distance (None = unknown = last)
-        distances.sort_by(|(_, d1), (_, d2)| {
-            match (d1, d2) {
-                (Some(a), Some(b)) => a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal),
-                (Some(_), None) => std::cmp::Ordering::Less,
-                (None, Some(_)) => std::cmp::Ordering::Greater,
-                (None, None) => std::cmp::Ordering::Equal,
-            }
+        distances.sort_by(|(_, d1), (_, d2)| match (d1, d2) {
+            (Some(a), Some(b)) => a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
         });
 
         distances.first().map(|(origin, distance)| {
@@ -307,7 +305,12 @@ impl OriginSelector {
             .collect();
 
         // Sort by geo priority
-        matching.sort_by_key(|o| configs.get(&o.id).map(|c| c.geo_priority).unwrap_or(u32::MAX));
+        matching.sort_by_key(|o| {
+            configs
+                .get(&o.id)
+                .map(|c| c.geo_priority)
+                .unwrap_or(u32::MAX)
+        });
 
         matching.first().map(|origin| {
             debug!(
