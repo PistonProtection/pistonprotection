@@ -78,6 +78,7 @@ mod version_history_tests {
     }
 
     #[test]
+    #[allow(clippy::useless_vec)]
     fn test_version_history_ordering() {
         let mut history = vec![
             ConfigVersionEntry {
@@ -151,7 +152,7 @@ mod cache_tests {
     #[test]
     fn test_cache_pattern_matching() {
         let _pattern = "filter_config:*";
-        let keys = vec![
+        let keys = [
             "filter_config:1",
             "filter_config:42",
             "filter_config:100",
@@ -420,7 +421,10 @@ mod backend_loading_tests {
 
         let mut grouped: HashMap<i32, Vec<&MockBackend>> = HashMap::new();
         for backend in &backends {
-            grouped.entry(backend.backend_type).or_default().push(backend);
+            grouped
+                .entry(backend.backend_type)
+                .or_default()
+                .push(backend);
         }
 
         assert_eq!(grouped.get(&1).unwrap().len(), 2);
@@ -442,6 +446,7 @@ mod rule_loading_tests {
     }
 
     #[test]
+    #[allow(clippy::useless_vec)]
     fn test_rules_sorted_by_priority() {
         let mut rules = vec![
             MockRule {
@@ -522,7 +527,8 @@ mod error_handling_tests {
 
     #[test]
     fn test_invalid_input_error() {
-        let error = TestError::InvalidInput("Cannot rollback to version 10 (current is 5)".to_string());
+        let error =
+            TestError::InvalidInput("Cannot rollback to version 10 (current is 5)".to_string());
 
         match error {
             TestError::InvalidInput(msg) => {

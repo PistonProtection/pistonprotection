@@ -398,7 +398,7 @@ mod validation_error_tests {
         };
 
         // In a real system, you'd filter by severity
-        let errors = vec![error, warning];
+        let errors = [error, warning];
         let error_count = errors
             .iter()
             .filter(|e| e.severity == ValidationSeverity::Error)
