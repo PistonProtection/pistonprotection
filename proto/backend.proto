@@ -4,7 +4,7 @@ package pistonprotection.backend;
 
 import "common.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/backend";
+option go_package = "github.com/pistonprotection/app/pkg/proto/backend";
 
 // Backend represents a protected origin server
 message Backend {

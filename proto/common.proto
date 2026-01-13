@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pistonprotection.common;
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/common";
+option go_package = "github.com/pistonprotection/app/pkg/proto/common";
 
 // Timestamp in nanoseconds since epoch
 message Timestamp {

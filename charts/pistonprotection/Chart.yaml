@@ -4,9 +4,9 @@ description: Enterprise DDoS protection with eBPF/XDP filtering
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-home: https://github.com/pistonprotection/pistonprotection
+home: https://github.com/pistonprotection/app
 sources:
-  - https://github.com/pistonprotection/pistonprotection
+  - https://github.com/pistonprotection/app
 maintainers:
   - name: PistonProtection
     email: hello@pistonprotection.io

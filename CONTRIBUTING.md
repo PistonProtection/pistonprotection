@@ -21,7 +21,7 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/pistonprotection/pistonprotection.git
+   git clone https://github.com/pistonprotection/app.git
    cd pistonprotection
    ```
 
@@ -233,7 +233,7 @@ pnpm test:e2e
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/pistonprotection/pistonprotection/issues)
+- [GitHub Issues](https://github.com/pistonprotection/app/issues)
 - [Discord](https://discord.gg/pistonprotection)
 - [Documentation](https://docs.pistonprotection.io)
 

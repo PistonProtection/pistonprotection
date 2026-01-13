@@ -1,7 +1,7 @@
 # PistonProtection
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/pistonprotection/pistonprotection/ci.yml?branch=main&style=flat-square)](https://github.com/pistonprotection/pistonprotection/actions)
-[![Release](https://img.shields.io/github/v/release/pistonprotection/pistonprotection?style=flat-square)](https://github.com/pistonprotection/pistonprotection/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/pistonprotection/pistonprotection/ci.yml?branch=main&style=flat-square)](https://github.com/pistonprotection/app/actions)
+[![Release](https://img.shields.io/github/v/release/pistonprotection/pistonprotection?style=flat-square)](https://github.com/pistonprotection/app/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-1.27+-326CE5?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
@@ -234,8 +234,8 @@ For detailed installation instructions, see the [Installation Guide](docs/instal
 
 - **Documentation**: [docs.pistonprotection.io](https://docs.pistonprotection.io)
 - **Discord Community**: [discord.gg/pistonprotection](https://discord.gg/pistonprotection)
-- **GitHub Issues**: [Report bugs or request features](https://github.com/pistonprotection/pistonprotection/issues)
-- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/pistonprotection/pistonprotection/discussions)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/pistonprotection/app/issues)
+- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/pistonprotection/app/discussions)
 
 ### Enterprise Support
 
@@ -256,7 +256,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ```bash
 # Quick start for development
-git clone https://github.com/pistonprotection/pistonprotection.git
+git clone https://github.com/pistonprotection/app.git
 cd pistonprotection
 make deps
 make dev

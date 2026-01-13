@@ -5,7 +5,7 @@ package pistonprotection.worker;
 import "common.proto";
 import "filter.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/worker";
+option go_package = "github.com/pistonprotection/app/pkg/proto/worker";
 
 // Worker node registration
 message Worker {

@@ -4,7 +4,7 @@ package pistonprotection.metrics;
 
 import "common.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/metrics";
+option go_package = "github.com/pistonprotection/app/pkg/proto/metrics";
 
 // Traffic metrics for a backend
 message TrafficMetrics {

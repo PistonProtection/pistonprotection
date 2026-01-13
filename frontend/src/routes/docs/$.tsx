@@ -85,7 +85,7 @@ function DocsPageComponent() {
               </Button>
             </Link>
             <a
-              href="https://github.com/PistonProtection/pistonprotection"
+              href="https://github.com/pistonprotection/app"
               target="_blank"
               rel="noopener noreferrer"
             >

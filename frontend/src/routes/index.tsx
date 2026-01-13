@@ -267,7 +267,7 @@ function LandingPage() {
               Documentation
             </Link>
             <a
-              href="https://github.com/PistonProtection/pistonprotection"
+              href="https://github.com/pistonprotection/app"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
@@ -318,7 +318,7 @@ function LandingPage() {
                   </Button>
                 </Link>
                 <a
-                  href="https://github.com/PistonProtection/pistonprotection"
+                  href="https://github.com/pistonprotection/app"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -634,7 +634,7 @@ function LandingPage() {
                 Need a custom solution? Want to self-host?
               </p>
               <a
-                href="https://github.com/PistonProtection/pistonprotection"
+                href="https://github.com/pistonprotection/app"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -731,7 +731,7 @@ function LandingPage() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/PistonProtection/pistonprotection/releases"
+                    href="https://github.com/pistonprotection/app/releases"
                     className="hover:text-foreground transition-colors"
                   >
                     Changelog
@@ -760,7 +760,7 @@ function LandingPage() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/PistonProtection/pistonprotection"
+                    href="https://github.com/pistonprotection/app"
                     className="hover:text-foreground transition-colors"
                   >
                     GitHub
@@ -768,7 +768,7 @@ function LandingPage() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/PistonProtection/pistonprotection/issues"
+                    href="https://github.com/pistonprotection/app/issues"
                     className="hover:text-foreground transition-colors"
                   >
                     Support
@@ -797,7 +797,7 @@ function LandingPage() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/PistonProtection/pistonprotection/blob/main/LICENSE"
+                    href="https://github.com/pistonprotection/app/blob/main/LICENSE"
                     className="hover:text-foreground transition-colors"
                   >
                     License (Apache 2.0)

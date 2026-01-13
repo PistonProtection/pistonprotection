@@ -1119,7 +1119,7 @@ import (
     "context"
     "log"
 
-    pb "github.com/pistonprotection/pistonprotection/pkg/proto"
+    pb "github.com/pistonprotection/app/pkg/proto"
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials"
     "google.golang.org/grpc/metadata"

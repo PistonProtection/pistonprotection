@@ -4,7 +4,7 @@ package pistonprotection.auth;
 
 import "common.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/auth";
+option go_package = "github.com/pistonprotection/app/pkg/proto/auth";
 
 // User account
 message User {

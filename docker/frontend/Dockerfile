@@ -182,7 +182,7 @@ LABEL org.opencontainers.image.title="PistonProtection Frontend" \
       org.opencontainers.image.revision="${GIT_COMMIT}" \
       org.opencontainers.image.vendor="PistonProtection" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.source="https://github.com/pistonprotection/pistonprotection"
+      org.opencontainers.image.source="https://github.com/pistonprotection/app"
 
 # Expose port
 EXPOSE 8080

@@ -15,7 +15,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["PistonProtection Team"]
 license = "Apache-2.0"
-repository = "https://github.com/PistonProtection/pistonprotection"
+repository = "https://github.com/pistonprotection/app"
 
 [workspace.dependencies]
 # Async runtime

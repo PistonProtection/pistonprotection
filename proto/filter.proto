@@ -4,7 +4,7 @@ package pistonprotection.filter;
 
 import "common.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/filter";
+option go_package = "github.com/pistonprotection/app/pkg/proto/filter";
 
 // Filter rule definition
 message FilterRule {

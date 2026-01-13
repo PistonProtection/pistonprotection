@@ -4,7 +4,7 @@ package pistonprotection.scoring;
 
 import "common.proto";
 
-option go_package = "github.com/pistonprotection/pistonprotection/pkg/proto/scoring";
+option go_package = "github.com/pistonprotection/app/pkg/proto/scoring";
 
 // IP Scoring Service provides threat assessment and IP reputation management
 service ScoringService {

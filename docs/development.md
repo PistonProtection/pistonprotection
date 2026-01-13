@@ -86,7 +86,7 @@ curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 ### Clone Repository
 
 ```bash
-git clone https://github.com/pistonprotection/pistonprotection.git
+git clone https://github.com/pistonprotection/app.git
 cd pistonprotection
 ```
 

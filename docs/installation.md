@@ -1027,7 +1027,7 @@ kubectl rollout status daemonset/pistonprotection-worker -n pistonprotection
 
 ### Major Version Upgrades
 
-For major version upgrades, review the [CHANGELOG](https://github.com/pistonprotection/pistonprotection/blob/main/CHANGELOG.md) and follow the migration guide.
+For major version upgrades, review the [CHANGELOG](https://github.com/pistonprotection/app/blob/main/CHANGELOG.md) and follow the migration guide.
 
 ```bash
 # Backup current configuration
@@ -1186,7 +1186,7 @@ kubectl port-forward -n pistonprotection svc/pistonprotection-frontend 3000:3000
 
 If you continue to experience issues:
 
-1. **Search existing issues**: [GitHub Issues](https://github.com/pistonprotection/pistonprotection/issues)
+1. **Search existing issues**: [GitHub Issues](https://github.com/pistonprotection/app/issues)
 2. **Join the community**: [Discord](https://discord.gg/pistonprotection)
 3. **Read the operations guide**: [Operations Guide](operations.md)
 4. **Check documentation**: [docs.pistonprotection.io](https://docs.pistonprotection.io)
