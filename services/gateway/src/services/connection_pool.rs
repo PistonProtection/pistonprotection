@@ -575,7 +575,7 @@ mod tests {
 
         // Acquire a connection
         let guard = pool.acquire().await.unwrap();
-        let conn_id = guard.id();
+        let _conn_id = guard.id();
         guard.mark_success();
         drop(guard);
 
@@ -598,7 +598,7 @@ mod tests {
 
         // Acquire max connections
         let g1 = pool.acquire().await.unwrap();
-        let g2 = pool.acquire().await.unwrap();
+        let _g2 = pool.acquire().await.unwrap();
 
         // Third should timeout
         let result = pool.acquire().await;

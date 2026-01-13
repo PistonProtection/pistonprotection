@@ -13,6 +13,12 @@ pub struct TcpAnalyzer {
     max_connections_per_ip: u32,
 }
 
+impl Default for TcpAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TcpAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -230,7 +236,7 @@ mod tests {
     #[test]
     fn test_state_transitions() {
         let syn = TcpFlags::from_byte(0x02);
-        let syn_ack = TcpFlags::from_byte(0x12);
+        let _syn_ack = TcpFlags::from_byte(0x12);
         let ack = TcpFlags::from_byte(0x10);
 
         // Normal connection establishment

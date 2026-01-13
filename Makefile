@@ -148,7 +148,7 @@ lint-rust: ## Lint Rust code
 
 lint-frontend: ## Lint frontend code
 	@echo "$(BLUE)[LINT]$(NC) Linting frontend..."
-	@cd frontend && pnpm lint
+	@cd frontend && pnpm check
 
 lint-helm: ## Lint Helm chart
 	@echo "$(BLUE)[LINT]$(NC) Linting Helm chart..."

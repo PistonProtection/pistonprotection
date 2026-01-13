@@ -173,6 +173,12 @@ pub struct HttpAnalyzer {
     allowed_methods: Vec<HttpMethod>,
 }
 
+impl Default for HttpAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HttpAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -241,8 +247,8 @@ impl ProtocolAnalyzer for HttpAnalyzer {
             }
 
             // Check user agent
-            if let Some(user_agent) = get_header(payload, b"User-Agent") {
-                if self.is_user_agent_blocked(user_agent) {
+            if let Some(user_agent) = get_header(payload, b"User-Agent")
+                && self.is_user_agent_blocked(user_agent) {
                     debug!(
                         src = %meta.src_ip,
                         user_agent = %String::from_utf8_lossy(user_agent),
@@ -251,7 +257,6 @@ impl ProtocolAnalyzer for HttpAnalyzer {
                     stats.packets_dropped += 1;
                     return Ok(Verdict::Drop);
                 }
-            }
 
             // Check for suspicious paths
             let path_str = String::from_utf8_lossy(path);
@@ -274,6 +279,12 @@ impl ProtocolAnalyzer for HttpAnalyzer {
 /// HTTP/2 protocol analyzer
 pub struct Http2Analyzer {
     stats: RwLock<AnalyzerStats>,
+}
+
+impl Default for Http2Analyzer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Http2Analyzer {

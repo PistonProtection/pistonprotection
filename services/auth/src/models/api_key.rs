@@ -209,7 +209,7 @@ impl ApiKeyGenerator {
 
         // Generate random bytes
         let mut bytes = vec![0u8; length];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rand::rng().fill_bytes(&mut bytes);
 
         // Encode as base64
         let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&bytes);

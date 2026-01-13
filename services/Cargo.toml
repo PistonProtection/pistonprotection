@@ -115,10 +115,27 @@ mockall = "0.13"
 # Allow large error variants since tonic::Status is intentionally large
 # and this is idiomatic in gRPC services
 result_large_err = "allow"
+# Allow if let Some(_) = x instead of x.is_some() for clarity in async code
+redundant_pattern_matching = "allow"
+# Allow collapsible if statements when they improve readability
+collapsible_if = "allow"
+# Allow let-and-return patterns that improve readability
+let_and_return = "allow"
+# Allow field reassign with default for builder patterns
+field_reassign_with_default = "allow"
+# Allow mutex guard held across await in test code
+await_holding_lock = "allow"
+# Allow functions with many arguments (common in builders and service methods)
+too_many_arguments = "allow"
+# Allow empty lines after doc comments (formatting preference)
+empty_line_after_doc_comments = "allow"
 
 [workspace.lints.rust]
 # These are common in proto-generated code and gRPC services
 mismatched_lifetime_syntaxes = "allow"
+# Allow dead code - many types and methods are defined for API completeness
+# and may be used in the future or by external consumers
+dead_code = "allow"
 
 [profile.release]
 opt-level = 3

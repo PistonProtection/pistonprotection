@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_role_management_hierarchy() {
-        let config = RbacConfig::default();
+        let _config = RbacConfig::default();
         // Would need mock for full test
 
         // Test role hierarchy
@@ -304,8 +304,7 @@ mod tests {
                 >= OrganizationRole::Admin.permission_level()
         );
         assert!(
-            !(OrganizationRole::Member.permission_level()
-                >= OrganizationRole::Admin.permission_level())
+            (OrganizationRole::Member.permission_level() < OrganizationRole::Admin.permission_level())
         );
     }
 }

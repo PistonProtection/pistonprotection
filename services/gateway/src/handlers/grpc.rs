@@ -123,7 +123,7 @@ impl BackendServiceTrait for BackendGrpcService {
             .list(
                 &req.organization_id,
                 pagination.page,
-                pagination.page_size.max(1).min(100),
+                pagination.page_size.clamp(1, 100),
             )
             .await
             .map_err(Status::from)?;
@@ -440,7 +440,7 @@ impl FilterServiceTrait for FilterGrpcService {
                 &req.backend_id,
                 req.include_disabled,
                 pagination.page,
-                pagination.page_size.max(1).min(100),
+                pagination.page_size.clamp(1, 100),
             )
             .await
             .map_err(Status::from)?;

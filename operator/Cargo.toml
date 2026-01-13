@@ -73,3 +73,35 @@ criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 [[bench]]
 name = "operator_benchmarks"
 harness = false
+
+[lints.clippy]
+# Allow these lints which are common in test code and for API completeness
+useless_vec = "allow"
+redundant_pattern_matching = "allow"
+collapsible_if = "allow"
+let_and_return = "allow"
+field_reassign_with_default = "allow"
+too_many_arguments = "allow"
+empty_line_after_doc_comments = "allow"
+question_mark = "allow"
+unnecessary_cast = "allow"
+useless_asref = "allow"
+needless_pass_by_value = "allow"
+clone_on_copy = "allow"
+get_first = "allow"
+single_match = "allow"
+match_single_binding = "allow"
+map_clone = "allow"
+manual_map = "allow"
+nonminimal_bool = "allow"
+if_same_then_else = "allow"
+needless_return = "allow"
+match_like_matches_macro = "allow"
+redundant_closure = "allow"
+single_char_pattern = "allow"
+ptr_arg = "allow"
+
+[lints.rust]
+dead_code = "allow"
+unused_variables = "allow"
+unused_imports = "allow"

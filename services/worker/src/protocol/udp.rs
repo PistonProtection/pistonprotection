@@ -16,6 +16,12 @@ pub struct UdpAnalyzer {
     flood_detection: bool,
 }
 
+impl Default for UdpAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UdpAnalyzer {
     pub fn new() -> Self {
         Self {

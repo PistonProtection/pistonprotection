@@ -78,8 +78,8 @@ impl GeoIpService {
         let mut info = GeoIpInfo::default();
 
         // City/Country lookup
-        if let Some(ref reader) = self.city_reader {
-            if let Ok(city) = reader.lookup::<geoip2::City>(ip) {
+        if let Some(ref reader) = self.city_reader
+            && let Ok(city) = reader.lookup::<geoip2::City>(ip) {
                 if let Some(country) = city.country {
                     info.country_code = country.iso_code.map(|s| s.to_string());
                     info.country_name = country
@@ -100,15 +100,13 @@ impl GeoIpService {
                     info.longitude = location.longitude;
                 }
             }
-        }
 
         // ASN lookup
-        if let Some(ref reader) = self.asn_reader {
-            if let Ok(asn) = reader.lookup::<geoip2::Asn>(ip) {
+        if let Some(ref reader) = self.asn_reader
+            && let Ok(asn) = reader.lookup::<geoip2::Asn>(ip) {
                 info.asn = asn.autonomous_system_number;
                 info.as_org = asn.autonomous_system_organization.map(|s| s.to_string());
             }
-        }
 
         info
     }

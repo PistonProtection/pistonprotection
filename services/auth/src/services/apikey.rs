@@ -321,13 +321,13 @@ impl From<ApiKeyError> for tonic::Status {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn test_ip_allowed_exact_match() {
         // Would need mock db/cache for full test
         // This tests the logic in isolation
-        let allowed = vec!["192.168.1.1".to_string(), "10.0.0.0/8".to_string()];
+        let allowed = ["192.168.1.1".to_string(), "10.0.0.0/8".to_string()];
 
         // Test exact match
         assert!(allowed.iter().any(|a| a == "192.168.1.1"));
