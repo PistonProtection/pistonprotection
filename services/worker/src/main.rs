@@ -16,6 +16,7 @@ mod control_plane;
 pub mod ebpf;
 mod handlers;
 pub mod protocol;
+pub mod routing;
 
 // Tests temporarily disabled - requires refactoring to library crate
 // #[cfg(test)]

@@ -92,8 +92,16 @@ pub struct McConfig {
     pub min_protocol_version: u32,
     pub max_protocol_version: u32,
     pub max_hostname_len: u16,
+    /// Protection level: 0=low (permissive), 1=medium, 2=high (strict)
+    pub protection_level: u16,
     pub max_packet_size: u32,
 }
+
+// Protection level constants
+const PROTECTION_LOW: u16 = 0;
+#[allow(dead_code)]
+const PROTECTION_MEDIUM: u16 = 1;
+const PROTECTION_HIGH: u16 = 2;
 
 // Minecraft protocol constants
 const MC_STATE_NONE: u8 = 0;
@@ -990,14 +998,14 @@ fn process_minecraft_bedrock(
     let udp_len = u16::from_be(udp.len) as usize;
 
     // Get config
-    let bedrock_port = if let Some(config) = unsafe { MC_CONFIG.get_ptr(0) } {
+    let (bedrock_port, protection_level) = if let Some(config) = unsafe { MC_CONFIG.get_ptr(0) } {
         let config = unsafe { &*config };
         if config.enabled == 0 {
             return Ok(xdp_action::XDP_PASS);
         }
-        config.bedrock_port
+        (config.bedrock_port, config.protection_level)
     } else {
-        MC_BEDROCK_PORT
+        (MC_BEDROCK_PORT, PROTECTION_LOW)
     };
 
     // Not Bedrock traffic
@@ -1135,8 +1143,13 @@ fn process_minecraft_bedrock(
                     return Ok(xdp_action::XDP_DROP);
                 }
             } else {
-                // No previous state - suspicious, but allow in low protection mode
-                // This could be a legitimate client whose state expired
+                // No previous state - check protection level
+                // In HIGH protection mode, we require proper handshake sequence
+                // In LOW/MEDIUM mode, we allow this for clients whose state may have expired
+                if protection_level >= PROTECTION_HIGH {
+                    // High protection: must have established connection state
+                    return Ok(xdp_action::XDP_DROP);
+                }
             }
 
             // Extract and validate MTU (bytes 24-25, after magic and server address)
@@ -1406,7 +1419,10 @@ fn process_minecraft_bedrock(
                 }
             } else {
                 // No state - connection request without handshake is suspicious
-                // In strict mode we would drop, but allow for expired state
+                // Check protection level - HIGH mode requires proper handshake sequence
+                if protection_level >= PROTECTION_HIGH {
+                    return Ok(xdp_action::XDP_DROP);
+                }
             }
 
             // Check use_security flag

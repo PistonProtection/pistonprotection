@@ -144,6 +144,93 @@ pub struct LoadBalancerConfig {
     /// Health-based routing
     #[prost(bool, tag = "5")]
     pub route_to_healthy_only: bool,
+    /// Geographic routing configuration
+    #[prost(message, optional, tag = "6")]
+    pub geo_routing: ::core::option::Option<GeoRoutingConfig>,
+}
+/// Geographic routing configuration for GeoDNS-like behavior
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GeoRoutingConfig {
+    /// Enable geographic routing
+    #[prost(bool, tag = "1")]
+    pub enabled: bool,
+    /// Geographic routing strategy
+    #[prost(enumeration = "GeoRoutingStrategy", tag = "2")]
+    pub strategy: i32,
+    /// Fallback origin ID if no geo match found
+    #[prost(string, tag = "3")]
+    pub fallback_origin_id: ::prost::alloc::string::String,
+    /// Per-origin geographic preferences
+    #[prost(message, repeated, tag = "4")]
+    pub origin_preferences: ::prost::alloc::vec::Vec<OriginGeoPreference>,
+    /// Geographic regions and their preferred origins
+    #[prost(message, repeated, tag = "5")]
+    pub region_mappings: ::prost::alloc::vec::Vec<GeoRegionMapping>,
+}
+/// Origin geographic preference
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OriginGeoPreference {
+    /// Origin ID
+    #[prost(string, tag = "1")]
+    pub origin_id: ::prost::alloc::string::String,
+    /// Geographic location of this origin
+    #[prost(message, optional, tag = "2")]
+    pub location: ::core::option::Option<GeoLocation>,
+    /// Countries this origin should serve (ISO codes)
+    #[prost(string, repeated, tag = "3")]
+    pub preferred_countries: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Continents this origin should serve
+    #[prost(string, repeated, tag = "4")]
+    pub preferred_continents: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Priority for this origin in geo routing (lower = higher priority)
+    #[prost(uint32, tag = "5")]
+    pub geo_priority: u32,
+}
+/// Geographic location
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GeoLocation {
+    /// ISO 3166-1 alpha-2 country code
+    #[prost(string, tag = "1")]
+    pub country_code: ::prost::alloc::string::String,
+    /// Continent code (AF, AN, AS, EU, NA, OC, SA)
+    #[prost(string, tag = "2")]
+    pub continent_code: ::prost::alloc::string::String,
+    /// Region/state code
+    #[prost(string, tag = "3")]
+    pub region_code: ::prost::alloc::string::String,
+    /// City name
+    #[prost(string, tag = "4")]
+    pub city: ::prost::alloc::string::String,
+    /// Latitude
+    #[prost(double, tag = "5")]
+    pub latitude: f64,
+    /// Longitude
+    #[prost(double, tag = "6")]
+    pub longitude: f64,
+    /// Data center identifier (e.g., "us-east-1", "eu-west-1")
+    #[prost(string, tag = "7")]
+    pub datacenter_id: ::prost::alloc::string::String,
+}
+/// Mapping from geographic region to preferred origins
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GeoRegionMapping {
+    /// Region identifier (country code, continent code, or custom region)
+    #[prost(string, tag = "1")]
+    pub region: ::prost::alloc::string::String,
+    /// Region type
+    #[prost(enumeration = "GeoRegionType", tag = "2")]
+    pub region_type: i32,
+    /// Ordered list of origin IDs to try for this region
+    #[prost(string, repeated, tag = "3")]
+    pub origin_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Health check configuration
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -639,6 +726,83 @@ impl BackendType {
             "BACKEND_TYPE_MINECRAFT_JAVA" => Some(Self::MinecraftJava),
             "BACKEND_TYPE_MINECRAFT_BEDROCK" => Some(Self::MinecraftBedrock),
             "BACKEND_TYPE_QUIC" => Some(Self::Quic),
+            _ => None,
+        }
+    }
+}
+/// Geographic routing strategy
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum GeoRoutingStrategy {
+    Unspecified = 0,
+    /// Route to geographically closest origin based on country/region
+    Proximity = 1,
+    /// Route based on explicit region-to-origin mappings
+    Mapping = 2,
+    /// Route based on measured latency (requires latency probing)
+    Latency = 3,
+    /// Route to origin in same continent, fallback to closest
+    Continent = 4,
+}
+impl GeoRoutingStrategy {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "GEO_ROUTING_STRATEGY_UNSPECIFIED",
+            Self::Proximity => "GEO_ROUTING_STRATEGY_PROXIMITY",
+            Self::Mapping => "GEO_ROUTING_STRATEGY_MAPPING",
+            Self::Latency => "GEO_ROUTING_STRATEGY_LATENCY",
+            Self::Continent => "GEO_ROUTING_STRATEGY_CONTINENT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "GEO_ROUTING_STRATEGY_UNSPECIFIED" => Some(Self::Unspecified),
+            "GEO_ROUTING_STRATEGY_PROXIMITY" => Some(Self::Proximity),
+            "GEO_ROUTING_STRATEGY_MAPPING" => Some(Self::Mapping),
+            "GEO_ROUTING_STRATEGY_LATENCY" => Some(Self::Latency),
+            "GEO_ROUTING_STRATEGY_CONTINENT" => Some(Self::Continent),
+            _ => None,
+        }
+    }
+}
+/// Type of geographic region
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum GeoRegionType {
+    Unspecified = 0,
+    Country = 1,
+    Continent = 2,
+    Custom = 3,
+}
+impl GeoRegionType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "GEO_REGION_TYPE_UNSPECIFIED",
+            Self::Country => "GEO_REGION_TYPE_COUNTRY",
+            Self::Continent => "GEO_REGION_TYPE_CONTINENT",
+            Self::Custom => "GEO_REGION_TYPE_CUSTOM",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "GEO_REGION_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "GEO_REGION_TYPE_COUNTRY" => Some(Self::Country),
+            "GEO_REGION_TYPE_CONTINENT" => Some(Self::Continent),
+            "GEO_REGION_TYPE_CUSTOM" => Some(Self::Custom),
             _ => None,
         }
     }

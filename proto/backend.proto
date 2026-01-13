@@ -124,6 +124,102 @@ message LoadBalancerConfig {
 
   // Health-based routing
   bool route_to_healthy_only = 5;
+
+  // Geographic routing configuration
+  GeoRoutingConfig geo_routing = 6;
+}
+
+// Geographic routing configuration for GeoDNS-like behavior
+message GeoRoutingConfig {
+  // Enable geographic routing
+  bool enabled = 1;
+
+  // Geographic routing strategy
+  GeoRoutingStrategy strategy = 2;
+
+  // Fallback origin ID if no geo match found
+  string fallback_origin_id = 3;
+
+  // Per-origin geographic preferences
+  repeated OriginGeoPreference origin_preferences = 4;
+
+  // Geographic regions and their preferred origins
+  repeated GeoRegionMapping region_mappings = 5;
+}
+
+// Geographic routing strategy
+enum GeoRoutingStrategy {
+  GEO_ROUTING_STRATEGY_UNSPECIFIED = 0;
+  // Route to geographically closest origin based on country/region
+  GEO_ROUTING_STRATEGY_PROXIMITY = 1;
+  // Route based on explicit region-to-origin mappings
+  GEO_ROUTING_STRATEGY_MAPPING = 2;
+  // Route based on measured latency (requires latency probing)
+  GEO_ROUTING_STRATEGY_LATENCY = 3;
+  // Route to origin in same continent, fallback to closest
+  GEO_ROUTING_STRATEGY_CONTINENT = 4;
+}
+
+// Origin geographic preference
+message OriginGeoPreference {
+  // Origin ID
+  string origin_id = 1;
+
+  // Geographic location of this origin
+  GeoLocation location = 2;
+
+  // Countries this origin should serve (ISO codes)
+  repeated string preferred_countries = 3;
+
+  // Continents this origin should serve
+  repeated string preferred_continents = 4;
+
+  // Priority for this origin in geo routing (lower = higher priority)
+  uint32 geo_priority = 5;
+}
+
+// Geographic location
+message GeoLocation {
+  // ISO 3166-1 alpha-2 country code
+  string country_code = 1;
+
+  // Continent code (AF, AN, AS, EU, NA, OC, SA)
+  string continent_code = 2;
+
+  // Region/state code
+  string region_code = 3;
+
+  // City name
+  string city = 4;
+
+  // Latitude
+  double latitude = 5;
+
+  // Longitude
+  double longitude = 6;
+
+  // Data center identifier (e.g., "us-east-1", "eu-west-1")
+  string datacenter_id = 7;
+}
+
+// Mapping from geographic region to preferred origins
+message GeoRegionMapping {
+  // Region identifier (country code, continent code, or custom region)
+  string region = 1;
+
+  // Region type
+  GeoRegionType region_type = 2;
+
+  // Ordered list of origin IDs to try for this region
+  repeated string origin_ids = 3;
+}
+
+// Type of geographic region
+enum GeoRegionType {
+  GEO_REGION_TYPE_UNSPECIFIED = 0;
+  GEO_REGION_TYPE_COUNTRY = 1;
+  GEO_REGION_TYPE_CONTINENT = 2;
+  GEO_REGION_TYPE_CUSTOM = 3;
 }
 
 // Load balancing algorithm
