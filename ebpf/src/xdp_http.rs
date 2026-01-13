@@ -131,6 +131,11 @@ pub struct Http2ConnectionState {
     pub streams_opened: u32,
     /// Number of streams reset
     pub streams_reset: u32,
+    /// HEADERS→RST pairs (rapid reset attack signature)
+    /// Incremented when RST_STREAM is received shortly after HEADERS
+    pub headers_rst_pairs: u32,
+    /// Timestamp of last HEADERS frame (for HEADERS→RST tracking)
+    pub last_headers_time: u64,
 }
 
 /// Per-IP HTTP rate limiting
@@ -689,7 +694,7 @@ fn process_tcp_http(
                 state.flags |= FLAG_SMUGGLING_DETECTED;
             }
             // Block IP for longer duration - smuggling is a serious attack
-            block_ip_v4(src_ip, (config.block_duration_ns << 1));
+            block_ip_v4(src_ip, config.block_duration_ns << 1);
             Ok(xdp_action::XDP_DROP)
         }
         HttpValidation::Suspicious => {
@@ -745,6 +750,8 @@ fn get_or_create_http2_connection(conn_key: u64, now: u64) -> Http2ConnectionSta
             last_rst_stream: 0,
             streams_opened: 0,
             streams_reset: 0,
+            headers_rst_pairs: 0,
+            last_headers_time: 0,
         };
         let _ = HTTP2_CONNECTIONS.insert(&conn_key, &state, 0);
         state
@@ -794,6 +801,11 @@ fn process_http2_frames(
             h2_state.window_update_count = 0;
             h2_state.headers_count = 0;
             h2_state.control_frame_count = 0;
+            // Also reset rapid reset attack tracking
+            h2_state.headers_rst_pairs = 0;
+            h2_state.last_headers_time = 0;
+            h2_state.streams_opened = 0;
+            h2_state.streams_reset = 0;
         }
 
         // Process frame by type
@@ -807,6 +819,8 @@ fn process_http2_frames(
                 h2_state.headers_count += 1;
                 h2_state.streams_opened += 1;
                 h2_state.control_frame_count += 1;
+                // Track HEADERS timestamp for HEADERS→RST pair detection
+                h2_state.last_headers_time = now;
 
                 // Check max streams
                 let max_streams = if config.http2_max_streams != 0 {
@@ -826,10 +840,21 @@ fn process_http2_frames(
                 h2_state.rst_stream_count += 1;
                 h2_state.streams_reset += 1;
                 h2_state.control_frame_count += 1;
-                h2_state.last_rst_stream = now;
 
                 // CVE-2023-44487: Rapid Reset Attack Detection
                 // Attackers send HEADERS followed immediately by RST_STREAM
+
+                // Track HEADERS→RST pairs - the signature of rapid reset attacks
+                // If RST_STREAM comes within 100ms (100_000_000ns) of last HEADERS, count it
+                const RAPID_RST_THRESHOLD_NS: u64 = 100_000_000; // 100ms
+                if h2_state.last_headers_time != 0
+                    && now.saturating_sub(h2_state.last_headers_time) < RAPID_RST_THRESHOLD_NS
+                {
+                    h2_state.headers_rst_pairs += 1;
+                }
+                h2_state.last_rst_stream = now;
+
+                // Detection 1: Excessive RST_STREAM frames in window
                 let max_rst = if config.http2_max_rst_per_window != 0 {
                     config.http2_max_rst_per_window
                 } else {
@@ -838,15 +863,25 @@ fn process_http2_frames(
 
                 if h2_state.rst_stream_count > max_rst {
                     update_stats_http2_rapid_reset();
-                    block_ip_v4(src_ip, (config.block_duration_ns << 1)); // Longer block for rapid reset
+                    block_ip_v4(src_ip, config.block_duration_ns << 1); // Longer block for rapid reset
                     return Ok(xdp_action::XDP_DROP);
                 }
 
-                // Additional heuristic: ratio of RST to HEADERS
-                // If more streams are being reset than opened, suspicious
-                if h2_state.streams_reset > h2_state.streams_opened && h2_state.streams_reset > 10 {
+                // Detection 2: HEADERS→RST pairs detection (most accurate for CVE-2023-44487)
+                // If we see 10+ rapid HEADERS→RST pairs, this is almost certainly an attack
+                if h2_state.headers_rst_pairs > 10 {
                     update_stats_http2_rapid_reset();
-                    block_ip_v4(src_ip, (config.block_duration_ns << 1));
+                    block_ip_v4(src_ip, config.block_duration_ns << 2); // Even longer block
+                    return Ok(xdp_action::XDP_DROP);
+                }
+
+                // Detection 3: Ratio heuristic - more resets than opens is suspicious
+                // Only trigger after enough samples to avoid false positives
+                if h2_state.streams_reset > h2_state.streams_opened
+                    && h2_state.streams_reset > 20
+                {
+                    update_stats_http2_rapid_reset();
+                    block_ip_v4(src_ip, config.block_duration_ns << 1);
                     return Ok(xdp_action::XDP_DROP);
                 }
             }

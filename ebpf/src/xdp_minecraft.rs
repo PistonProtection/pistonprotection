@@ -126,6 +126,10 @@ const MC_PROTO_1_20_5: u32 = 766; // Transfer state added
 // Maximum VarInt bytes (5 for 32-bit values)
 const MAX_VARINT_BYTES: usize = 5;
 
+// Fragment timeout: 5 seconds in nanoseconds
+// If a fragmented packet isn't completed within this time, drop subsequent fragments
+const FRAGMENT_TIMEOUT_NS: u64 = 5_000_000_000;
+
 // Maximum Minecraft packet size (2MB is protocol max, but we're stricter)
 const DEFAULT_MAX_PACKET_SIZE: i32 = 2097151;
 
@@ -367,6 +371,21 @@ fn process_minecraft_java(
     if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get(&connection_key) } {
         if state.flags & MC_FLAG_FRAGMENTED_PENDING != 0 && state.pending_packet_bytes > 0 {
             // We're expecting continuation data from a previous fragment
+            let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+
+            // SECURITY: Check fragment timeout to prevent stale fragment attacks
+            // If the fragment started too long ago, clear the pending state and drop
+            if now.saturating_sub(state.last_seen) > FRAGMENT_TIMEOUT_NS {
+                // Fragment timed out - clear pending state and drop this packet
+                if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get_ptr_mut(&connection_key) } {
+                    let state = unsafe { &mut *state };
+                    state.flags &= !MC_FLAG_FRAGMENTED_PENDING;
+                    state.pending_packet_bytes = 0;
+                    state.pending_seq = 0;
+                }
+                return Ok(xdp_action::XDP_DROP);
+            }
+
             // SECURITY: Validate TCP sequence number matches expected
             // This prevents attackers from injecting out-of-order fragments
             let expected_seq = state.pending_seq;
