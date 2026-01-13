@@ -102,10 +102,10 @@ pretty_assertions = "1.4"
 fake = { version = "2.9", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 
-# Tests temporarily disabled - need refactoring to access private modules
-# [[test]]
-# name = "integration"
-# path = "src/tests/mod.rs"
+# Integration tests disabled - need significant refactoring
+# The test files in src/tests/ use APIs that differ from the current service implementation.
+# These tests should be updated to match the current service API structure.
+# See: https://github.com/pistonprotection/app/issues/XXX (tracking issue)
 
 [[bench]]
 name = "auth_benchmarks"
