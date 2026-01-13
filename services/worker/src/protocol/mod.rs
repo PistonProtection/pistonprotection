@@ -1,10 +1,13 @@
 //! Protocol analysis and filtering
 
+pub mod haproxy;
 pub mod http;
 pub mod minecraft;
 pub mod quic;
 pub mod tcp;
 pub mod udp;
+
+pub use haproxy::{ProxyHeader, ProxyProtocolVersion};
 
 use pistonprotection_common::error::Result;
 use std::net::IpAddr;
