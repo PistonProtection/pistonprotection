@@ -46,8 +46,11 @@ export const Route = createFileRoute("/")({
       {
         name: "keywords",
         content:
-          "DDoS protection, eBPF, XDP, Minecraft protection, game server protection, TCP proxy, UDP proxy, anti-DDoS, self-hosted",
+          "DDoS protection, eBPF, XDP, Minecraft protection, game server protection, TCP proxy, UDP proxy, anti-DDoS, self-hosted, Kubernetes DDoS, RakNet protection",
       },
+      { name: "robots", content: "index, follow" },
+      { name: "author", content: "PistonProtection" },
+      { name: "theme-color", content: "#0f172a" },
       {
         property: "og:title",
         content: "PistonProtection - Enterprise DDoS Protection",
@@ -55,12 +58,30 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Open-source, self-hostable DDoS protection with eBPF/XDP kernel-level filtering.",
+          "Open-source, self-hostable DDoS protection with eBPF/XDP kernel-level filtering. Protect TCP, UDP, HTTP/3, QUIC, and Minecraft servers.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://pistonprotection.com" },
+      {
+        property: "og:image",
+        content: "https://pistonprotection.com/og-image.png",
+      },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:site_name", content: "PistonProtection" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "PistonProtection - DDoS Protection" },
+      {
+        name: "twitter:description",
+        content:
+          "Enterprise-grade DDoS protection with eBPF/XDP. Sub-millisecond latency filtering for TCP, UDP, HTTP, QUIC, and Minecraft.",
+      },
+      {
+        name: "twitter:image",
+        content: "https://pistonprotection.com/og-image.png",
+      },
     ],
+    links: [{ rel: "canonical", href: "https://pistonprotection.com" }],
   }),
 });
 
@@ -643,6 +664,140 @@ function LandingPage() {
                   <ExternalLink className="ml-1 h-4 w-4" />
                 </Button>
               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Use Cases Section */}
+        <section className="py-20 md:py-28 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <Badge className="mb-4" variant="outline">
+                <Server className="h-3 w-3 mr-1" />
+                Use Cases
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Built for Every Scale
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+                From indie game servers to enterprise infrastructure,
+                PistonProtection scales with you.
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+              {[
+                {
+                  title: "Game Servers",
+                  description:
+                    "Minecraft, Source Engine, and custom game servers with protocol-aware filtering and player protection.",
+                  icon: Gamepad2,
+                },
+                {
+                  title: "SaaS Platforms",
+                  description:
+                    "Protect your web applications and APIs with HTTP/2/3 and QUIC filtering at the edge.",
+                  icon: Cloud,
+                },
+                {
+                  title: "E-commerce",
+                  description:
+                    "Keep your online store available during peak traffic and attack scenarios.",
+                  icon: HardDrive,
+                },
+                {
+                  title: "Infrastructure",
+                  description:
+                    "Kubernetes-native deployment for modern cloud infrastructure and microservices.",
+                  icon: Server,
+                },
+                {
+                  title: "Gaming Networks",
+                  description:
+                    "Multi-server protection for large gaming networks with GeoDNS load balancing.",
+                  icon: Network,
+                },
+                {
+                  title: "Open Source Projects",
+                  description:
+                    "Self-host on your own infrastructure with the Apache 2.0 licensed codebase.",
+                  icon: Code2,
+                },
+              ].map((useCase, i) => (
+                <Card
+                  key={i}
+                  className="group hover:border-primary/50 transition-colors"
+                >
+                  <CardHeader>
+                    <div className="mb-3 p-2 rounded-lg bg-primary/10 w-fit">
+                      <useCase.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">{useCase.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {useCase.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq" className="py-20 md:py-28">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <Badge className="mb-4" variant="outline">
+                FAQ
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+                Common questions about PistonProtection and DDoS mitigation.
+              </p>
+            </div>
+            <div className="max-w-3xl mx-auto space-y-4">
+              {[
+                {
+                  q: "What types of attacks does PistonProtection mitigate?",
+                  a: "PistonProtection mitigates volumetric attacks (UDP/TCP floods, amplification), protocol attacks (SYN flood, Slowloris), and application-layer attacks (HTTP floods, bot attacks). Our eBPF/XDP technology handles millions of packets per second at the kernel level.",
+                },
+                {
+                  q: "How does eBPF/XDP filtering work?",
+                  a: "XDP (eXpress Data Path) operates at the Linux kernel level, processing packets before they reach the network stack. This means malicious traffic is dropped at wire speed with minimal CPU overhead, allowing legitimate traffic to pass through with sub-millisecond latency.",
+                },
+                {
+                  q: "Can I self-host PistonProtection?",
+                  a: "Yes! PistonProtection is fully open-source under the Apache 2.0 license. You can deploy it on your own Kubernetes cluster with Cilium CNI, or use our managed service for zero-ops protection.",
+                },
+                {
+                  q: "Do you support Minecraft server protection?",
+                  a: "Absolutely. We have native protocol support for both Minecraft Java Edition (TCP) and Bedrock Edition (RakNet/UDP). Our filters understand the Minecraft protocol to detect bot attacks, packet spam, and amplification attacks.",
+                },
+                {
+                  q: "What's the setup time for protection?",
+                  a: "For managed service, you can be protected within minutes by pointing your DNS to our edge network. For self-hosted deployments, our Helm chart and operator make Kubernetes deployment straightforward.",
+                },
+                {
+                  q: "How is real client IP preserved?",
+                  a: "We support HAProxy PROXY protocol v1 and v2, allowing your backend servers to receive the original client IP address. This ensures your logs, rate limiting, and geo-blocking work correctly.",
+                },
+              ].map((faq, i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold">
+                      {faq.q}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {faq.a}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
