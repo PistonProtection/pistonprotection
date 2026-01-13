@@ -713,31 +713,38 @@ fn make_connection_key(
     src_ip: u32,
     src_port: u16,
     dcid_len: u8,
-    _data: usize,
+    data: usize,
     dcid_start: usize,
 ) -> u64 {
-    // Create a connection key from IP, port, and DCID hash
+    // Create a connection key from IP, port, and full DCID hash
+    // Use FNV-1a style hash for better distribution with minimal collisions
     let mut key: u64 = (src_ip as u64) << 32;
     key |= (src_port as u64) << 16;
 
-    // Simple hash of first few DCID bytes if available
+    // Hash all DCID bytes to avoid collision when only first byte matches
     if dcid_len > 0 {
-        let dcid_byte = unsafe { *(dcid_start as *const u8) };
-        key |= dcid_byte as u64;
+        let dcid_hash = hash_connection_id(data, dcid_start, dcid_len);
+        // Mix the DCID hash into the lower 16 bits
+        key |= (dcid_hash & 0xFFFF) as u64;
     }
 
     key
 }
 
 #[inline(always)]
-fn hash_connection_id(data: usize, dcid_start: usize, dcid_len: u8) -> u64 {
-    // Simple hash of connection ID
-    let mut hash: u64 = 0;
-    let len = core::cmp::min(dcid_len as usize, 8);
+fn hash_connection_id(_data: usize, dcid_start: usize, dcid_len: u8) -> u64 {
+    // FNV-1a hash of connection ID for good distribution
+    // FNV-1a constants for 64-bit
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    let mut hash: u64 = FNV_OFFSET;
+    let len = core::cmp::min(dcid_len as usize, 20); // QUIC max DCID is 20 bytes
 
     for i in 0..len {
         let byte = unsafe { *((dcid_start + i) as *const u8) };
-        hash = hash.wrapping_mul(31).wrapping_add(byte as u64);
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
     }
 
     hash
