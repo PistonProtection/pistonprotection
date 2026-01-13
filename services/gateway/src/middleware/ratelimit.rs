@@ -9,7 +9,7 @@ use std::task::{Context, Poll};
 type BoxBody = UnsyncBoxBody<Bytes, tonic::Status>;
 use http_body_util::BodyExt;
 use tower::{Layer, Service};
-use tracing::warn;
+use tracing::{error, warn};
 
 /// Rate limiting middleware
 #[derive(Clone)]
@@ -56,10 +56,27 @@ where
                 let empty_body = http_body_util::Empty::<Bytes>::new()
                     .map_err(|_| tonic::Status::internal("body error"))
                     .boxed_unsync();
-                let response = http::Response::builder()
+                // Build the rate limit response. This should never fail since we're using
+                // valid status codes and headers, but we handle it defensively.
+                let response = match http::Response::builder()
                     .status(http::StatusCode::TOO_MANY_REQUESTS)
+                    .header("content-type", "application/grpc")
+                    .header("grpc-status", "8") // RESOURCE_EXHAUSTED
+                    .header("grpc-message", "Rate limit exceeded")
                     .body(empty_body)
-                    .unwrap();
+                {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        error!("Failed to build rate limit response: {}", e);
+                        // Fall back to a minimal response
+                        http::Response::builder()
+                            .status(http::StatusCode::TOO_MANY_REQUESTS)
+                            .body(http_body_util::Empty::<Bytes>::new()
+                                .map_err(|_| tonic::Status::internal("body error"))
+                                .boxed_unsync())
+                            .expect("minimal response should always build")
+                    }
+                };
                 return Ok(response);
             }
 

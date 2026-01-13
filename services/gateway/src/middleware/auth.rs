@@ -393,19 +393,20 @@ where
                 Ok(None) => {
                     warn!(path = %path, "Unauthorized request - no credentials provided");
 
-                    // Return unauthenticated error
+                    // Return unauthenticated error. Builder should never fail with valid inputs.
                     let response = http::Response::builder()
                         .status(http::StatusCode::UNAUTHORIZED)
                         .header("content-type", "application/grpc")
                         .header("grpc-status", "16") // UNAUTHENTICATED
                         .header("grpc-message", "Missing authorization")
                         .body(UnsyncBoxBody::default())
-                        .unwrap();
+                        .expect("auth error response should always build with valid inputs");
 
                     Ok(response)
                 }
                 Err(e) => {
-                    warn!(path = %path, error = %e, "Authentication failed");
+                    // Log only the error category, not full details to avoid information leakage
+                    warn!(path = %path, error_category = ?e, "Authentication failed");
 
                     let status: tonic::Status = e.into();
                     let response = http::Response::builder()
@@ -414,7 +415,7 @@ where
                         .header("grpc-status", "16") // UNAUTHENTICATED
                         .header("grpc-message", status.message())
                         .body(UnsyncBoxBody::default())
-                        .unwrap();
+                        .expect("auth error response should always build with valid inputs");
 
                     Ok(response)
                 }

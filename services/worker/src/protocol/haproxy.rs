@@ -582,8 +582,16 @@ fn parse_v2_addresses(
             if data.len() < 36 {
                 return Err(ProxyProtocolError::InsufficientData);
             }
-            let src_ip = Ipv6Addr::from(<[u8; 16]>::try_from(&data[0..16]).unwrap());
-            let dst_ip = Ipv6Addr::from(<[u8; 16]>::try_from(&data[16..32]).unwrap());
+            // SAFETY: We checked data.len() >= 36 above, so these slices are valid.
+            // The conversion to [u8; 16] is guaranteed to succeed for a 16-byte slice.
+            let src_bytes: [u8; 16] = data[0..16]
+                .try_into()
+                .map_err(|_| ProxyProtocolError::InsufficientData)?;
+            let dst_bytes: [u8; 16] = data[16..32]
+                .try_into()
+                .map_err(|_| ProxyProtocolError::InsufficientData)?;
+            let src_ip = Ipv6Addr::from(src_bytes);
+            let dst_ip = Ipv6Addr::from(dst_bytes);
             let src_port = u16::from_be_bytes([data[32], data[33]]);
             let dst_port = u16::from_be_bytes([data[34], data[35]]);
             Ok((
