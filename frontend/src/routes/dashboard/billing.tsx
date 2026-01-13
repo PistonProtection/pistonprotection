@@ -46,11 +46,33 @@ export const Route = createFileRoute("/dashboard/billing")({
 });
 
 // Plan pricing (monthly prices in cents - would come from Stripe in production)
-const planPricing: Record<string, { monthly: number; annual: number }> = {
-  free: { monthly: 0, annual: 0 },
-  starter: { monthly: 2900, annual: 29000 }, // $29/mo, $290/yr
-  professional: { monthly: 9900, annual: 99000 }, // $99/mo, $990/yr
-  enterprise: { monthly: 29900, annual: 299000 }, // $299/mo, $2990/yr
+const planPricing: Record<
+  string,
+  {
+    monthly: number;
+    annual: number;
+    billingType?: "flat" | "usage" | "hybrid";
+    bandwidthPricePerGb?: number;
+    requestsPricePerMillion?: number;
+  }
+> = {
+  free: { monthly: 0, annual: 0, billingType: "flat" },
+  starter: { monthly: 2900, annual: 29000, billingType: "flat" }, // $29/mo, $290/yr
+  professional: {
+    monthly: 9900,
+    annual: 99000,
+    billingType: "hybrid",
+    bandwidthPricePerGb: 5,
+    requestsPricePerMillion: 50,
+  }, // $99/mo, $990/yr + overage
+  enterprise: { monthly: 29900, annual: 299000, billingType: "flat" }, // $299/mo, $2990/yr
+  "pay-as-you-go": {
+    monthly: 0,
+    annual: 0,
+    billingType: "usage",
+    bandwidthPricePerGb: 8,
+    requestsPricePerMillion: 100,
+  },
 };
 
 // Plan features for display
@@ -59,19 +81,23 @@ const planFeatures: Record<string, string[]> = {
     "1 protected backend",
     "5 filter rules",
     "1 GB bandwidth/month",
+    "100K requests/month",
     "Community support",
   ],
   starter: [
     "5 protected backends",
     "25 filter rules",
     "100 GB bandwidth/month",
+    "10M requests/month",
     "Email support",
     "14-day free trial",
   ],
   professional: [
     "15 protected backends",
     "100 filter rules",
-    "1 TB bandwidth/month",
+    "1 TB included bandwidth",
+    "100M included requests",
+    "Overage: $0.05/GB, $0.50/1M req",
     "Priority support",
     "Advanced analytics",
     "14-day free trial",
@@ -80,10 +106,19 @@ const planFeatures: Record<string, string[]> = {
     "Unlimited backends",
     "Unlimited filter rules",
     "Unlimited bandwidth",
+    "Unlimited requests",
     "24/7 dedicated support",
     "Custom integrations",
     "SLA guarantee",
     "14-day free trial",
+  ],
+  "pay-as-you-go": [
+    "10 protected backends",
+    "50 filter rules",
+    "Pay per GB: $0.08/GB",
+    "Pay per request: $1.00/1M",
+    "No monthly minimum",
+    "Scale as needed",
   ],
 };
 
@@ -287,6 +322,79 @@ function BillingPage() {
               )}
               Reactivate
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Usage Warning Alert */}
+      {usage?.warningStatus?.needsWarning && (
+        <Card className="border-orange-500">
+          <CardContent className="flex items-center gap-4 py-4">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <div className="flex-1">
+              <p className="font-medium text-orange-600">
+                Approaching Usage Limit
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {usage.bandwidth.percentage >= (usage.warningStatus.threshold ?? 80) && (
+                  <span>
+                    Bandwidth at {usage.bandwidth.percentage}% of limit.{" "}
+                  </span>
+                )}
+                {usage.requests?.percentage &&
+                  usage.requests.percentage >= (usage.warningStatus.threshold ?? 80) && (
+                    <span>
+                      Requests at {usage.requests.percentage}% of limit.{" "}
+                    </span>
+                  )}
+                {usage.warningStatus.billingType === "hybrid" && (
+                  <span className="block mt-1">
+                    Overage charges may apply after limits are exceeded.
+                  </span>
+                )}
+                {usage.warningStatus.hardCapEnabled && (
+                  <span className="block mt-1 text-red-500">
+                    Service will be suspended when limits are reached.
+                  </span>
+                )}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Find a better plan to upgrade to
+                const currentIndex = ["free", "starter", "professional", "enterprise"].indexOf(currentPlanName);
+                const nextPlan = ["starter", "professional", "enterprise", "enterprise"][currentIndex];
+                if (nextPlan && nextPlan !== currentPlanName) {
+                  const plan = plans?.find(p => p.name === nextPlan);
+                  if (plan?.lookupKey) {
+                    upgradeMutation.mutate({ priceId: plan.lookupKey, annual: false });
+                  }
+                }
+              }}
+            >
+              Upgrade Plan
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Overage Cost Warning */}
+      {usage?.warningStatus?.estimatedOverageCost && usage.warningStatus.estimatedOverageCost > 0 && (
+        <Card className="border-red-500">
+          <CardContent className="flex items-center gap-4 py-4">
+            <Zap className="h-5 w-5 text-red-500" />
+            <div className="flex-1">
+              <p className="font-medium text-red-600">
+                Overage Charges Applied
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Estimated overage cost this period:{" "}
+                <span className="font-semibold">
+                  ${(usage.warningStatus.estimatedOverageCost / 100).toFixed(2)}
+                </span>
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -15,9 +15,11 @@ import {
   trafficMetric,
 } from "@/server/db/schema";
 import {
+  checkUsageStatus,
   formatBytes,
   formatNumber,
   getOrganizationLimits,
+  type ProtectionPlanConfig,
   protectionPlans,
 } from "@/server/server-utils";
 import { stripeClient } from "@/server/stripe";
@@ -123,6 +125,10 @@ export const billingRouter = createTRPCRouter({
 
     // Get bandwidth usage (from protection org or calculate from metrics)
     const bandwidthUsed = protOrg?.bandwidthUsed ?? 0;
+    const requestsUsed = protOrg?.requestsUsed ?? 0;
+
+    // Check usage status for warnings
+    const usageStatus = await checkUsageStatus(input.organizationId);
 
     return {
       backends: {
@@ -146,7 +152,31 @@ export const billingRouter = createTRPCRouter({
             ? 0
             : Math.min(100, (bandwidthUsed / limits.bandwidth) * 100),
       },
+      requests: {
+        used: requestsUsed,
+        usedFormatted: formatNumber(requestsUsed),
+        limit: limits.requests,
+        limitFormatted: formatNumber(limits.requests),
+        unlimited: limits.requests === -1,
+        percentage:
+          limits.requests === -1
+            ? 0
+            : Math.min(100, (requestsUsed / limits.requests) * 100),
+      },
       lastUsageReset: protOrg?.lastUsageReset?.toISOString() ?? null,
+      // Usage warning status
+      warningStatus: {
+        needsWarning: usageStatus.needsWarning,
+        threshold: protOrg?.usageWarningThreshold ?? 80,
+        bandwidthUsedPercent: usageStatus.bandwidthUsedPercent,
+        requestsUsedPercent: usageStatus.requestsUsedPercent,
+        isOverBandwidthLimit: usageStatus.isOverBandwidthLimit,
+        isOverRequestsLimit: usageStatus.isOverRequestsLimit,
+        estimatedOverageCost: usageStatus.estimatedOverageCost,
+        billingType: limits.billingType,
+        hardCapEnabled: protOrg?.usageHardCap ?? false,
+        softCapEnabled: protOrg?.usageSoftCap ?? true,
+      },
     };
   }),
 
@@ -209,23 +239,33 @@ export const billingRouter = createTRPCRouter({
 
   // Get all available plans
   getPlans: protectedProcedure.query(async () => {
-    return protectionPlans.map((plan) => ({
-      name: plan.name,
-      lookupKey: plan.lookupKey ?? null,
-      annualLookupKey: plan.annualDiscountLookupKey ?? null,
-      limits: {
-        backends: plan.limits?.backends ?? 1,
-        backendsFormatted: formatNumber(plan.limits?.backends ?? 1),
-        filters: plan.limits?.filters ?? 5,
-        filtersFormatted: formatNumber(plan.limits?.filters ?? 5),
-        bandwidth: plan.limits?.bandwidth ?? 1_000_000_000,
-        bandwidthFormatted: formatBytes(
-          plan.limits?.bandwidth ?? 1_000_000_000,
-        ),
-      },
-      hasFreeTrial: !!plan.freeTrial,
-      freeTrialDays: plan.freeTrial?.days ?? 0,
-    }));
+    return protectionPlans.map((plan) => {
+      const limits = plan.limits as ProtectionPlanConfig | undefined;
+      return {
+        name: plan.name,
+        lookupKey: plan.lookupKey ?? null,
+        annualLookupKey: plan.annualDiscountLookupKey ?? null,
+        limits: {
+          backends: limits?.backends ?? 1,
+          backendsFormatted: formatNumber(limits?.backends ?? 1),
+          filters: limits?.filters ?? 5,
+          filtersFormatted: formatNumber(limits?.filters ?? 5),
+          bandwidth: limits?.bandwidth ?? 1_000_000_000,
+          bandwidthFormatted: formatBytes(limits?.bandwidth ?? 1_000_000_000),
+          requests: limits?.requests ?? 100_000,
+          requestsFormatted: formatNumber(limits?.requests ?? 100_000),
+        },
+        billing: {
+          type: limits?.billingType ?? "flat",
+          bandwidthPricePerGb: limits?.bandwidthPricePerGb,
+          requestsPricePerMillion: limits?.requestsPricePerMillion,
+          includedBandwidthGb: limits?.includedBandwidthGb,
+          includedRequestsMillions: limits?.includedRequestsMillions,
+        },
+        hasFreeTrial: !!plan.freeTrial,
+        freeTrialDays: plan.freeTrial?.days ?? 0,
+      };
+    });
   }),
 
   // ==================== STRIPE INTEGRATION ====================

@@ -70,19 +70,42 @@ export const severityEnum = pgEnum("severity", [
   "critical",
 ]);
 
+// Billing type enum
+export const billingTypeEnum = pgEnum("billing_type", [
+  "flat", // Fixed monthly/annual pricing
+  "usage", // Pure usage-based billing
+  "hybrid", // Flat base + usage overage
+]);
+
 // Protection organization - extends base organization with DDoS-specific data
 export const protectionOrganization = pgTable("protection_organization", {
   organizationId: uuid("organization_id")
     .primaryKey()
     .references(() => organization.id, { onDelete: "cascade" }),
   status: organizationStatusEnum("status").notNull().default("pre-onboarding"),
+  // Resource limits
   bandwidthLimit: bigint("bandwidth_limit", { mode: "number" }).default(
     1_000_000_000,
   ), // 1GB default
   backendsLimit: integer("backends_limit").default(1),
   filtersLimit: integer("filters_limit").default(5),
+  // Current usage tracking
   bandwidthUsed: bigint("bandwidth_used", { mode: "number" }).default(0),
+  requestsUsed: bigint("requests_used", { mode: "number" }).default(0),
   lastUsageReset: timestamp("last_usage_reset").defaultNow(),
+  // Usage-based billing settings
+  billingType: billingTypeEnum("billing_type").default("flat"),
+  // Usage caps and warnings
+  usageWarningThreshold: integer("usage_warning_threshold").default(80), // Percentage (0-100)
+  usageWarningEnabled: boolean("usage_warning_enabled").default(true),
+  usageHardCap: boolean("usage_hard_cap").default(false), // If true, service stops at limit
+  usageSoftCap: boolean("usage_soft_cap").default(true), // If true, charges overage
+  // Overage pricing (per GB for bandwidth, per million for requests)
+  overageBandwidthPricePerGb: integer("overage_bandwidth_price_per_gb"), // In cents
+  overageRequestsPricePerMillion: integer("overage_requests_price_per_million"), // In cents
+  // Warning email tracking
+  lastWarningEmailSent: timestamp("last_warning_email_sent"),
+  warningEmailSentForThreshold: integer("warning_email_sent_for_threshold"),
 }).enableRLS();
 
 // Backend servers (protected origin servers)

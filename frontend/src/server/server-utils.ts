@@ -4,6 +4,24 @@ import { db } from "@/server/db";
 import { member } from "@/server/db/auth-schema";
 import { protectionOrganization } from "@/server/db/schema";
 
+// Extended plan interface with usage-based billing options
+export interface ProtectionPlanConfig {
+  // Flat plan limits
+  backends: number;
+  filters: number;
+  bandwidth: number; // in bytes
+  requests: number; // max requests per month (-1 for unlimited)
+  // Billing type
+  billingType: "flat" | "usage" | "hybrid";
+  // Usage-based pricing (in cents)
+  bandwidthPricePerGb?: number; // $/GB for usage/hybrid plans
+  requestsPricePerMillion?: number; // $/million requests
+  basePriceMonthly?: number; // Base monthly price for hybrid plans (cents)
+  // Included in hybrid plans
+  includedBandwidthGb?: number;
+  includedRequestsMillions?: number;
+}
+
 // Protection plan definitions for Stripe
 export const protectionPlans: StripePlan[] = [
   {
@@ -12,7 +30,9 @@ export const protectionPlans: StripePlan[] = [
       backends: 1,
       filters: 5,
       bandwidth: 1_000_000_000, // 1GB
-    },
+      requests: 100_000,
+      billingType: "flat",
+    } as ProtectionPlanConfig,
   },
   {
     name: "starter",
@@ -22,7 +42,9 @@ export const protectionPlans: StripePlan[] = [
       backends: 5,
       filters: 25,
       bandwidth: 100_000_000_000, // 100GB
-    },
+      requests: 10_000_000, // 10M
+      billingType: "flat",
+    } as ProtectionPlanConfig,
     freeTrial: {
       days: 14,
       onTrialStart: async (_subscription) => {
@@ -44,7 +66,13 @@ export const protectionPlans: StripePlan[] = [
       backends: 15,
       filters: 100,
       bandwidth: 1_000_000_000_000, // 1TB
-    },
+      requests: 100_000_000, // 100M
+      billingType: "hybrid",
+      bandwidthPricePerGb: 5, // $0.05/GB overage
+      requestsPricePerMillion: 50, // $0.50/million overage
+      includedBandwidthGb: 1000,
+      includedRequestsMillions: 100,
+    } as ProtectionPlanConfig,
     freeTrial: {
       days: 14,
       onTrialStart: async (_subscription) => {
@@ -66,7 +94,9 @@ export const protectionPlans: StripePlan[] = [
       backends: -1, // unlimited
       filters: -1,
       bandwidth: -1,
-    },
+      requests: -1,
+      billingType: "flat", // Custom pricing negotiated
+    } as ProtectionPlanConfig,
     freeTrial: {
       days: 14,
       onTrialStart: async (_subscription) => {
@@ -79,6 +109,20 @@ export const protectionPlans: StripePlan[] = [
         console.log("Enterprise trial expired");
       },
     },
+  },
+  // Usage-based plans
+  {
+    name: "pay-as-you-go",
+    lookupKey: "price_payg_monthly",
+    limits: {
+      backends: 10,
+      filters: 50,
+      bandwidth: -1, // unlimited, charged per use
+      requests: -1,
+      billingType: "usage",
+      bandwidthPricePerGb: 8, // $0.08/GB
+      requestsPricePerMillion: 100, // $1.00/million
+    } as ProtectionPlanConfig,
   },
 ];
 
@@ -119,6 +163,10 @@ export async function getOrganizationLimits(orgId: string): Promise<{
   backends: number;
   filters: number;
   bandwidth: number;
+  requests: number;
+  billingType: "flat" | "usage" | "hybrid";
+  bandwidthPricePerGb?: number;
+  requestsPricePerMillion?: number;
 }> {
   const subscription = await db.query.subscription.findFirst({
     where: (sub, { eq, and, inArray }) =>
@@ -134,6 +182,8 @@ export async function getOrganizationLimits(orgId: string): Promise<{
       backends: 1,
       filters: 5,
       bandwidth: 1_000_000_000,
+      requests: 100_000,
+      billingType: "flat",
     };
   }
 
@@ -143,14 +193,106 @@ export async function getOrganizationLimits(orgId: string): Promise<{
       backends: 1,
       filters: 5,
       bandwidth: 1_000_000_000,
+      requests: 100_000,
+      billingType: "flat",
     };
   }
 
+  const limits = plan.limits as ProtectionPlanConfig;
   return {
-    backends: plan.limits.backends ?? 1,
-    filters: plan.limits.filters ?? 5,
-    bandwidth: plan.limits.bandwidth ?? 1_000_000_000,
+    backends: limits.backends ?? 1,
+    filters: limits.filters ?? 5,
+    bandwidth: limits.bandwidth ?? 1_000_000_000,
+    requests: limits.requests ?? 100_000,
+    billingType: limits.billingType ?? "flat",
+    bandwidthPricePerGb: limits.bandwidthPricePerGb,
+    requestsPricePerMillion: limits.requestsPricePerMillion,
   };
+}
+
+// Check if organization is approaching or over usage limits
+export async function checkUsageStatus(orgId: string): Promise<{
+  bandwidthUsedPercent: number;
+  requestsUsedPercent: number;
+  isOverBandwidthLimit: boolean;
+  isOverRequestsLimit: boolean;
+  needsWarning: boolean;
+  estimatedOverageCost: number; // in cents
+}> {
+  const [protOrg, limits] = await Promise.all([
+    getProtectionOrganizationById(orgId),
+    getOrganizationLimits(orgId),
+  ]);
+
+  if (!protOrg) {
+    return {
+      bandwidthUsedPercent: 0,
+      requestsUsedPercent: 0,
+      isOverBandwidthLimit: false,
+      isOverRequestsLimit: false,
+      needsWarning: false,
+      estimatedOverageCost: 0,
+    };
+  }
+
+  const bandwidthUsed = protOrg.bandwidthUsed ?? 0;
+  const requestsUsed = protOrg.requestsUsed ?? 0;
+
+  // Calculate percentages (-1 means unlimited)
+  const bandwidthUsedPercent =
+    limits.bandwidth === -1
+      ? 0
+      : Math.round((bandwidthUsed / limits.bandwidth) * 100);
+  const requestsUsedPercent =
+    limits.requests === -1
+      ? 0
+      : Math.round((requestsUsed / limits.requests) * 100);
+
+  const isOverBandwidthLimit =
+    limits.bandwidth !== -1 && bandwidthUsed > limits.bandwidth;
+  const isOverRequestsLimit =
+    limits.requests !== -1 && requestsUsed > limits.requests;
+
+  const warningThreshold = protOrg.usageWarningThreshold ?? 80;
+  const needsWarning =
+    (protOrg.usageWarningEnabled ?? true) &&
+    (bandwidthUsedPercent >= warningThreshold ||
+      requestsUsedPercent >= warningThreshold);
+
+  // Calculate estimated overage cost for usage/hybrid plans
+  let estimatedOverageCost = 0;
+  if (limits.billingType === "usage" || limits.billingType === "hybrid") {
+    if (isOverBandwidthLimit && limits.bandwidthPricePerGb) {
+      const overageGb = (bandwidthUsed - limits.bandwidth) / 1_000_000_000;
+      estimatedOverageCost += Math.ceil(overageGb * limits.bandwidthPricePerGb);
+    }
+    if (isOverRequestsLimit && limits.requestsPricePerMillion) {
+      const overageMillions = (requestsUsed - limits.requests) / 1_000_000;
+      estimatedOverageCost += Math.ceil(
+        overageMillions * limits.requestsPricePerMillion,
+      );
+    }
+  }
+
+  return {
+    bandwidthUsedPercent,
+    requestsUsedPercent,
+    isOverBandwidthLimit,
+    isOverRequestsLimit,
+    needsWarning,
+    estimatedOverageCost,
+  };
+}
+
+// Check if organization should be blocked due to hard cap
+export async function shouldBlockDueToUsage(orgId: string): Promise<boolean> {
+  const protOrg = await getProtectionOrganizationById(orgId);
+  if (!protOrg || !protOrg.usageHardCap) {
+    return false;
+  }
+
+  const usageStatus = await checkUsageStatus(orgId);
+  return usageStatus.isOverBandwidthLimit || usageStatus.isOverRequestsLimit;
 }
 
 // Format bytes to human readable
