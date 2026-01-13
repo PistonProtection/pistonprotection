@@ -1,6 +1,3 @@
-# Opt-in to unstable edition 2024 feature for eBPF compilation
-cargo-features = ["edition2024"]
-
 [package]
 name = "pistonprotection-ebpf"
 version = "0.1.0"
