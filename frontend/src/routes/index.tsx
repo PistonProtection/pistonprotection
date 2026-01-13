@@ -304,7 +304,12 @@ function LandingPage() {
             <Link to="/auth/register">
               <Button>Get Started</Button>
             </Link>
-            <Button variant="ghost" size="icon" className="md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              aria-label="Open navigation menu"
+            >
               <Menu className="h-5 w-5" />
             </Button>
           </div>

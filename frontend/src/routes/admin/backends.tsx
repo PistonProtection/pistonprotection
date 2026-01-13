@@ -353,6 +353,7 @@ function AdminBackendsPage() {
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search backends, organizations, and domains"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -381,7 +382,11 @@ function AdminBackendsPage() {
                 </SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Refresh backends list"
+            >
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
@@ -434,7 +439,11 @@ function AdminBackendsPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Actions for ${backend.name}`}
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

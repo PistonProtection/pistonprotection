@@ -331,8 +331,11 @@ function FiltersPage() {
                 <form.Field name="priority">
                   {(field) => (
                     <div className="grid gap-2">
-                      <Label>Priority (0-1000, higher = processed first)</Label>
+                      <Label htmlFor="filter-priority">
+                        Priority (0-1000, higher = processed first)
+                      </Label>
                       <Input
+                        id="filter-priority"
                         type="number"
                         min={0}
                         max={1000}
@@ -340,7 +343,12 @@ function FiltersPage() {
                         onChange={(e) =>
                           field.handleChange(Number(e.target.value))
                         }
+                        aria-describedby="priority-description"
                       />
+                      <p id="priority-description" className="sr-only">
+                        Filter rules with higher priority values are processed
+                        first
+                      </p>
                     </div>
                   )}
                 </form.Field>
@@ -564,7 +572,11 @@ function FiltersPage() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Actions for filter ${filter.name}`}
+                              >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
