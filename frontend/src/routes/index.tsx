@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Route paths need to be updated to match registered routes
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Activity,

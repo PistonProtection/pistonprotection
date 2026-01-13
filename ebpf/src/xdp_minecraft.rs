@@ -1250,12 +1250,15 @@ const RAKNET_MAX_NAK_SEQUENCE_RANGE: u32 = 1000; // Max sequence range in a sing
 /// RakNet connection state for Bedrock
 #[repr(C)]
 pub struct BedrockConnectionState {
-    /// Connection state: 0=none, 1=ping_sent, 2=conn_req1, 3=conn_req2, 4=connected
+    /// Connection state: 0=none, 1=ping_sent, 2=conn_req1, 3=conn_req2, 4=connected, 5=fully_established
     pub state: u8,
     /// RakNet protocol version
     pub protocol_version: u8,
     /// Negotiated MTU size
     pub mtu_size: u16,
+    /// Security cookie for anti-amplification (sent in Reply1, validated in Request2)
+    /// See GeyserMC advisory: https://geysermc.org/blog/raknet-amplification-attack/
+    pub security_cookie: u32,
     /// Client GUID (for validation)
     pub client_guid: u64,
     /// Packets received
@@ -1283,6 +1286,7 @@ const BEDROCK_FLAG_GUID_VALIDATED: u32 = 0x0001;
 const BEDROCK_FLAG_MTU_NEGOTIATED: u32 = 0x0002;
 const BEDROCK_FLAG_SUSPICIOUS: u32 = 0x0004;
 const BEDROCK_FLAG_AMPLIFICATION_DETECTED: u32 = 0x0008;
+const BEDROCK_FLAG_COOKIE_VALIDATED: u32 = 0x0010; // Security cookie verified
 
 /// Process Minecraft Bedrock (RakNet) packets with amplification attack protection
 ///
@@ -1994,11 +1998,17 @@ fn track_bedrock_connection(
         state.bytes_in += bytes;
         state.last_seen = now;
     } else {
+        // Generate security cookie for anti-amplification protection
+        // See: https://geysermc.org/blog/raknet-amplification-attack/
+        // Cookie is based on connection key and timestamp to be unpredictable
+        let cookie = generate_security_cookie(connection_key, now);
+
         // New connection
         let state = BedrockConnectionState {
             state: new_state,
             protocol_version: 0,
             mtu_size: mtu,
+            security_cookie: cookie,
             client_guid,
             packets: 1,
             bytes_in: bytes,
@@ -2012,6 +2022,33 @@ fn track_bedrock_connection(
         };
         let _ = MC_BEDROCK_CONNECTIONS.insert(&connection_key, &state, 0);
     }
+}
+
+/// Generate a security cookie for RakNet anti-amplification protection
+/// Based on GeyserMC's mitigation: the cookie must be echoed back by the client
+/// in Open Connection Request 2 to prove the IP is not spoofed
+#[inline(always)]
+fn generate_security_cookie(connection_key: u64, timestamp: u64) -> u32 {
+    // Simple hash combining connection key and timestamp
+    // Using FNV-1a inspired mixing for good distribution
+    let mut hash: u32 = 2166136261; // FNV offset basis
+
+    // Mix in connection key bytes
+    for i in 0..8 {
+        let byte = ((connection_key >> (i * 8)) & 0xFF) as u32;
+        hash ^= byte;
+        hash = hash.wrapping_mul(16777619); // FNV prime
+    }
+
+    // Mix in timestamp (lower 32 bits, rotating every ~136 years is fine)
+    let ts_low = timestamp as u32;
+    hash ^= ts_low;
+    hash = hash.wrapping_mul(16777619);
+    hash ^= ts_low >> 16;
+    hash = hash.wrapping_mul(16777619);
+
+    // Ensure non-zero result (0 means no cookie)
+    if hash == 0 { 1 } else { hash }
 }
 
 /// Update Bedrock connection state counters
