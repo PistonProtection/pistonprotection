@@ -13,7 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +78,14 @@ function AdminBlacklists() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<BlacklistType>("ip");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<{
+    total: number;
+    processed: number;
+    errors: string[];
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -146,6 +153,121 @@ function AdminBlacklists() {
     },
   });
 
+  // Export blacklist entries to CSV
+  const handleExport = () => {
+    if (!blacklistEntries?.items || blacklistEntries.items.length === 0) {
+      toast.error("No entries to export");
+      return;
+    }
+
+    const csvHeader = "type,value,reason,expires_at,added_at\n";
+    const csvRows = blacklistEntries.items
+      .map((entry) => {
+        const reason = (entry.reason || "").replace(/"/g, '""');
+        const expiresAt = entry.expiresAt
+          ? new Date(entry.expiresAt).toISOString()
+          : "";
+        const createdAt = new Date(entry.createdAt).toISOString();
+        return `"${activeTab}","${entry.value}","${reason}","${expiresAt}","${createdAt}"`;
+      })
+      .join("\n");
+
+    const csv = csvHeader + csvRows;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `blacklist-${activeTab}-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${blacklistEntries.items.length} entries`);
+  };
+
+  // Import blacklist entries from CSV
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split("\n").filter((line) => line.trim());
+
+    // Skip header if present
+    const hasHeader = lines[0]?.toLowerCase().includes("type");
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    if (dataLines.length === 0) {
+      toast.error("No entries found in file");
+      return;
+    }
+
+    setImportProgress({ total: dataLines.length, processed: 0, errors: [] });
+    setIsImportDialogOpen(true);
+
+    const errors: string[] = [];
+    let processed = 0;
+
+    for (const line of dataLines) {
+      try {
+        // Parse CSV line (simple parser - handles quoted values)
+        const match = line.match(/(?:"([^"]*(?:""[^"]*)*)"|([^,]*))(?:,|$)/g);
+        if (!match) continue;
+
+        const values = match
+          .map((v) =>
+            v.replace(/^"|"$/g, "").replace(/""/, '"').replace(/,$/, ""),
+          )
+          .slice(0, 4);
+
+        const [type, value, reason, expiresAt] = values;
+
+        if (!value?.trim()) {
+          processed++;
+          continue;
+        }
+
+        const entryType = (type?.trim() || activeTab) as BlacklistType;
+        if (!["ip", "cidr", "asn", "country"].includes(entryType)) {
+          errors.push(`Invalid type: ${type}`);
+          processed++;
+          continue;
+        }
+
+        await addMutation.mutateAsync({
+          type: entryType,
+          value: value.trim(),
+          reason: reason?.trim() || undefined,
+          expiresAt: expiresAt?.trim() ? new Date(expiresAt.trim()) : undefined,
+        });
+      } catch (err) {
+        errors.push(
+          `Line ${processed + 1}: ${err instanceof Error ? err.message : "Unknown error"}`,
+        );
+      }
+
+      processed++;
+      setImportProgress((prev) =>
+        prev ? { ...prev, processed, errors } : null,
+      );
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["admin", "blacklist"] });
+
+    if (errors.length > 0) {
+      toast.warning(
+        `Import completed with ${errors.length} error(s). ${processed - errors.length} entries added.`,
+      );
+    } else {
+      toast.success(`Successfully imported ${processed} entries`);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -158,11 +280,21 @@ function AdminBlacklists() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".csv,.txt"
+            onChange={handleImport}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -457,6 +589,75 @@ function AdminBlacklists() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Progress Dialog */}
+      <Dialog
+        open={isImportDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && importProgress?.processed === importProgress?.total) {
+            setIsImportDialogOpen(false);
+            setImportProgress(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importing Blacklist Entries</DialogTitle>
+            <DialogDescription>
+              {importProgress && importProgress.processed < importProgress.total
+                ? `Processing ${importProgress.processed} of ${importProgress.total} entries...`
+                : `Import completed. ${importProgress?.processed ?? 0} entries processed.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {importProgress && (
+              <>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{
+                      width: `${(importProgress.processed / importProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+                {importProgress.errors.length > 0 && (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                    <p className="text-sm font-medium text-destructive mb-2">
+                      Errors ({importProgress.errors.length})
+                    </p>
+                    <div className="max-h-32 overflow-y-auto text-xs text-destructive/80">
+                      {importProgress.errors.slice(0, 10).map((err, i) => (
+                        <p key={i}>{err}</p>
+                      ))}
+                      {importProgress.errors.length > 10 && (
+                        <p className="font-medium mt-1">
+                          ...and {importProgress.errors.length - 10} more
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setIsImportDialogOpen(false);
+                setImportProgress(null);
+              }}
+              disabled={
+                importProgress !== null &&
+                importProgress.processed < importProgress.total
+              }
+            >
+              {importProgress && importProgress.processed < importProgress.total
+                ? "Importing..."
+                : "Close"}
             </Button>
           </DialogFooter>
         </DialogContent>
