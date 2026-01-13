@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3,
+  BookOpen,
   CreditCard,
   Filter,
   LayoutDashboard,
@@ -25,6 +26,7 @@ import {
 
 const menuItems = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Setup Guide", url: "/dashboard/setup", icon: BookOpen },
   { title: "Backends", url: "/dashboard/backends", icon: Server },
   { title: "Filters", url: "/dashboard/filters", icon: Filter },
   { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
