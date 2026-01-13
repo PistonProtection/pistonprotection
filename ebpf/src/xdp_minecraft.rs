@@ -130,6 +130,18 @@ const MAX_VARINT_BYTES: usize = 5;
 // If a fragmented packet isn't completed within this time, drop subsequent fragments
 const FRAGMENT_TIMEOUT_NS: u64 = 5_000_000_000;
 
+// Connection state cleanup timeout: 300 seconds (5 minutes) in nanoseconds
+// Connections idle longer than this are considered stale and will be cleaned up
+const CONNECTION_STALE_TIMEOUT_NS: u64 = 300_000_000_000;
+
+// Handshake state timeout: 30 seconds in nanoseconds
+// Connections that haven't progressed past handshake/login states are cleaned up faster
+const HANDSHAKE_STATE_TIMEOUT_NS: u64 = 30_000_000_000;
+
+// Cleanup check interval: Run cleanup logic roughly every 1000 packets (based on timestamp modulo)
+// This prevents cleanup overhead on every packet while ensuring regular cleanup
+const CLEANUP_CHECK_INTERVAL_NS: u64 = 100_000_000; // 100ms
+
 // Maximum Minecraft packet size (2MB is protocol max, but we're stricter)
 const DEFAULT_MAX_PACKET_SIZE: i32 = 2097151;
 
@@ -199,6 +211,11 @@ static MC_STATUS_RATE: LruHashMap<u32, u64> = LruHashMap::with_max_entries(100_0
 /// Configuration
 #[map]
 static MC_CONFIG: PerCpuArray<McConfig> = PerCpuArray::with_max_entries(1, 0);
+
+/// Last cleanup timestamp (per-CPU to avoid contention)
+/// Used to rate-limit cleanup operations
+#[map]
+static MC_LAST_CLEANUP: PerCpuArray<u64> = PerCpuArray::with_max_entries(1, 0);
 
 // Constants
 const ETH_P_IP: u16 = 0x0800;
@@ -321,6 +338,12 @@ fn process_minecraft_java(
         return Ok(xdp_action::XDP_DROP);
     }
 
+    // Get current timestamp for state management
+    let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+
+    // Run periodic cleanup of stale states
+    maybe_run_cleanup(src_ip, now);
+
     // Calculate TCP data offset
     let tcp_header_len = ((u16::from_be(tcp.doff_flags) >> 12) & 0x0f) as usize * 4;
     let payload_start = data + tcp_header_len;
@@ -368,10 +391,15 @@ fn process_minecraft_java(
     let tcp_seq = u32::from_be(tcp.seq);
 
     // Check if this is a continuation of a fragmented packet
+    // Also check for stale connection state and clean up if needed
     if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get(&connection_key) } {
-        if state.flags & MC_FLAG_FRAGMENTED_PENDING != 0 && state.pending_packet_bytes > 0 {
+        // SECURITY: Check if connection state is stale and clean it up
+        if is_java_connection_stale(&state, now) {
+            cleanup_stale_java_connection(&connection_key, now);
+            // Continue processing as a new connection
+        } else if state.flags & MC_FLAG_FRAGMENTED_PENDING != 0 && state.pending_packet_bytes > 0 {
             // We're expecting continuation data from a previous fragment
-            let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+            // Note: Using 'now' from earlier in the function
 
             // SECURITY: Check fragment timeout to prevent stale fragment attacks
             // If the fragment started too long ago, clear the pending state and drop
@@ -421,6 +449,7 @@ fn process_minecraft_java(
                 return Ok(xdp_action::XDP_PASS);
             } else {
                 // Fragment complete, clear pending state
+                let extra_bytes = payload_len.saturating_sub(pending_bytes);
                 if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get_ptr_mut(&connection_key) } {
                     let state = unsafe { &mut *state };
                     state.flags &= !MC_FLAG_FRAGMENTED_PENDING;
@@ -430,25 +459,78 @@ fn process_minecraft_java(
                     state.bytes += payload_len as u64;
                     state.last_seen = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
                 }
-                // SECURITY FIX: Don't just pass through completed fragments.
-                // Continue to validate any additional packet data in this segment.
-                // If this segment only contained the tail of the previous fragment,
-                // we need to ensure we don't blindly pass potential attack data.
-                // For now, we pass through as XDP can't do full TCP reassembly,
-                // but we've validated the connection has an established state.
-                // Additional validation happens at the userspace level for encrypted
-                // connections and complex multi-packet scenarios.
-                if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get(&connection_key) } {
-                    // Only pass if connection is in a valid state (not NONE)
-                    if state.state == MC_STATE_NONE {
+
+                // SECURITY FIX: Validate completed fragment and any trailing data
+                // Get current connection state for validation
+                let (conn_state, conn_flags) =
+                    if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get(&connection_key) } {
+                        (state.state, state.flags)
+                    } else {
+                        // No connection state after fragment - invalid
                         return Ok(xdp_action::XDP_DROP);
-                    }
-                    // If encryption is enabled, we can't inspect further anyway
-                    if state.flags & MC_FLAG_ENCRYPTION_ENABLED != 0 {
-                        return Ok(xdp_action::XDP_PASS);
+                    };
+
+                // Connection must be in a valid state (not NONE)
+                if conn_state == MC_STATE_NONE {
+                    return Ok(xdp_action::XDP_DROP);
+                }
+
+                // If encryption is enabled, we can't inspect further
+                if conn_flags & MC_FLAG_ENCRYPTION_ENABLED != 0 {
+                    return Ok(xdp_action::XDP_PASS);
+                }
+
+                // SECURITY: If there's extra data after the completed fragment,
+                // it's the start of a new packet - validate its structure
+                if extra_bytes > 0 && pending_bytes < payload_len {
+                    // Calculate offset to the extra data (start of new packet)
+                    let extra_start = pending_bytes;
+                    if extra_start < payload_len {
+                        // Try to read the new packet's length VarInt
+                        let extra_data = &payload[extra_start..];
+                        if let Some((new_pkt_len, new_len_bytes)) = read_varint(extra_data) {
+                            // Validate packet length is reasonable
+                            if new_pkt_len < 0 || new_pkt_len > max_packet_size {
+                                return Ok(xdp_action::XDP_DROP);
+                            }
+
+                            // If we have enough data, validate the packet ID
+                            if extra_data.len() > new_len_bytes {
+                                let new_pkt_data = &extra_data[new_len_bytes..];
+                                if let Some((new_pkt_id, _)) = read_varint(new_pkt_data) {
+                                    // Validate packet ID is non-negative
+                                    if new_pkt_id < 0 {
+                                        return Ok(xdp_action::XDP_DROP);
+                                    }
+
+                                    // Validate packet ID is valid for current state
+                                    let valid_id = match conn_state {
+                                        MC_STATE_STATUS => new_pkt_id >= 0x00 && new_pkt_id <= 0x01,
+                                        MC_STATE_LOGIN => new_pkt_id >= 0x00 && new_pkt_id <= 0x03,
+                                        MC_STATE_CONFIGURATION => {
+                                            new_pkt_id >= 0x00 && new_pkt_id <= 0x07
+                                        }
+                                        MC_STATE_PLAY => new_pkt_id >= 0x00 && new_pkt_id <= 0x50,
+                                        MC_STATE_TRANSFER => {
+                                            new_pkt_id >= 0x00 && new_pkt_id <= 0x01
+                                        }
+                                        _ => false,
+                                    };
+
+                                    if !valid_id {
+                                        return Ok(xdp_action::XDP_DROP);
+                                    }
+                                }
+                                // If we can't read the packet ID yet, the data is incomplete
+                                // which is fine - next segment will validate
+                            }
+                        }
+                        // If we can't read length VarInt, data is too short - that's OK
+                        // for incomplete packets spanning segments
                     }
                 }
-                // Fragment reassembly complete - pass to continue normal flow
+
+                // Fragment reassembly complete with validated trailing data
                 return Ok(xdp_action::XDP_PASS);
             }
         }
@@ -755,12 +837,11 @@ fn process_minecraft_java(
             }
 
             // Transfer state has very few valid client-to-server packets
-            // Mainly just acknowledgments. Allow reasonable range.
-            // SECURITY FIX: Explicit bounds check for Transfer state
-            // Valid packets in Transfer state (1.20.5+):
+            // SECURITY FIX: Strict validation - only these packets are valid:
             // 0x00: Transfer Response Acknowledge
-            // 0x01: Plugin Message (optional)
-            if packet_id < 0x00 || packet_id > 0x10 {
+            // 0x01: Plugin Message (for transfer coordination)
+            // Any other packet ID is invalid in transfer state
+            if packet_id < 0x00 || packet_id > 0x01 {
                 return Ok(xdp_action::XDP_DROP);
             }
 
@@ -909,19 +990,17 @@ fn validate_handshake(
         });
     }
 
-    // Verify packet length matches parsed content
+    // Verify packet length matches parsed content exactly
     // packet_len is the length after the outer length VarInt, includes packet ID
+    // SECURITY FIX: Require exact match - no tolerance for length mismatch
+    // Any discrepancy indicates malformed packet or potential attack
     let expected_data_len = id_bytes + offset;
     if expected_data_len != packet_len {
-        // Length mismatch - could be malformed or attack
-        // Allow some tolerance for edge cases
-        if expected_data_len > packet_len + 1 || expected_data_len + 1 < packet_len {
-            return Some(HandshakeResult {
-                valid: false,
-                protocol_version: proto_u32,
-                next_state: next_state as u8,
-            });
-        }
+        return Some(HandshakeResult {
+            valid: false,
+            protocol_version: proto_u32,
+            next_state: next_state as u8,
+        });
     }
 
     Some(HandshakeResult {
@@ -941,6 +1020,199 @@ fn update_connection_state(connection_key: &u64, payload_len: usize) {
         state.packets += 1;
         state.bytes += payload_len as u64;
         state.last_seen = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+    }
+}
+
+/// Check if a Java connection state is stale and should be cleaned up
+/// Returns true if the connection is stale (should be dropped/cleaned)
+///
+/// SECURITY: This function implements state cleanup to prevent:
+/// 1. Memory exhaustion from abandoned connections
+/// 2. State confusion attacks using very old connection states
+/// 3. Fragment reassembly attacks using stale pending states
+#[inline(always)]
+fn is_java_connection_stale(state: &McConnectionState, now: u64) -> bool {
+    let idle_time = now.saturating_sub(state.last_seen);
+
+    // Check for stale fragment state first (highest priority)
+    // Fragments that haven't completed within timeout are definitely stale
+    if state.flags & MC_FLAG_FRAGMENTED_PENDING != 0 {
+        if idle_time > FRAGMENT_TIMEOUT_NS {
+            return true;
+        }
+    }
+
+    // Connections in early states (handshake, login) have shorter timeout
+    // This prevents attackers from holding many half-open connections
+    match state.state {
+        MC_STATE_NONE | MC_STATE_STATUS | MC_STATE_LOGIN => {
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS {
+                return true;
+            }
+        }
+        MC_STATE_CONFIGURATION | MC_STATE_TRANSFER => {
+            // Configuration and transfer states also have shorter timeout
+            // as they're transitional states
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS * 2 {
+                // 60 seconds
+                return true;
+            }
+        }
+        MC_STATE_PLAY => {
+            // Play state connections get the full timeout
+            if idle_time > CONNECTION_STALE_TIMEOUT_NS {
+                return true;
+            }
+        }
+        _ => {
+            // Unknown state - consider stale after short timeout
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Check and cleanup stale Java connection state
+/// This is called opportunistically during packet processing
+/// Returns true if the connection was stale and cleaned up
+#[inline(always)]
+fn cleanup_stale_java_connection(connection_key: &u64, now: u64) -> bool {
+    if let Some(state) = unsafe { MC_JAVA_CONNECTIONS.get(connection_key) } {
+        if is_java_connection_stale(&state, now) {
+            // Connection is stale - remove it from the map
+            // Note: LruHashMap doesn't have a delete method, but we can
+            // effectively invalidate by resetting to MC_STATE_NONE
+            if let Some(state_ptr) = unsafe { MC_JAVA_CONNECTIONS.get_ptr_mut(connection_key) } {
+                let state = unsafe { &mut *state_ptr };
+                state.state = MC_STATE_NONE;
+                state.flags = 0;
+                state.pending_packet_bytes = 0;
+                state.pending_seq = 0;
+                state.packets = 0;
+                state.bytes = 0;
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// Check if a Bedrock connection state is stale and should be cleaned up
+/// Returns true if the connection is stale (should be dropped/cleaned)
+#[inline(always)]
+fn is_bedrock_connection_stale(state: &BedrockConnectionState, now: u64) -> bool {
+    let idle_time = now.saturating_sub(state.last_seen);
+
+    // Bedrock connections in early handshake states have shorter timeout
+    match state.state {
+        0 | 1 | 2 => {
+            // None, ping_sent, conn_req1 - very short timeout
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS {
+                return true;
+            }
+        }
+        3 => {
+            // conn_req2 - still in handshake
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS * 2 {
+                return true;
+            }
+        }
+        4 | 5 => {
+            // connected or fully established - full timeout
+            if idle_time > CONNECTION_STALE_TIMEOUT_NS {
+                return true;
+            }
+        }
+        _ => {
+            // Unknown state
+            if idle_time > HANDSHAKE_STATE_TIMEOUT_NS {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Check and cleanup stale Bedrock connection state
+/// Returns true if the connection was stale and cleaned up
+#[inline(always)]
+fn cleanup_stale_bedrock_connection(connection_key: &u64, now: u64) -> bool {
+    if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(connection_key) } {
+        if is_bedrock_connection_stale(&state, now) {
+            // Connection is stale - reset it
+            if let Some(state_ptr) = unsafe { MC_BEDROCK_CONNECTIONS.get_ptr_mut(connection_key) } {
+                let state = unsafe { &mut *state_ptr };
+                state.state = 0;
+                state.flags = 0;
+                state.mtu_size = 0;
+                state.client_guid = 0;
+                state.packets = 0;
+                state.bytes_in = 0;
+                state.bytes_out_estimate = 0;
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// Periodic cleanup check - called during packet processing
+/// Uses timestamp-based rate limiting to avoid overhead on every packet
+/// This provides best-effort cleanup of stale states
+#[inline(always)]
+fn maybe_run_cleanup(src_ip: u32, now: u64) {
+    // Check if enough time has passed since last cleanup
+    let should_cleanup = if let Some(last_ptr) = unsafe { MC_LAST_CLEANUP.get_ptr_mut(0) } {
+        let last = unsafe { &mut *last_ptr };
+        if now.saturating_sub(*last) > CLEANUP_CHECK_INTERVAL_NS {
+            *last = now;
+            true
+        } else {
+            false
+        }
+    } else {
+        // First time - set initial value
+        if let Some(last_ptr) = unsafe { MC_LAST_CLEANUP.get_ptr_mut(0) } {
+            unsafe { *last_ptr = now };
+        }
+        false
+    };
+
+    if !should_cleanup {
+        return;
+    }
+
+    // Run cleanup on IP-related data
+    // Clean up IP connection count if it's old
+    if let Some(count) = unsafe { MC_IP_COUNTS.get_ptr_mut(&src_ip) } {
+        let count = unsafe { &mut *count };
+        // Reset count if last connection was more than 5 minutes ago
+        if now.saturating_sub(count.last_connection) > CONNECTION_STALE_TIMEOUT_NS {
+            count.count = 0;
+            count.blocked_until = 0;
+        }
+    }
+
+    // Clean up Bedrock rate state if stale
+    if let Some(rate) = unsafe { MC_BEDROCK_RATE.get_ptr_mut(&src_ip) } {
+        let rate = unsafe { &mut *rate };
+        // Reset rate limiting state if window is very old
+        if now.saturating_sub(rate.window_start) > CONNECTION_STALE_TIMEOUT_NS {
+            rate.ping_count = 0;
+            rate.conn_req_count = 0;
+            rate.nak_count = 0;
+            rate.bytes_in = 0;
+            rate.bytes_out_estimate = 0;
+            rate.window_start = now;
+            // Clear block if it was temporary
+            if rate.blocked_until > 0 && rate.blocked_until < now {
+                rate.blocked_until = 0;
+            }
+        }
     }
 }
 
@@ -1066,6 +1338,12 @@ fn process_minecraft_bedrock(
         return Ok(xdp_action::XDP_DROP);
     }
 
+    // Get current timestamp for state management
+    let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+
+    // Run periodic cleanup of stale states
+    maybe_run_cleanup(src_ip, now);
+
     let payload_start = data + mem::size_of::<UdpHdr>();
     if payload_start >= data_end {
         return Ok(xdp_action::XDP_DROP);
@@ -1085,8 +1363,6 @@ fn process_minecraft_bedrock(
 
     let payload = unsafe { core::slice::from_raw_parts(payload_start as *const u8, payload_len) };
     let packet_id = payload[0];
-
-    let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
 
     // Build connection key for state tracking
     let connection_key = ((src_ip as u64) << 32) | (src_port as u64);
@@ -1273,6 +1549,13 @@ fn process_minecraft_bedrock(
             // STATE VALIDATION: Data packets require established connection
             // SECURITY: Strict enforcement - no data packets without proper handshake
             if let Some(state) = unsafe { MC_BEDROCK_CONNECTIONS.get(&connection_key) } {
+                // SECURITY: Check for stale connection state first
+                if is_bedrock_connection_stale(&state, now) {
+                    cleanup_stale_bedrock_connection(&connection_key, now);
+                    // Stale connection - drop data packet, require new handshake
+                    return Ok(xdp_action::XDP_DROP);
+                }
+
                 if state.state < 3 {
                     // Not in connected state - drop
                     // This prevents attackers from sending data without handshake

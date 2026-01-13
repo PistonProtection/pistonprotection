@@ -86,6 +86,9 @@ pub struct UdpIpState {
     pub blocked_until: u64,
     /// Flags
     pub flags: u32,
+    /// Bloom filter for tracking unique ports (64 bytes = 512 bits)
+    /// Uses 3 hash functions for good collision resistance
+    pub port_bloom_filter: [u64; 8],
 }
 
 /// Per-port statistics (for detecting targeted attacks)
@@ -502,11 +505,8 @@ fn process_ipv6(
         return Ok(xdp_action::XDP_DROP);
     }
 
-    // Use last 4 bytes as simplified IP key for rate limiting
-    // (Full IPv6 tracking is done via UDP_IP_STATE_V6 map)
-    let ip_key = u32::from_be_bytes([src_ip[12], src_ip[13], src_ip[14], src_ip[15]]);
-
-    process_udp(ctx, header_offset, data_end, ip_key, config, is_fragmented)
+    // Use the full IPv6 address for proper rate limiting
+    process_udp_v6(ctx, header_offset, data_end, &src_ip, config, is_fragmented)
 }
 
 // ============================================================================
@@ -638,6 +638,176 @@ fn process_udp(
 }
 
 // ============================================================================
+// IPv6 UDP Processing
+// ============================================================================
+
+/// Hash a full IPv6 address to a u32 for amplification tracking
+/// Uses FNV-1a hash for good distribution
+#[inline(always)]
+fn hash_ipv6_to_u32(addr: &[u8; 16]) -> u32 {
+    // FNV-1a hash constants for 32-bit
+    const FNV_OFFSET: u32 = 0x811c9dc5;
+    const FNV_PRIME: u32 = 0x01000193;
+
+    let mut hash = FNV_OFFSET;
+
+    // Unrolled loop for eBPF verifier
+    hash ^= addr[0] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[1] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[2] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[3] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[4] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[5] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[6] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[7] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[8] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[9] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[10] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[11] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[12] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[13] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[14] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= addr[15] as u32;
+    hash = hash.wrapping_mul(FNV_PRIME);
+
+    hash
+}
+
+#[inline(always)]
+fn process_udp_v6(
+    ctx: &XdpContext,
+    data: usize,
+    data_end: usize,
+    src_ip: &[u8; 16],
+    config: &UdpConfig,
+    is_fragmented: bool,
+) -> Result<u32, ()> {
+    if data + mem::size_of::<UdpHdr>() > data_end {
+        return Ok(xdp_action::XDP_PASS);
+    }
+
+    let udp = unsafe { &*(data as *const UdpHdr) };
+    let src_port = u16::from_be(udp.source);
+    let dst_port = u16::from_be(udp.dest);
+    let udp_len = u16::from_be(udp.len);
+
+    // Update stats
+    update_stats_total();
+
+    // Check for blocked destination port
+    if unsafe { BLOCKED_PORTS.get(&dst_port) }.is_some() {
+        update_stats_blocked_port();
+        return Ok(xdp_action::XDP_DROP);
+    }
+
+    // Fragmented amplification check (same as IPv4)
+    if is_fragmented {
+        let is_amp_source = matches!(
+            src_port,
+            PORT_DNS
+                | PORT_NTP
+                | PORT_SSDP
+                | PORT_SNMP
+                | PORT_MEMCACHED
+                | PORT_CHARGEN
+                | PORT_QOTD
+                | PORT_LDAP
+                | PORT_MSSQL
+                | PORT_RIP
+                | PORT_PORTMAP
+                | PORT_NETBIOS
+                | PORT_CLDAP
+                | PORT_TFTP
+        );
+
+        if is_amp_source && config.protection_level >= 2 {
+            update_stats_amplification();
+            update_stats_fragmented();
+            return Ok(xdp_action::XDP_DROP);
+        }
+    }
+
+    // Validate packet size
+    let payload_len = udp_len.saturating_sub(8);
+
+    let min_size = if config.min_packet_size != 0 {
+        config.min_packet_size
+    } else {
+        DEFAULT_MIN_PACKET_SIZE
+    };
+
+    let max_size = if config.max_packet_size != 0 {
+        config.max_packet_size
+    } else {
+        DEFAULT_MAX_PACKET_SIZE
+    };
+
+    if payload_len < min_size || payload_len > max_size {
+        update_stats_invalid_size();
+        return Ok(xdp_action::XDP_DROP);
+    }
+
+    // Check rate limit using full IPv6 address
+    let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+
+    if !check_rate_limit_v6(src_ip, udp_len as u64, now, config) {
+        update_stats_rate_limited();
+        return Ok(xdp_action::XDP_DROP);
+    }
+
+    // Amplification attack detection
+    // Use hashed IPv6 address for amplification tracking (amp key uses u32)
+    if config.amp_detection_enabled != 0 {
+        let ip_hash = hash_ipv6_to_u32(src_ip);
+        if let Some(action) = check_amplification_attack(
+            ctx,
+            data,
+            data_end,
+            ip_hash,
+            src_port,
+            dst_port,
+            payload_len,
+            config,
+            is_fragmented,
+        ) {
+            return Ok(action);
+        }
+    }
+
+    // Port scan detection using full IPv6 address
+    if config.portscan_detection_enabled != 0 {
+        if is_port_scan_v6(src_ip, dst_port, now, config) {
+            update_stats_port_scan();
+            if config.protection_level >= 2 {
+                block_ip_v6(src_ip, config.block_duration_ns);
+                return Ok(xdp_action::XDP_DROP);
+            }
+        }
+    }
+
+    // Protocol-specific tracking
+    track_protocol_stats(src_port, dst_port);
+
+    update_stats_passed();
+    Ok(xdp_action::XDP_PASS)
+}
+
+// ============================================================================
 // Amplification Attack Detection
 // ============================================================================
 
@@ -681,39 +851,121 @@ fn check_amplification_attack(
     // Protocol-specific validation
     match src_port {
         PORT_DNS => {
-            // DNS amplification detection
-            if payload_start + 12 <= data_end && payload_len > 512 {
-                // Large DNS response - check if it's a response
+            // DNS amplification detection with proper protocol validation
+            // DNS header structure (12 bytes minimum):
+            // - Transaction ID: 2 bytes
+            // - Flags: 2 bytes (QR, Opcode, AA, TC, RD, RA, Z, RCODE)
+            // - QDCOUNT: 2 bytes (number of questions)
+            // - ANCOUNT: 2 bytes (number of answers)
+            // - NSCOUNT: 2 bytes (number of authority records)
+            // - ARCOUNT: 2 bytes (number of additional records)
+
+            if payload_start + 12 <= data_end {
                 let flags = unsafe { u16::from_be(*((payload_start + 2) as *const u16)) };
+                let qdcount = unsafe { u16::from_be(*((payload_start + 4) as *const u16)) };
+                let ancount = unsafe { u16::from_be(*((payload_start + 6) as *const u16)) };
 
                 // Check if QR bit is set (response)
-                if flags & DNS_FLAG_RESPONSE != 0 {
-                    // This is a DNS response - potential amplification
-                    update_stats_amplification();
+                let is_response = (flags & DNS_FLAG_RESPONSE) != 0;
 
-                    // Track this source
-                    let amp_key = ((src_ip as u64) << 16) | (src_port as u64);
-                    track_amp_source(amp_key, payload_len as u64, config);
+                // Extract opcode (bits 11-14 of flags)
+                // Valid opcodes: 0=Query, 1=IQuery, 2=Status, 4=Notify, 5=Update
+                let opcode = (flags >> 11) & 0x0F;
+                let valid_opcode = opcode <= 5;
 
-                    if config.protection_level >= 2 && payload_len > 1024 {
-                        // Large DNS response - likely amplification
-                        return Some(xdp_action::XDP_DROP);
+                // Check for amplification indicators:
+                // 1. Response with many more answers than questions
+                // 2. Large payload size
+                // 3. ANY query responses (opcode 0 with many answers)
+                let amp_ratio_suspicious = ancount > 10 && qdcount <= 2;
+                let is_large = payload_len > 512;
+
+                if is_response && valid_opcode {
+                    // Amplification heuristics:
+                    // - High answer/question ratio indicates amplification
+                    // - Large responses (>512 bytes) are suspicious
+                    // - ANY queries can return massive responses
+
+                    let is_amplification = amp_ratio_suspicious || (is_large && ancount > qdcount * 5);
+
+                    if is_amplification || (is_large && payload_len > 1024) {
+                        update_stats_amplification();
+
+                        let amp_key = ((src_ip as u64) << 16) | (src_port as u64);
+                        track_amp_source(amp_key, payload_len as u64, config);
+
+                        // Drop based on protection level and severity
+                        if config.protection_level >= 2 {
+                            // At moderate protection: drop highly suspicious responses
+                            if amp_ratio_suspicious || payload_len > 1024 {
+                                return Some(xdp_action::XDP_DROP);
+                            }
+                        }
+                        if config.protection_level >= 3 && is_large {
+                            // At aggressive protection: drop any large DNS response
+                            return Some(xdp_action::XDP_DROP);
+                        }
                     }
                 }
             }
         }
 
         PORT_NTP => {
-            // NTP amplification detection
+            // NTP amplification detection with mode 7 and version validation
+            // NTP first byte structure:
+            // - Bits 0-2: Mode (0-7)
+            // - Bits 3-5: Version (1-4 are valid)
+            // - Bits 6-7: Leap Indicator
+            //
+            // Mode 7 (private/monlist) is the main amplification vector
+            // - "monlist" command returns list of last 600 clients
+            // - Can amplify 200x or more
+            //
+            // Mode 6 (control) can also be abused but less common
+
             if payload_start + 1 <= data_end {
                 let first_byte = unsafe { *(payload_start as *const u8) };
                 let mode = first_byte & NTP_MODE_MASK;
+                let version = (first_byte >> 3) & 0x07; // Bits 3-5
 
-                // Check for server response or monlist response
-                if mode == NTP_MODE_SERVER || mode == NTP_MODE_BROADCAST {
-                    // NTP response
+                // Validate NTP version (1-4 are valid, 0 and 5+ are invalid/suspicious)
+                let valid_version = version >= 1 && version <= 4;
+
+                // Mode 7 (private) - ALWAYS suspicious, this is the monlist attack vector
+                // Drop immediately regardless of payload size
+                if mode == 7 {
+                    update_stats_amplification();
+                    track_amp_source(
+                        ((src_ip as u64) << 16) | (src_port as u64),
+                        payload_len as u64,
+                        config,
+                    );
+
+                    // Mode 7 traffic from external sources is almost always malicious
+                    if config.protection_level >= 1 {
+                        return Some(xdp_action::XDP_DROP);
+                    }
+                }
+
+                // Mode 6 (control) - also suspicious, can leak info
+                if mode == 6 && payload_len > 12 {
+                    update_stats_amplification();
+                    track_amp_source(
+                        ((src_ip as u64) << 16) | (src_port as u64),
+                        payload_len as u64,
+                        config,
+                    );
+
+                    if config.protection_level >= 2 {
+                        return Some(xdp_action::XDP_DROP);
+                    }
+                }
+
+                // Check for server response or broadcast (standard NTP)
+                if (mode == NTP_MODE_SERVER || mode == NTP_MODE_BROADCAST) && valid_version {
+                    // Standard NTP response is 48 bytes
+                    // Larger responses indicate potential abuse
                     if payload_len > 48 {
-                        // Larger than standard NTP response
                         update_stats_amplification();
                         track_amp_source(
                             ((src_ip as u64) << 16) | (src_port as u64),
@@ -724,6 +976,14 @@ fn check_amplification_attack(
                         if config.protection_level >= 2 && payload_len > 200 {
                             return Some(xdp_action::XDP_DROP);
                         }
+                    }
+                }
+
+                // Invalid version with any response mode is suspicious
+                if !valid_version && (mode == NTP_MODE_SERVER || mode == NTP_MODE_BROADCAST || mode == 6 || mode == 7) {
+                    update_stats_amplification();
+                    if config.protection_level >= 2 {
+                        return Some(xdp_action::XDP_DROP);
                     }
                 }
             }
@@ -746,17 +1006,41 @@ fn check_amplification_attack(
         }
 
         PORT_MEMCACHED => {
-            // Memcached amplification (can be massive)
-            // Any response from memcached default port is suspicious
-            update_stats_amplification();
-            track_amp_source(
-                ((src_ip as u64) << 16) | (src_port as u64),
-                payload_len as u64,
-                config,
-            );
+            // Memcached amplification detection
+            // Only block RESPONSES (src_port == 11211), not requests (dst_port == 11211)
+            // This check is implicitly satisfied since we're in the src_port match branch
+            //
+            // Check for memcached binary protocol magic bytes:
+            // 0x80 = request magic (shouldn't come from server)
+            // 0x81 = response magic (amplification indicator)
+            // Text protocol responses start with "VALUE", "END", "STAT", etc.
 
-            if config.protection_level >= 1 && payload_len > 100 {
-                return Some(xdp_action::XDP_DROP);
+            if payload_start + 1 <= data_end {
+                let magic_byte = unsafe { *(payload_start as *const u8) };
+
+                // Binary protocol response magic (0x81) or request magic echoed back (0x80)
+                // Both indicate potential amplification
+                let is_binary_protocol = magic_byte == 0x80 || magic_byte == 0x81;
+
+                // Also check for large payloads which are characteristic of amplification
+                // Memcached can return massive responses (up to 1MB+ per key)
+                let is_large_response = payload_len > 100;
+
+                if is_binary_protocol || is_large_response {
+                    update_stats_amplification();
+                    track_amp_source(
+                        ((src_ip as u64) << 16) | (src_port as u64),
+                        payload_len as u64,
+                        config,
+                    );
+
+                    // Drop binary protocol responses or large text responses
+                    if config.protection_level >= 1 {
+                        if is_binary_protocol || payload_len > 500 {
+                            return Some(xdp_action::XDP_DROP);
+                        }
+                    }
+                }
             }
         }
 
@@ -841,8 +1125,75 @@ fn track_amp_source(amp_key: u64, bytes: u64, config: &UdpConfig) {
 }
 
 // ============================================================================
-// Port Scan Detection
+// Port Scan Detection with Bloom Filter
 // ============================================================================
+
+/// Compute bloom filter hash indices for a port number
+/// Uses 3 independent hash functions for good collision resistance
+/// Returns (hash1, hash2, hash3) as bit indices into the 512-bit filter
+#[inline(always)]
+fn bloom_hash_port(port: u16) -> (usize, usize, usize) {
+    let port32 = port as u32;
+
+    // Hash function 1: Simple multiplication hash
+    let h1 = (port32.wrapping_mul(0x9E3779B9)) & 0x1FF; // 9 bits for 512 positions
+
+    // Hash function 2: Different multiplier
+    let h2 = (port32.wrapping_mul(0x85EBCA6B).wrapping_add(0x3F)) & 0x1FF;
+
+    // Hash function 3: XOR-based hash
+    let h3 = ((port32 ^ (port32 >> 5)).wrapping_mul(0xC2B2AE35)) & 0x1FF;
+
+    (h1 as usize, h2 as usize, h3 as usize)
+}
+
+/// Check if a port is in the bloom filter and add it if not
+/// Returns true if the port was already present (likely), false if newly added
+#[inline(always)]
+fn bloom_check_and_add(filter: &mut [u64; 8], port: u16) -> bool {
+    let (h1, h2, h3) = bloom_hash_port(port);
+
+    // Calculate array index and bit position for each hash
+    let idx1 = h1 >> 6; // Divide by 64 to get u64 index
+    let bit1 = h1 & 0x3F; // Mod 64 to get bit position
+
+    let idx2 = h2 >> 6;
+    let bit2 = h2 & 0x3F;
+
+    let idx3 = h3 >> 6;
+    let bit3 = h3 & 0x3F;
+
+    // Bounds check for eBPF verifier - indices are always < 8
+    if idx1 >= 8 || idx2 >= 8 || idx3 >= 8 {
+        return false;
+    }
+
+    // Check if all bits are already set (port likely already seen)
+    let already_present = (filter[idx1] & (1u64 << bit1)) != 0
+        && (filter[idx2] & (1u64 << bit2)) != 0
+        && (filter[idx3] & (1u64 << bit3)) != 0;
+
+    // Set all bits
+    filter[idx1] |= 1u64 << bit1;
+    filter[idx2] |= 1u64 << bit2;
+    filter[idx3] |= 1u64 << bit3;
+
+    already_present
+}
+
+/// Clear the bloom filter
+#[inline(always)]
+fn bloom_clear(filter: &mut [u64; 8]) {
+    // Unroll for eBPF - avoid variable loop
+    filter[0] = 0;
+    filter[1] = 0;
+    filter[2] = 0;
+    filter[3] = 0;
+    filter[4] = 0;
+    filter[5] = 0;
+    filter[6] = 0;
+    filter[7] = 0;
+}
 
 #[inline(always)]
 fn is_port_scan(src_ip: u32, dst_port: u16, now: u64, config: &UdpConfig) -> bool {
@@ -861,21 +1212,25 @@ fn is_port_scan(src_ip: u32, dst_port: u16, now: u64, config: &UdpConfig) -> boo
     if let Some(state) = unsafe { UDP_IP_STATE_V4.get_ptr_mut(&src_ip) } {
         let state = unsafe { &mut *state };
 
-        // Check if in new window
+        // Check if in new window - reset bloom filter
         if now.saturating_sub(state.window_start) > window {
             state.window_start = now;
-            state.unique_ports = 1;
+            state.unique_ports = 0;
+            bloom_clear(&mut state.port_bloom_filter);
             state.flags &= !FLAG_PORTSCAN_DETECTED;
-            return false;
         }
 
-        // Simple approximation: increment unique ports counter
-        // In a real implementation, you'd use a bloom filter or similar
-        state.unique_ports += 1;
+        // Check bloom filter - only increment if this is a new port
+        let port_already_seen = bloom_check_and_add(&mut state.port_bloom_filter, dst_port);
 
-        if state.unique_ports > threshold {
-            state.flags |= FLAG_PORTSCAN_DETECTED;
-            return true;
+        if !port_already_seen {
+            // This is a genuinely new port (with high probability)
+            state.unique_ports += 1;
+
+            if state.unique_ports > threshold {
+                state.flags |= FLAG_PORTSCAN_DETECTED;
+                return true;
+            }
         }
     }
 
@@ -951,6 +1306,7 @@ fn check_rate_limit_v4(src_ip: u32, bytes: u64, now: u64, config: &UdpConfig) ->
             amp_responses: 0,
             blocked_until: 0,
             flags: 0,
+            port_bloom_filter: [0; 8],
         };
         let _ = UDP_IP_STATE_V4.insert(&src_ip, &state, 0);
         true
@@ -1001,8 +1357,157 @@ fn block_ip_v4(src_ip: u32, duration_ns: u64) {
             amp_responses: 0,
             blocked_until: block_until,
             flags: 0,
+            port_bloom_filter: [0; 8],
         };
         let _ = UDP_IP_STATE_V4.insert(&src_ip, &state, 0);
+    }
+}
+
+// ============================================================================
+// IPv6 Rate Limiting and Port Scan Detection
+// ============================================================================
+
+#[inline(always)]
+fn check_rate_limit_v6(src_ip: &[u8; 16], bytes: u64, now: u64, config: &UdpConfig) -> bool {
+    let window = if config.rate_limit_window_ns != 0 {
+        config.rate_limit_window_ns
+    } else {
+        DEFAULT_RATE_LIMIT_WINDOW_NS
+    };
+
+    let max_packets = if config.max_packets_per_window != 0 {
+        config.max_packets_per_window
+    } else {
+        DEFAULT_MAX_PACKETS_PER_WINDOW
+    };
+
+    let max_bytes = if config.max_bytes_per_window != 0 {
+        config.max_bytes_per_window
+    } else {
+        DEFAULT_MAX_BYTES_PER_WINDOW
+    };
+
+    if let Some(state) = unsafe { UDP_IP_STATE_V6.get_ptr_mut(src_ip) } {
+        let state = unsafe { &mut *state };
+
+        // Check if blocked
+        if state.blocked_until > now {
+            return false;
+        }
+
+        // Check if in new window
+        if now.saturating_sub(state.window_start) > window {
+            state.window_start = now;
+            state.window_packets = 1;
+            state.unique_ports = 1;
+            state.packets += 1;
+            state.bytes += bytes;
+            state.last_seen = now;
+            bloom_clear(&mut state.port_bloom_filter);
+            return true;
+        }
+
+        // Update counters
+        state.window_packets += 1;
+        state.packets += 1;
+        state.bytes += bytes;
+        state.last_seen = now;
+
+        // Check limits
+        if state.window_packets > max_packets || state.bytes > max_bytes {
+            state.flags |= FLAG_FLOOD_DETECTED;
+            state.blocked_until = now + config.block_duration_ns;
+            return false;
+        }
+
+        true
+    } else {
+        // First packet from this IPv6
+        let state = UdpIpState {
+            packets: 1,
+            bytes,
+            window_start: now,
+            window_packets: 1,
+            last_seen: now,
+            unique_ports: 1,
+            amp_responses: 0,
+            blocked_until: 0,
+            flags: 0,
+            port_bloom_filter: [0; 8],
+        };
+        let _ = UDP_IP_STATE_V6.insert(src_ip, &state, 0);
+        true
+    }
+}
+
+#[inline(always)]
+fn is_port_scan_v6(src_ip: &[u8; 16], dst_port: u16, now: u64, config: &UdpConfig) -> bool {
+    let threshold = if config.portscan_threshold != 0 {
+        config.portscan_threshold
+    } else {
+        DEFAULT_PORTSCAN_THRESHOLD
+    };
+
+    let window = if config.rate_limit_window_ns != 0 {
+        config.rate_limit_window_ns
+    } else {
+        DEFAULT_RATE_LIMIT_WINDOW_NS
+    };
+
+    if let Some(state) = unsafe { UDP_IP_STATE_V6.get_ptr_mut(src_ip) } {
+        let state = unsafe { &mut *state };
+
+        // Check if in new window - reset bloom filter
+        if now.saturating_sub(state.window_start) > window {
+            state.window_start = now;
+            state.unique_ports = 0;
+            bloom_clear(&mut state.port_bloom_filter);
+            state.flags &= !FLAG_PORTSCAN_DETECTED;
+        }
+
+        // Check bloom filter - only increment if this is a new port
+        let port_already_seen = bloom_check_and_add(&mut state.port_bloom_filter, dst_port);
+
+        if !port_already_seen {
+            state.unique_ports += 1;
+
+            if state.unique_ports > threshold {
+                state.flags |= FLAG_PORTSCAN_DETECTED;
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+#[inline(always)]
+fn block_ip_v6(src_ip: &[u8; 16], duration_ns: u64) {
+    let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+    let block_until = now
+        + if duration_ns != 0 {
+            duration_ns
+        } else {
+            DEFAULT_BLOCK_DURATION_NS
+        };
+
+    if let Some(state) = unsafe { UDP_IP_STATE_V6.get_ptr_mut(src_ip) } {
+        let state = unsafe { &mut *state };
+        state.blocked_until = block_until;
+    } else {
+        let state = UdpIpState {
+            packets: 0,
+            bytes: 0,
+            window_start: now,
+            window_packets: 0,
+            last_seen: now,
+            unique_ports: 0,
+            amp_responses: 0,
+            blocked_until: block_until,
+            flags: 0,
+            port_bloom_filter: [0; 8],
+        };
+        let _ = UDP_IP_STATE_V6.insert(src_ip, &state, 0);
     }
 }
 

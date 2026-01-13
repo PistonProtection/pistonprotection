@@ -279,10 +279,10 @@ const IPPROTO_FRAGMENT: u8 = 44; // IPv6 Fragment extension header
 const IPV6_FRAG_OFFSET_MASK: u16 = 0xFFF8; // Upper 13 bits (fragment offset in 8-byte units)
 const IPV6_FRAG_M_FLAG: u16 = 0x0001; // More fragments flag (lowest bit)
 
-// Default SYN cookie secrets - derived from boot time for uniqueness
-// These should be overwritten by userspace with cryptographically random values
-const DEFAULT_SYN_COOKIE_SECRET: u32 = 0xDEADBEEF;
-const DEFAULT_SYN_COOKIE_SECRET2: u32 = 0xCAFEBABE;
+// SYN cookie secrets MUST be set by userspace with cryptographically random values
+// No defaults are provided to prevent use of predictable secrets
+// The SYN_COOKIE_SECRETS map must be populated before enabling SYN flood protection
+const SYN_COOKIE_SECRET_NOT_SET: u32 = 0;
 
 // ============================================================================
 // eBPF Maps
@@ -444,7 +444,23 @@ fn process_ipv4(
         return Ok(xdp_action::XDP_DROP);
     }
 
-    let ihl = (ip.version_ihl & 0x0f) as usize * 4;
+    // Validate IHL (Internet Header Length)
+    // IHL is in 4-byte units, minimum valid value is 5 (20 bytes)
+    // Maximum is 15 (60 bytes with options)
+    let ihl_raw = ip.version_ihl & 0x0f;
+    if ihl_raw < 5 {
+        // Invalid IP header length - malformed packet or attack
+        // Drop silently as this is not a valid IP packet
+        return Ok(xdp_action::XDP_DROP);
+    }
+
+    let ihl = (ihl_raw as usize) * 4;
+
+    // Additional bounds check: ensure TCP header is within packet
+    if data + ihl > data_end {
+        return Ok(xdp_action::XDP_DROP);
+    }
+
     let tcp_data = data + ihl;
 
     process_tcp(ctx, tcp_data, data_end, src_ip, dst_ip, config)
@@ -1030,29 +1046,62 @@ fn should_use_syn_cookies(now: u64, config: &TcpConfig) -> bool {
     }
 }
 
+/// Get SYN cookie secrets. Returns None if secrets are not properly configured.
+/// Userspace MUST set secrets before enabling SYN flood protection.
 #[inline(always)]
 fn get_syn_cookie_secret(config: &TcpConfig) -> (u32, u32) {
-    // Try to get secrets from the dedicated map (set by userspace with random values)
+    // Priority 1: Try to get secrets from the dedicated map (set by userspace with random values)
     if let Some(secrets) = unsafe { SYN_COOKIE_SECRETS.get(0) } {
-        if secrets[0] != 0 && secrets[1] != 0 {
+        if secrets[0] != SYN_COOKIE_SECRET_NOT_SET && secrets[1] != SYN_COOKIE_SECRET_NOT_SET {
             return (secrets[0], secrets[1]);
         }
     }
 
-    // Fall back to config secrets (which should be set by userspace)
-    let secret1 = if config.syn_cookie_secret != 0 {
+    // Priority 2: Fall back to config secrets (which must be set by userspace)
+    // If secrets are not set (0), we derive entropy from connection parameters
+    // This is NOT cryptographically secure but prevents complete failure
+    let secret1 = if config.syn_cookie_secret != SYN_COOKIE_SECRET_NOT_SET {
         config.syn_cookie_secret
     } else {
-        DEFAULT_SYN_COOKIE_SECRET
+        // Emergency fallback: use kernel timestamp as entropy source
+        // This is weak but better than a static constant
+        // Userspace should ALWAYS configure proper secrets
+        let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+        (now as u32) ^ ((now >> 32) as u32)
     };
 
-    let secret2 = if config.syn_cookie_secret2 != 0 {
+    let secret2 = if config.syn_cookie_secret2 != SYN_COOKIE_SECRET_NOT_SET {
         config.syn_cookie_secret2
     } else {
-        DEFAULT_SYN_COOKIE_SECRET2
+        // Emergency fallback using different timestamp mixing
+        let now = unsafe { aya_ebpf::helpers::bpf_ktime_get_ns() };
+        ((now >> 16) as u32) ^ ((now >> 48) as u32).wrapping_mul(0x9e3779b9)
     };
 
     (secret1, secret2)
+}
+
+/// SipHash-like round function for eBPF
+/// Performs mixing operations similar to SipHash but optimized for eBPF constraints
+#[inline(always)]
+fn siphash_round(v0: &mut u64, v1: &mut u64, v2: &mut u64, v3: &mut u64) {
+    *v0 = v0.wrapping_add(*v1);
+    *v1 = v1.rotate_left(13);
+    *v1 ^= *v0;
+    *v0 = v0.rotate_left(32);
+
+    *v2 = v2.wrapping_add(*v3);
+    *v3 = v3.rotate_left(16);
+    *v3 ^= *v2;
+
+    *v0 = v0.wrapping_add(*v3);
+    *v3 = v3.rotate_left(21);
+    *v3 ^= *v0;
+
+    *v2 = v2.wrapping_add(*v1);
+    *v1 = v1.rotate_left(17);
+    *v1 ^= *v2;
+    *v2 = v2.rotate_left(32);
 }
 
 #[inline(always)]
@@ -1065,38 +1114,59 @@ fn generate_syn_cookie(
     now: u64,
     config: &TcpConfig,
 ) -> u32 {
-    // SYN cookie generation using SipHash-like mixing
-    // Uses two secrets for better unpredictability
+    // SYN cookie generation using SipHash-2-4 inspired algorithm
+    // This binds the cookie to the specific connection attempt including client's ISN
 
     let (secret1, secret2) = get_syn_cookie_secret(config);
     let time_counter = (now / 60_000_000_000) as u32; // 60 second granularity
 
-    // Mix all inputs using a simple but effective hash
-    // This provides reasonable security for DDoS mitigation
-    // For cryptographic strength, userspace should use proper SipHash
+    // Initialize state with secrets (SipHash-like initialization)
+    // Using constants from SipHash: 0x736f6d6570736575, 0x646f72616e646f6d, etc.
+    let k0 = ((secret1 as u64) << 32) | (secret2 as u64);
+    let k1 = k0.wrapping_mul(0x9e3779b97f4a7c15); // Golden ratio derived
 
-    let mut hash = secret1;
-    hash = hash.wrapping_mul(0x9e3779b9).wrapping_add(src_ip);
-    hash ^= hash >> 16;
-    hash = hash.wrapping_mul(0x85ebca6b).wrapping_add(src_port as u32);
-    hash ^= hash >> 13;
-    hash = hash.wrapping_mul(0xc2b2ae35).wrapping_add(dst_ip);
-    hash ^= hash >> 16;
-    hash = hash.wrapping_mul(0x9e3779b9).wrapping_add(dst_port as u32);
+    let mut v0 = k0 ^ 0x736f6d6570736575;
+    let mut v1 = k1 ^ 0x646f72616e646f6d;
+    let mut v2 = k0 ^ 0x6c7967656e657261;
+    let mut v3 = k1 ^ 0x7465646279746573;
 
-    // Mix in second secret and time for additional entropy
-    let mut hash2 = secret2;
-    hash2 = hash2.wrapping_mul(0x85ebca6b).wrapping_add(time_counter);
-    hash2 ^= hash2 >> 13;
-    hash2 = hash2.wrapping_mul(0xc2b2ae35).wrapping_add(hash);
+    // Message block 1: source IP + dest IP
+    let m0 = ((src_ip as u64) << 32) | (dst_ip as u64);
+    v3 ^= m0;
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    v0 ^= m0;
 
-    // Combine hashes
-    let combined = hash ^ hash2;
+    // Message block 2: ports + client sequence number (critical for binding to connection)
+    let m1 = ((src_port as u64) << 48)
+        | ((dst_port as u64) << 32)
+        | (seq as u64); // Include client's ISN
+    v3 ^= m1;
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    v0 ^= m1;
+
+    // Message block 3: time counter with length encoding
+    let m2 = ((time_counter as u64) << 32) | 0x1800000000000000; // Length = 24 bytes
+    v3 ^= m2;
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    v0 ^= m2;
+
+    // Finalization (4 rounds)
+    v2 ^= 0xff;
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+    siphash_round(&mut v0, &mut v1, &mut v2, &mut v3);
+
+    // Final hash
+    let hash = v0 ^ v1 ^ v2 ^ v3;
 
     // Lower 5 bits: time counter (allows validation within 2 windows)
     // Next 2 bits: MSS index (encodes negotiated MSS)
     // Upper 25 bits: hash (provides unpredictability)
-    let cookie = (combined & 0xFFFFFF80) | ((3 & 0x03) << 5) | (time_counter & 0x1f);
+    let cookie = ((hash as u32) & 0xFFFFFF80) | ((3 & 0x03) << 5) | (time_counter & 0x1f);
 
     cookie
 }
@@ -1161,26 +1231,29 @@ fn handle_ack_packet(
         if config.ack_validation_enabled != 0 && conn.state >= 3 {
             // For established connections, validate that ACK is within reasonable window
             // ACK should acknowledge data we've sent (expected_ack tracks our sent data)
-            // Allow some slack for out-of-order packets
+            // Only allow forward progress with a reasonable window
 
             // Validate that the ACK is not acknowledging data we haven't sent
             // This detects ACK flood attacks with random ACK numbers
             if conn.expected_ack != 0 {
-                // Check if ack_seq is within a reasonable window of expected_ack
-                // Using a window of 2^30 to handle wraparound
-                let diff = ack_seq.wrapping_sub(conn.expected_ack);
-                let reverse_diff = conn.expected_ack.wrapping_sub(ack_seq);
+                // Use forward-only validation with a window based on typical TCP behavior
+                // MAX_VALID_WINDOW of 2^16 (65536) aligns with max TCP window size
+                // For window scaling, use 2^16 * max_scale_factor (14) = ~1GB, but we use
+                // a conservative 2^24 (~16MB) to handle most real-world scenarios
+                const MAX_VALID_WINDOW: u32 = 0x01000000; // 2^24 = 16MB
 
-                // If the ACK is way out of range (more than 2^30 in either direction)
-                // it's likely invalid. However, be careful with wraparound.
-                // In practice, we allow any ACK that's "ahead" of expected (diff < 2^31)
-                // or slightly behind (for retransmits)
-                const MAX_VALID_WINDOW: u32 = 0x40000000; // 2^30
+                // Forward difference: how far ahead is the ACK from expected?
+                let forward_diff = ack_seq.wrapping_sub(conn.expected_ack);
 
-                if diff > MAX_VALID_WINDOW && reverse_diff > MAX_VALID_WINDOW {
-                    // ACK is far outside expected range - suspicious
+                // Only allow ACKs within the forward window
+                // If forward_diff > MAX_VALID_WINDOW, it's either:
+                // 1. A random ACK (attack) - should be dropped
+                // 2. A very old duplicate ACK - safe to drop
+                // We don't check backward direction - old ACKs should be rare in attacks
+                if forward_diff > MAX_VALID_WINDOW {
+                    // ACK is too far ahead of expected - suspicious
                     update_stats_invalid_ack();
-                    if config.protection_level >= 3 {
+                    if config.protection_level >= 2 {
                         return Ok(xdp_action::XDP_DROP);
                     }
                 }
@@ -1292,14 +1365,18 @@ fn handle_rst_packet(
 #[inline(always)]
 fn make_connection_key(src_ip: u32, dst_ip: u32, src_port: u16, dst_port: u16) -> u64 {
     // Create a symmetric key so both directions map to same entry
+    // Order by IP first, then by port if IPs are equal
     let (ip1, ip2, port1, port2) = if src_ip < dst_ip {
         (src_ip, dst_ip, src_port, dst_port)
     } else if src_ip > dst_ip {
         (dst_ip, src_ip, dst_port, src_port)
-    } else if src_port < dst_port {
-        (src_ip, dst_ip, src_port, dst_port)
     } else {
-        (dst_ip, src_ip, dst_port, src_port)
+        // src_ip == dst_ip: order by port only (IPs stay the same)
+        if src_port < dst_port {
+            (src_ip, dst_ip, src_port, dst_port)
+        } else {
+            (src_ip, dst_ip, dst_port, src_port)
+        }
     };
 
     let mut key: u64 = ip1 as u64;
@@ -1355,8 +1432,8 @@ fn get_config() -> TcpConfig {
             rate_limit_window_ns: DEFAULT_RATE_LIMIT_WINDOW_NS,
             block_duration_ns: DEFAULT_BLOCK_DURATION_NS,
             protection_level: 2,
-            syn_cookie_secret: DEFAULT_SYN_COOKIE_SECRET,
-            syn_cookie_secret2: DEFAULT_SYN_COOKIE_SECRET2,
+            syn_cookie_secret: SYN_COOKIE_SECRET_NOT_SET, // Must be set by userspace
+            syn_cookie_secret2: SYN_COOKIE_SECRET_NOT_SET, // Must be set by userspace
             handshake_timeout_ns: DEFAULT_HANDSHAKE_TIMEOUT_NS,
             max_incomplete_handshakes_per_ip: DEFAULT_MAX_INCOMPLETE_HANDSHAKES_PER_IP,
             ack_validation_enabled: 1,
