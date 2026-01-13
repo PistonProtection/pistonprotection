@@ -50,6 +50,8 @@ E.g. remove useless modules and make sure the codebase is clean.
   - ensure there is a full-fledged frontpage for this dashboard which talks about the product, has navbar/etc. with login button
   - make it all one big webapp for both getting customers and for customers to log into the dashboard at.
   - make sure it looks pretty and SEO is good
+  - supports BOTH usage based billing and flat package billing with a fixed usage amount. for usage based billing add warning + usage cap support that is configurable.
+  - also support mixes of flat billing and usage based billing
 - Advanced eBPF and XDP filter stacks on the worker nodes
 - Build it all based on kubernetes with ciliumm, operators, etc.
 - allow self hosting it

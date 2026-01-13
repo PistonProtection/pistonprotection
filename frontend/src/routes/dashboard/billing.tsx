@@ -45,9 +45,51 @@ export const Route = createFileRoute("/dashboard/billing")({
   component: BillingPage,
 });
 
+// Plan pricing (monthly prices in cents - would come from Stripe in production)
+const planPricing: Record<string, { monthly: number; annual: number }> = {
+  free: { monthly: 0, annual: 0 },
+  starter: { monthly: 2900, annual: 29000 }, // $29/mo, $290/yr
+  professional: { monthly: 9900, annual: 99000 }, // $99/mo, $990/yr
+  enterprise: { monthly: 29900, annual: 299000 }, // $299/mo, $2990/yr
+};
+
+// Plan features for display
+const planFeatures: Record<string, string[]> = {
+  free: [
+    "1 protected backend",
+    "5 filter rules",
+    "1 GB bandwidth/month",
+    "Community support",
+  ],
+  starter: [
+    "5 protected backends",
+    "25 filter rules",
+    "100 GB bandwidth/month",
+    "Email support",
+    "14-day free trial",
+  ],
+  professional: [
+    "15 protected backends",
+    "100 filter rules",
+    "1 TB bandwidth/month",
+    "Priority support",
+    "Advanced analytics",
+    "14-day free trial",
+  ],
+  enterprise: [
+    "Unlimited backends",
+    "Unlimited filter rules",
+    "Unlimited bandwidth",
+    "24/7 dedicated support",
+    "Custom integrations",
+    "SLA guarantee",
+    "14-day free trial",
+  ],
+};
+
 function BillingPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [upgradePlanId, setUpgradePlanId] = useState<string | null>(null);
+  const [upgradePlanName, setUpgradePlanName] = useState<string | null>(null);
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -121,21 +163,41 @@ function BillingPage() {
     }),
   );
 
-  // Download invoice
-  const downloadInvoice = async (invoiceId: string) => {
-    try {
-      const response = await fetch(
-        `/api/billing/invoices/${invoiceId}/download`,
-      );
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoiceId}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Failed to download invoice");
+  // Resume subscription
+  const resumeMutation = useMutation(
+    trpc.billing.resumeSubscription.mutationOptions({
+      onSuccess: () => {
+        toast.success("Subscription reactivated successfully.");
+        queryClient.invalidateQueries({ queryKey: ["billing"] });
+      },
+      onError: (error) => {
+        toast.error(`Failed to reactivate subscription: ${error.message}`);
+      },
+    }),
+  );
+
+  // Open invoice in new tab (Stripe hosted URL)
+  const viewInvoice = (hostedUrl: string | null) => {
+    if (hostedUrl) {
+      window.open(hostedUrl, "_blank");
+    } else {
+      toast.error("Invoice URL not available");
+    }
+  };
+
+  // Download invoice PDF
+  const downloadInvoice = (
+    pdfUrl: string | null,
+    invoiceNumber: string | null,
+  ) => {
+    if (pdfUrl) {
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.download = `invoice-${invoiceNumber ?? "download"}.pdf`;
+      link.target = "_blank";
+      link.click();
+    } else {
+      toast.error("Invoice PDF not available");
     }
   };
 
@@ -149,7 +211,9 @@ function BillingPage() {
     );
   }
 
-  const currentPlan = plans?.find((p) => p.id === subscription?.planId);
+  // Match current plan by name
+  const currentPlanName = subscription?.plan ?? "free";
+  const currentPricing = planPricing[currentPlanName] ?? planPricing.free;
   const defaultPaymentMethod = paymentMethods?.find((pm) => pm.isDefault);
 
   return (
@@ -215,16 +279,12 @@ function BillingPage() {
             </div>
             <Button
               variant="outline"
-              onClick={() =>
-                trpc.billing.reactivateSubscription
-                  .mutate()
-                  .then(() => {
-                    toast.success("Subscription reactivated");
-                    queryClient.invalidateQueries({ queryKey: ["billing"] });
-                  })
-                  .catch((e) => toast.error(e.message))
-              }
+              onClick={() => resumeMutation.mutate()}
+              disabled={resumeMutation.isPending}
             >
+              {resumeMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Reactivate
             </Button>
           </CardContent>
@@ -239,16 +299,19 @@ function BillingPage() {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {currentPlan?.name ?? "Free"}
+            <div className="text-2xl font-bold capitalize">
+              {currentPlanName}
             </div>
             <p className="text-xs text-muted-foreground">
-              {currentPlan ? (
-                <>
-                  ${(currentPlan.price / 100).toFixed(2)}/{currentPlan.interval}
-                </>
+              {currentPricing.monthly > 0 ? (
+                <>${(currentPricing.monthly / 100).toFixed(2)}/month</>
               ) : (
-                "No active subscription"
+                "Free tier"
+              )}
+              {subscription?.isTrialing && (
+                <Badge variant="secondary" className="ml-2">
+                  Trial
+                </Badge>
               )}
             </p>
           </CardContent>
@@ -260,7 +323,7 @@ function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentPlan ? `$${(currentPlan.price / 100).toFixed(2)}` : "$0"}
+              ${(currentPricing.monthly / 100).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               {subscription?.currentPeriodEnd
@@ -282,7 +345,7 @@ function BillingPage() {
                 <div className="text-2xl font-bold">
                   **** {defaultPaymentMethod.last4}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground capitalize">
                   {defaultPaymentMethod.brand} - Expires{" "}
                   {defaultPaymentMethod.expMonth}/{defaultPaymentMethod.expYear}
                 </p>
@@ -305,6 +368,12 @@ function BillingPage() {
           <CardTitle>Usage This Period</CardTitle>
           <CardDescription>
             Your resource consumption for the current billing cycle.
+            {usage?.lastUsageReset && (
+              <span className="block text-xs mt-1">
+                Last reset:{" "}
+                {new Date(usage.lastUsageReset).toLocaleDateString()}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -315,18 +384,14 @@ function BillingPage() {
                 <span className="text-sm font-medium">Bandwidth</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {formatBytes(usage?.bandwidthUsed ?? 0)} /{" "}
-                {usage?.bandwidthLimit
-                  ? formatBytes(usage.bandwidthLimit)
-                  : "Unlimited"}
+                {usage?.bandwidth.usedFormatted ?? "0 B"} /{" "}
+                {usage?.bandwidth.unlimited
+                  ? "Unlimited"
+                  : (usage?.bandwidth.limitFormatted ?? "1 GB")}
               </span>
             </div>
             <Progress
-              value={
-                usage?.bandwidthLimit
-                  ? ((usage?.bandwidthUsed ?? 0) / usage.bandwidthLimit) * 100
-                  : 0
-              }
+              value={usage?.bandwidth.percentage ?? 0}
               className="h-2"
             />
           </div>
@@ -337,15 +402,19 @@ function BillingPage() {
                 <span className="text-sm font-medium">Protected Backends</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {usage?.backendsUsed ?? 0} /{" "}
-                {usage?.backendsLimit ?? "Unlimited"}
+                {usage?.backends.used ?? 0} /{" "}
+                {usage?.backends.unlimited
+                  ? "Unlimited"
+                  : (usage?.backends.limit ?? 1)}
               </span>
             </div>
             <Progress
               value={
-                usage?.backendsLimit
-                  ? ((usage?.backendsUsed ?? 0) / usage.backendsLimit) * 100
-                  : 0
+                usage?.backends.unlimited
+                  ? 0
+                  : ((usage?.backends.used ?? 0) /
+                      (usage?.backends.limit ?? 1)) *
+                    100
               }
               className="h-2"
             />
@@ -357,14 +426,18 @@ function BillingPage() {
                 <span className="text-sm font-medium">Filter Rules</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {usage?.filtersUsed ?? 0} / {usage?.filtersLimit ?? "Unlimited"}
+                {usage?.filters.used ?? 0} /{" "}
+                {usage?.filters.unlimited
+                  ? "Unlimited"
+                  : (usage?.filters.limit ?? 5)}
               </span>
             </div>
             <Progress
               value={
-                usage?.filtersLimit
-                  ? ((usage?.filtersUsed ?? 0) / usage.filtersLimit) * 100
-                  : 0
+                usage?.filters.unlimited
+                  ? 0
+                  : ((usage?.filters.used ?? 0) / (usage?.filters.limit ?? 5)) *
+                    100
               }
               className="h-2"
             />
@@ -381,56 +454,84 @@ function BillingPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {plans?.map((plan) => {
-              const isCurrent = plan.id === subscription?.planId;
+              const isCurrent = plan.name === currentPlanName;
+              const pricing = planPricing[plan.name] ?? planPricing.free;
+              const features = planFeatures[plan.name] ?? [];
+              const currentPlanPrice = currentPricing.monthly;
+
               return (
                 <Card
-                  key={plan.id}
-                  className={isCurrent ? "border-primary" : ""}
+                  key={plan.name}
+                  className={
+                    isCurrent ? "border-primary ring-2 ring-primary/20" : ""
+                  }
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>{plan.name}</CardTitle>
+                      <CardTitle className="capitalize">{plan.name}</CardTitle>
                       {isCurrent && <Badge>Current</Badge>}
                     </div>
                     <CardDescription>
                       <span className="text-3xl font-bold">
-                        ${(plan.price / 100).toFixed(0)}
+                        {pricing.monthly === 0
+                          ? "Free"
+                          : `$${(pricing.monthly / 100).toFixed(0)}`}
                       </span>
-                      /{plan.interval}
+                      {pricing.monthly > 0 && (
+                        <span className="text-muted-foreground">/month</span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-2 text-sm">
-                      {plan.features?.map((feature, j) => (
+                    <ul className="space-y-2 text-sm mb-4">
+                      {features.map((feature, j) => (
                         <li key={j} className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
-                          {feature}
+                          <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className="w-full mt-4"
-                      variant={isCurrent ? "outline" : "default"}
-                      disabled={isCurrent || upgradeMutation.isPending}
-                      onClick={() => {
-                        if (!isCurrent) {
-                          setUpgradePlanId(plan.id);
-                          upgradeMutation.mutate({ planId: plan.id });
+                    <div className="text-xs text-muted-foreground mb-4">
+                      <div>Backends: {plan.limits.backendsFormatted}</div>
+                      <div>Filters: {plan.limits.filtersFormatted}</div>
+                      <div>Bandwidth: {plan.limits.bandwidthFormatted}</div>
+                    </div>
+                    {plan.name === "free" ? (
+                      <Button className="w-full" variant="outline" disabled>
+                        {isCurrent ? "Current Plan" : "Default"}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant={isCurrent ? "outline" : "default"}
+                        disabled={
+                          isCurrent ||
+                          upgradeMutation.isPending ||
+                          !plan.lookupKey
                         }
-                      }}
-                    >
-                      {upgradeMutation.isPending &&
-                      upgradePlanId === plan.id ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      {isCurrent
-                        ? "Current Plan"
-                        : (currentPlan?.price ?? 0) < plan.price
-                          ? "Upgrade"
-                          : "Downgrade"}
-                    </Button>
+                        onClick={() => {
+                          if (!isCurrent && plan.lookupKey) {
+                            setUpgradePlanName(plan.name);
+                            upgradeMutation.mutate({
+                              priceId: plan.lookupKey,
+                              annual: false,
+                            });
+                          }
+                        }}
+                      >
+                        {upgradeMutation.isPending &&
+                        upgradePlanName === plan.name ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {isCurrent
+                          ? "Current Plan"
+                          : currentPlanPrice < pricing.monthly
+                            ? "Upgrade"
+                            : "Switch"}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -472,9 +573,13 @@ function BillingPage() {
                       {invoice.number ?? invoice.id.slice(0, 12)}
                     </TableCell>
                     <TableCell>
-                      {new Date(invoice.createdAt).toLocaleDateString()}
+                      {invoice.date
+                        ? new Date(invoice.date).toLocaleDateString()
+                        : "N/A"}
                     </TableCell>
-                    <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
+                    <TableCell>
+                      ${invoice.amount.toFixed(2)} {invoice.currency}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
@@ -489,11 +594,21 @@ function BillingPage() {
                         {invoice.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => downloadInvoice(invoice.id)}
+                        onClick={() => viewInvoice(invoice.hostedInvoiceUrl)}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          downloadInvoice(invoice.invoicePdf, invoice.number)
+                        }
                       >
                         <Download className="mr-2 h-4 w-4" />
                         PDF
@@ -508,25 +623,27 @@ function BillingPage() {
       </Card>
 
       {/* Cancel Subscription */}
-      {subscription && !subscription.cancelAtPeriodEnd && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Cancel Subscription</CardTitle>
-            <CardDescription>
-              Cancel your subscription. You will retain access until the end of
-              your billing period.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="destructive"
-              onClick={() => setCancelDialogOpen(true)}
-            >
-              Cancel Subscription
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {subscription &&
+        subscription.plan !== "free" &&
+        !subscription.cancelAtPeriodEnd && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cancel Subscription</CardTitle>
+              <CardDescription>
+                Cancel your subscription. You will retain access until the end
+                of your billing period.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="destructive"
+                onClick={() => setCancelDialogOpen(true)}
+              >
+                Cancel Subscription
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -535,7 +652,9 @@ function BillingPage() {
             <DialogTitle>Cancel Subscription</DialogTitle>
             <DialogDescription>
               Are you sure you want to cancel your subscription? You will retain
-              access to {currentPlan?.name ?? "your plan"} until{" "}
+              access to the{" "}
+              <span className="capitalize font-medium">{currentPlanName}</span>{" "}
+              plan until{" "}
               {subscription?.currentPeriodEnd
                 ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
                 : "the end of the billing period"}
@@ -564,12 +683,4 @@ function BillingPage() {
       </Dialog>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
