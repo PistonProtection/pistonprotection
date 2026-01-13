@@ -319,6 +319,73 @@ export const filtersRouter = createTRPCRouter({
       return updated;
     }),
 
+  // Bulk toggle filters enabled status
+  bulkToggle: organizationAdminProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string().uuid()).min(1),
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify all filters belong to organization
+      const existingFilters = await ctx.db.query.filter.findMany({
+        where: eq(filter.organizationId, input.organizationId),
+        columns: { id: true },
+      });
+
+      const existingIds = new Set(existingFilters.map((f) => f.id));
+      const invalidIds = input.ids.filter((id) => !existingIds.has(id));
+
+      if (invalidIds.length > 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Some filters not found: ${invalidIds.join(", ")}`,
+        });
+      }
+
+      // Update all filters
+      const updated = await Promise.all(
+        input.ids.map((id) =>
+          ctx.db
+            .update(filter)
+            .set({ enabled: input.enabled, updatedAt: new Date() })
+            .where(eq(filter.id, id))
+            .returning(),
+        ),
+      );
+
+      return { count: updated.length, enabled: input.enabled };
+    }),
+
+  // Bulk delete filters
+  bulkDelete: organizationAdminProcedure
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify all filters belong to organization
+      const existingFilters = await ctx.db.query.filter.findMany({
+        where: eq(filter.organizationId, input.organizationId),
+        columns: { id: true },
+      });
+
+      const existingIds = new Set(existingFilters.map((f) => f.id));
+      const invalidIds = input.ids.filter((id) => !existingIds.has(id));
+
+      if (invalidIds.length > 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Some filters not found: ${invalidIds.join(", ")}`,
+        });
+      }
+
+      // Delete all filters
+      await Promise.all(
+        input.ids.map((id) => ctx.db.delete(filter).where(eq(filter.id, id))),
+      );
+
+      return { count: input.ids.length };
+    }),
+
   // Bulk update filter priorities
   updatePriorities: organizationAdminProcedure
     .input(
