@@ -127,10 +127,10 @@ impl MapManager {
     pub fn is_blocked(&self, ip: &IpAddr) -> bool {
         if let Some(entry) = self.blocked_ips.get(ip) {
             // Check expiration
-            if let Some(expires_at) = entry.expires_at
-                && chrono::Utc::now() > expires_at
-            {
-                return false;
+            if let Some(expires_at) = entry.expires_at {
+                if chrono::Utc::now() > expires_at {
+                    return false;
+                }
             }
             true
         } else {

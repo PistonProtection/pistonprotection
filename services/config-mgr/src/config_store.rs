@@ -388,24 +388,24 @@ impl ConfigStore {
             }
 
             // Validate rate limits
-            if let Some(ref per_ip_rate) = protection.per_ip_rate
-                && per_ip_rate.tokens_per_second == 0
-            {
-                errors.push(ValidationError {
-                    field: format!("backends[{}].protection.per_ip_rate", backend.backend_id),
-                    message: "Per-IP rate limit tokens_per_second cannot be 0".to_string(),
-                    severity: ValidationSeverity::Warning,
-                });
+            if let Some(ref per_ip_rate) = protection.per_ip_rate {
+                if per_ip_rate.tokens_per_second == 0 {
+                    errors.push(ValidationError {
+                        field: format!("backends[{}].protection.per_ip_rate", backend.backend_id),
+                        message: "Per-IP rate limit tokens_per_second cannot be 0".to_string(),
+                        severity: ValidationSeverity::Warning,
+                    });
+                }
             }
 
-            if let Some(ref global_rate) = protection.global_rate
-                && global_rate.tokens_per_second == 0
-            {
-                errors.push(ValidationError {
-                    field: format!("backends[{}].protection.global_rate", backend.backend_id),
-                    message: "Global rate limit tokens_per_second cannot be 0".to_string(),
-                    severity: ValidationSeverity::Warning,
-                });
+            if let Some(ref global_rate) = protection.global_rate {
+                if global_rate.tokens_per_second == 0 {
+                    errors.push(ValidationError {
+                        field: format!("backends[{}].protection.global_rate", backend.backend_id),
+                        message: "Global rate limit tokens_per_second cannot be 0".to_string(),
+                        severity: ValidationSeverity::Warning,
+                    });
+                }
             }
         }
 

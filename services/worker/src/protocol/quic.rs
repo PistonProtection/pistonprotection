@@ -177,18 +177,17 @@ impl QuicAnalyzer {
         }
 
         // Check version
-        if let Some(version) = get_version(payload)
-            && version != 0
-            && !self.allowed_versions.contains(&version)
-        {
-            return false;
+        if let Some(version) = get_version(payload) {
+            if version != 0 && !self.allowed_versions.contains(&version) {
+                return false;
+            }
         }
 
         // Check connection ID lengths
-        if let Some((dcid_len, scid_len)) = get_connection_id_lengths(payload)
-            && (dcid_len > self.max_cid_length || scid_len > self.max_cid_length)
-        {
-            return false;
+        if let Some((dcid_len, scid_len)) = get_connection_id_lengths(payload) {
+            if dcid_len > self.max_cid_length || scid_len > self.max_cid_length {
+                return false;
+            }
         }
 
         true
