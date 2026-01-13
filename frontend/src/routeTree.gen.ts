@@ -15,6 +15,7 @@ import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as DashboardSetupRouteImport } from './routes/dashboard/setup'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardIpLookupRouteImport } from './routes/dashboard/ip-lookup'
 import { Route as DashboardFiltersRouteImport } from './routes/dashboard/filters'
@@ -29,6 +30,7 @@ import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizat
 import { Route as AdminMetricsRouteImport } from './routes/admin/metrics'
 import { Route as AdminBlacklistsRouteImport } from './routes/admin/blacklists'
 import { Route as AdminBackendsRouteImport } from './routes/admin/backends'
+import { Route as AdminAuditLogRouteImport } from './routes/admin/audit-log'
 import { Route as AdminAttacksRouteImport } from './routes/admin/attacks'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -60,6 +62,11 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSetupRoute = DashboardSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
@@ -131,6 +138,11 @@ const AdminBackendsRoute = AdminBackendsRouteImport.update({
   path: '/admin/backends',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAuditLogRoute = AdminAuditLogRouteImport.update({
+  id: '/admin/audit-log',
+  path: '/admin/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAttacksRoute = AdminAttacksRouteImport.update({
   id: '/admin/attacks',
   path: '/admin/attacks',
@@ -141,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/admin/attacks': typeof AdminAttacksRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/backends': typeof AdminBackendsRoute
   '/admin/blacklists': typeof AdminBlacklistsRoute
   '/admin/metrics': typeof AdminMetricsRoute
@@ -155,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/setup': typeof DashboardSetupRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -163,6 +177,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/attacks': typeof AdminAttacksRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/backends': typeof AdminBackendsRoute
   '/admin/blacklists': typeof AdminBlacklistsRoute
   '/admin/metrics': typeof AdminMetricsRoute
@@ -177,6 +192,7 @@ export interface FileRoutesByTo {
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/setup': typeof DashboardSetupRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -187,6 +203,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/admin/attacks': typeof AdminAttacksRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/backends': typeof AdminBackendsRoute
   '/admin/blacklists': typeof AdminBlacklistsRoute
   '/admin/metrics': typeof AdminMetricsRoute
@@ -201,6 +218,7 @@ export interface FileRoutesById {
   '/dashboard/filters': typeof DashboardFiltersRoute
   '/dashboard/ip-lookup': typeof DashboardIpLookupRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/setup': typeof DashboardSetupRoute
   '/docs/$': typeof DocsSplatRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/admin/attacks'
+    | '/admin/audit-log'
     | '/admin/backends'
     | '/admin/blacklists'
     | '/admin/metrics'
@@ -226,6 +245,7 @@ export interface FileRouteTypes {
     | '/dashboard/filters'
     | '/dashboard/ip-lookup'
     | '/dashboard/settings'
+    | '/dashboard/setup'
     | '/docs/$'
     | '/admin'
     | '/dashboard/'
@@ -234,6 +254,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin/attacks'
+    | '/admin/audit-log'
     | '/admin/backends'
     | '/admin/blacklists'
     | '/admin/metrics'
@@ -248,6 +269,7 @@ export interface FileRouteTypes {
     | '/dashboard/filters'
     | '/dashboard/ip-lookup'
     | '/dashboard/settings'
+    | '/dashboard/setup'
     | '/docs/$'
     | '/admin'
     | '/dashboard'
@@ -257,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/admin/attacks'
+    | '/admin/audit-log'
     | '/admin/backends'
     | '/admin/blacklists'
     | '/admin/metrics'
@@ -271,6 +294,7 @@ export interface FileRouteTypes {
     | '/dashboard/filters'
     | '/dashboard/ip-lookup'
     | '/dashboard/settings'
+    | '/dashboard/setup'
     | '/docs/$'
     | '/admin/'
     | '/dashboard/'
@@ -281,6 +305,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   AdminAttacksRoute: typeof AdminAttacksRoute
+  AdminAuditLogRoute: typeof AdminAuditLogRoute
   AdminBackendsRoute: typeof AdminBackendsRoute
   AdminBlacklistsRoute: typeof AdminBlacklistsRoute
   AdminMetricsRoute: typeof AdminMetricsRoute
@@ -337,6 +362,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/setup': {
+      id: '/dashboard/setup'
+      path: '/setup'
+      fullPath: '/dashboard/setup'
+      preLoaderRoute: typeof DashboardSetupRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/dashboard/settings': {
       id: '/dashboard/settings'
@@ -436,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBackendsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/audit-log': {
+      id: '/admin/audit-log'
+      path: '/admin/audit-log'
+      fullPath: '/admin/audit-log'
+      preLoaderRoute: typeof AdminAuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/attacks': {
       id: '/admin/attacks'
       path: '/admin/attacks'
@@ -453,6 +492,7 @@ interface DashboardRouteChildren {
   DashboardFiltersRoute: typeof DashboardFiltersRoute
   DashboardIpLookupRoute: typeof DashboardIpLookupRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSetupRoute: typeof DashboardSetupRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
@@ -463,6 +503,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardFiltersRoute: DashboardFiltersRoute,
   DashboardIpLookupRoute: DashboardIpLookupRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSetupRoute: DashboardSetupRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
@@ -474,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   AdminAttacksRoute: AdminAttacksRoute,
+  AdminAuditLogRoute: AdminAuditLogRoute,
   AdminBackendsRoute: AdminBackendsRoute,
   AdminBlacklistsRoute: AdminBlacklistsRoute,
   AdminMetricsRoute: AdminMetricsRoute,
