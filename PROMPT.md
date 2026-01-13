@@ -12,6 +12,11 @@ Make sure you use latest version of all dependencies and resolve any conflicts/i
 
 Also don't use any old or unsupported or deprecated dependencies such as otel instead of tempo or promtail instead of grafanas promtail replacement because promtail is being dropped support for.
 
+Make sure there are no modules that are obsolete/deprecated and there is no "unused" functionality.
+Make sure all things work that are defined in code and have actual use for the app. e.g. dont code both ipv4 and ipv6 support but only use ipv4 support.
+Also don't leave a documentation module when documentations should be in the frontend module.
+E.g. remove useless modules and make sure the codebase is clean.
+
 - ddos protection management panel written with:
   - shadcn/ui (baseui theme, not radix theme)
   - shadcn/ui used idiomatically, use components where possible. always consider all available shadcn components for a design
