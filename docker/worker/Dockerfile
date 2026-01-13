@@ -5,7 +5,7 @@
 # Multi-stage build with eBPF support
 # =============================================================================
 
-ARG RUST_VERSION=1.82
+ARG RUST_VERSION=1.85
 ARG DEBIAN_VERSION=bookworm
 
 # -----------------------------------------------------------------------------
