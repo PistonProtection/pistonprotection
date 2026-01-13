@@ -34,7 +34,7 @@ pub struct Worker {
 /// Network interface on worker
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct NetworkInterface {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
@@ -62,7 +62,7 @@ pub struct NetworkInterface {
 /// XDP program status
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct XdpStatus {
     #[prost(bool, tag = "1")]
     pub attached: bool,
@@ -78,7 +78,7 @@ pub struct XdpStatus {
 /// Worker capabilities
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WorkerCapabilities {
     /// XDP support
     #[prost(bool, tag = "1")]
@@ -153,7 +153,7 @@ pub struct BackendFilter {
 /// Protection configuration
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ProtectionConfig {
     #[prost(bool, tag = "1")]
     pub enabled: bool,
@@ -181,7 +181,7 @@ pub struct ProtectionConfig {
 /// Rate limit config for XDP
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RateLimitConfig {
     #[prost(uint64, tag = "1")]
     pub tokens_per_second: u64,
@@ -191,7 +191,7 @@ pub struct RateLimitConfig {
 /// Global filter settings
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GlobalFilterSettings {
     /// Default action for unmatched traffic
     #[prost(enumeration = "super::common::Action", tag = "1")]
@@ -208,7 +208,7 @@ pub struct GlobalFilterSettings {
 /// eBPF map update
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MapUpdate {
     #[prost(string, tag = "1")]
     pub map_name: ::prost::alloc::string::String,
@@ -224,7 +224,7 @@ pub struct MapUpdate {
 /// Connection tracking entry
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ConnTrackEntry {
     #[prost(message, optional, tag = "1")]
     pub src_ip: ::core::option::Option<super::common::IpAddress>,
@@ -254,7 +254,7 @@ pub struct ConnTrackEntry {
 /// Blocked IP entry
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlockedIp {
     #[prost(message, optional, tag = "1")]
     pub ip: ::core::option::Option<super::common::IpAddress>,
@@ -309,7 +309,7 @@ pub struct WorkerMetrics {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct InterfaceMetrics {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
@@ -330,7 +330,7 @@ pub struct InterfaceMetrics {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HeartbeatResponse {
     #[prost(bool, tag = "1")]
     pub config_update_available: bool,
@@ -339,21 +339,21 @@ pub struct HeartbeatResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeregisterRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeregisterResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetConfigRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -371,7 +371,7 @@ pub struct GetConfigResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StreamConfigRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -387,7 +387,7 @@ pub struct ApplyMapUpdatesRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ApplyMapUpdatesResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -429,7 +429,7 @@ pub struct BackendMetrics {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ReportMetricsResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -453,7 +453,7 @@ pub struct ReportAttackRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AttackSourceInfo {
     #[prost(message, optional, tag = "1")]
     pub ip: ::core::option::Option<super::common::IpAddress>,
@@ -532,7 +532,7 @@ pub mod conn_track_sync {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetBlockedIpsRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -550,7 +550,7 @@ pub struct GetBlockedIpsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlockIpRequest {
     #[prost(message, optional, tag = "1")]
     pub ip: ::core::option::Option<super::common::IpAddress>,
@@ -562,28 +562,28 @@ pub struct BlockIpRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlockIpResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UnblockIpRequest {
     #[prost(message, optional, tag = "1")]
     pub ip: ::core::option::Option<super::common::IpAddress>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UnblockIpResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetXdpStatsRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -609,7 +609,7 @@ pub struct GetXdpStatsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DumpMapsRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -629,7 +629,7 @@ pub struct DumpMapsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MapEntry {
     #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
@@ -899,7 +899,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/Register",
             );
@@ -925,7 +925,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/Heartbeat",
             );
@@ -951,7 +951,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/Deregister",
             );
@@ -981,7 +981,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/GetConfig",
             );
@@ -1007,7 +1007,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/StreamConfig",
             );
@@ -1037,7 +1037,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/ApplyMapUpdates",
             );
@@ -1067,7 +1067,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/ReportMetrics",
             );
@@ -1096,7 +1096,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/ReportAttack",
             );
@@ -1126,7 +1126,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/SyncConnTrack",
             );
@@ -1156,7 +1156,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/GetBlockedIps",
             );
@@ -1185,7 +1185,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/BlockIp",
             );
@@ -1211,7 +1211,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/UnblockIp",
             );
@@ -1238,7 +1238,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/GetXdpStats",
             );
@@ -1267,7 +1267,7 @@ pub mod worker_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.worker.WorkerService/DumpMaps",
             );
@@ -1515,7 +1515,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RegisterSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1560,7 +1560,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = HeartbeatSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1605,7 +1605,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = DeregisterSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1650,7 +1650,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetConfigSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1696,7 +1696,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = StreamConfigSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1742,7 +1742,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ApplyMapUpdatesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1787,7 +1787,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ReportMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1832,7 +1832,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ReportAttackSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1880,7 +1880,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = SyncConnTrackSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1925,7 +1925,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetBlockedIpsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1970,7 +1970,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = BlockIpSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2015,7 +2015,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UnblockIpSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2060,7 +2060,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetXdpStatsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2105,7 +2105,7 @@ pub mod worker_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = DumpMapsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,

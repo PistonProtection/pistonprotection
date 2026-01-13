@@ -1,7 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import {
   Bell,
   Copy,
@@ -210,7 +209,6 @@ function SettingsPage() {
     onSubmit: async ({ value }) => {
       await updateOrgMutation.mutateAsync(value);
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: orgSettingsSchema,
     },
@@ -229,7 +227,6 @@ function SettingsPage() {
     onSubmit: async ({ value }) => {
       await updateSecurityMutation.mutateAsync(value);
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: securitySettingsSchema,
     },
@@ -248,7 +245,6 @@ function SettingsPage() {
     onSubmit: async ({ value }) => {
       await updateNotificationMutation.mutateAsync(value);
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: notificationSettingsSchema,
     },

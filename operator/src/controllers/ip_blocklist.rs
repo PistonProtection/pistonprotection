@@ -14,7 +14,6 @@ use crate::crd::{
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
-use k8s_openapi::api::core::v1::ObjectReference;
 use kube::{
     api::{Api, ListParams, ObjectMeta, Patch, PatchParams},
     runtime::{
@@ -58,9 +57,9 @@ impl Context {
         }
     }
 
-    /// Create a recorder for a specific object
-    fn recorder(&self, obj_ref: ObjectReference) -> Recorder {
-        Recorder::new(self.client.clone(), self.reporter.clone(), obj_ref)
+    /// Create a recorder for events
+    fn recorder(&self) -> Recorder {
+        Recorder::new(self.client.clone(), self.reporter.clone())
     }
 }
 
@@ -81,16 +80,8 @@ pub async fn reconcile(
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "IPBlocklist", &namespace);
 
-    // Create object reference for events
-    let obj_ref = ObjectReference {
-        api_version: Some(IPBlocklist::api_version(&()).to_string()),
-        kind: Some(IPBlocklist::kind(&()).to_string()),
-        name: Some(name.clone()),
-        namespace: Some(namespace.clone()),
-        uid: blocklist.metadata.uid.clone(),
-        ..Default::default()
-    };
-    let recorder = ctx.recorder(obj_ref);
+    // Create recorder for events
+    let recorder = ctx.recorder();
 
     // Get API for this namespace
     let blocklist_api: Api<IPBlocklist> = Api::namespaced(ctx.client.clone(), &namespace);
@@ -145,19 +136,25 @@ async fn reconcile_apply(
     // Validate the blocklist
     validate_blocklist(blocklist)?;
 
+    // Create object reference for events
+    let obj_ref = blocklist.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciling".to_string(),
-            note: Some(format!(
-                "Processing IP blocklist: {} ({} entries)",
-                blocklist.spec.name,
-                blocklist.spec.entries.len()
-            )),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciling".to_string(),
+                note: Some(format!(
+                    "Processing IP blocklist: {} ({} entries)",
+                    blocklist.spec.name,
+                    blocklist.spec.entries.len()
+                )),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -260,16 +257,19 @@ async fn reconcile_apply(
 
     // Record success event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciled".to_string(),
-            note: Some(format!(
-                "IPBlocklist {} synced: {} active entries",
-                blocklist.spec.name, active_count
-            )),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciled".to_string(),
+                note: Some(format!(
+                    "IPBlocklist {} synced: {} active entries",
+                    blocklist.spec.name, active_count
+                )),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -287,7 +287,7 @@ async fn reconcile_apply(
 
 /// Cleanup reconciliation - handle delete
 async fn reconcile_cleanup(
-    _blocklist: &IPBlocklist,
+    blocklist: &IPBlocklist,
     ctx: &Context,
     recorder: &Recorder,
     namespace: &str,
@@ -295,15 +295,21 @@ async fn reconcile_cleanup(
 ) -> Result<Action> {
     info!("Cleaning up IPBlocklist {}/{}", namespace, name);
 
+    // Create object reference for events
+    let obj_ref = blocklist.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Deleting".to_string(),
-            note: Some("Removing IP blocklist from gateway".to_string()),
-            action: "Delete".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Deleting".to_string(),
+                note: Some("Removing IP blocklist from gateway".to_string()),
+                action: "Delete".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 

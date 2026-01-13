@@ -2,7 +2,7 @@
 /// User account
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct User {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -33,7 +33,7 @@ pub struct User {
 /// Organization
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Organization {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -61,7 +61,7 @@ pub struct Organization {
 /// Organization member
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OrganizationMember {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -80,7 +80,7 @@ pub struct OrganizationMember {
 /// Subscription plan
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Subscription {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -114,7 +114,7 @@ pub struct Subscription {
 /// Subscription plan definition
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Plan {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -156,7 +156,7 @@ pub struct Plan {
 /// Invoice
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Invoice {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -202,7 +202,7 @@ pub struct Invoice {
 /// Usage record
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UsageRecord {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -220,7 +220,7 @@ pub struct UsageRecord {
 /// Usage summary for a billing period
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UsageSummary {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -250,7 +250,7 @@ pub struct UsageSummary {
 /// Payment method
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PaymentMethod {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -275,7 +275,7 @@ pub struct PaymentMethod {
 /// Checkout session response
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CheckoutSession {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -287,7 +287,7 @@ pub struct CheckoutSession {
 /// Billing portal session response
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BillingPortalSession {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -297,7 +297,7 @@ pub struct BillingPortalSession {
 /// Organization limits based on plan
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OrganizationLimits {
     #[prost(uint32, tag = "1")]
     pub max_backends: u32,
@@ -327,7 +327,7 @@ pub struct OrganizationLimits {
 /// Organization usage
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OrganizationUsage {
     #[prost(uint32, tag = "1")]
     pub backends_count: u32,
@@ -347,7 +347,7 @@ pub struct OrganizationUsage {
 /// API Key
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ApiKey {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -378,7 +378,7 @@ pub struct ApiKey {
 /// Session
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Session {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -443,7 +443,7 @@ pub struct AuditLogEntry {
 /// Invitation
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Invitation {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -468,42 +468,42 @@ pub struct Invitation {
 /// Request/Response messages
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUserRequest {
     #[prost(string, tag = "1")]
     pub user_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUserByEmailRequest {
     #[prost(string, tag = "1")]
     pub email: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUserResponse {
     #[prost(message, optional, tag = "1")]
     pub user: ::core::option::Option<User>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetOrganizationRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetOrganizationResponse {
     #[prost(message, optional, tag = "1")]
     pub organization: ::core::option::Option<Organization>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListUserOrganizationsRequest {
     #[prost(string, tag = "1")]
     pub user_id: ::prost::alloc::string::String,
@@ -517,7 +517,7 @@ pub struct ListUserOrganizationsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetOrganizationMemberRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -526,14 +526,14 @@ pub struct GetOrganizationMemberRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetOrganizationMemberResponse {
     #[prost(message, optional, tag = "1")]
     pub member: ::core::option::Option<OrganizationMember>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListOrganizationMembersRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -551,7 +551,7 @@ pub struct ListOrganizationMembersResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CheckPermissionRequest {
     #[prost(string, tag = "1")]
     pub user_id: ::prost::alloc::string::String,
@@ -566,7 +566,7 @@ pub struct CheckPermissionRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CheckPermissionResponse {
     #[prost(bool, tag = "1")]
     pub allowed: bool,
@@ -575,14 +575,14 @@ pub struct CheckPermissionResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ValidateTokenRequest {
     #[prost(string, tag = "1")]
     pub token: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ValidateTokenResponse {
     #[prost(bool, tag = "1")]
     pub valid: bool,
@@ -593,14 +593,14 @@ pub struct ValidateTokenResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ValidateApiKeyRequest {
     #[prost(string, tag = "1")]
     pub api_key: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ValidateApiKeyResponse {
     #[prost(bool, tag = "1")]
     pub valid: bool,
@@ -611,7 +611,7 @@ pub struct ValidateApiKeyResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateApiKeyRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -626,7 +626,7 @@ pub struct CreateApiKeyRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateApiKeyResponse {
     #[prost(message, optional, tag = "1")]
     pub key: ::core::option::Option<ApiKey>,
@@ -636,7 +636,7 @@ pub struct CreateApiKeyResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListApiKeysRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -654,14 +654,14 @@ pub struct ListApiKeysResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RevokeApiKeyRequest {
     #[prost(string, tag = "1")]
     pub key_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RevokeApiKeyResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -682,7 +682,7 @@ pub struct CreateAuditLogResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListAuditLogsRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -708,7 +708,7 @@ pub struct ListAuditLogsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateInvitationRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -719,14 +719,14 @@ pub struct CreateInvitationRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateInvitationResponse {
     #[prost(message, optional, tag = "1")]
     pub invitation: ::core::option::Option<Invitation>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListInvitationsRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -746,14 +746,14 @@ pub struct ListInvitationsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RevokeInvitationRequest {
     #[prost(string, tag = "1")]
     pub invitation_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RevokeInvitationResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -761,7 +761,7 @@ pub struct RevokeInvitationResponse {
 /// Plans
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListPlansRequest {
     #[prost(bool, tag = "1")]
     pub include_inactive: bool,
@@ -775,14 +775,14 @@ pub struct ListPlansResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetPlanRequest {
     #[prost(string, tag = "1")]
     pub plan_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetPlanResponse {
     #[prost(message, optional, tag = "1")]
     pub plan: ::core::option::Option<Plan>,
@@ -790,14 +790,14 @@ pub struct GetPlanResponse {
 /// Subscriptions
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetSubscriptionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetSubscriptionResponse {
     #[prost(message, optional, tag = "1")]
     pub subscription: ::core::option::Option<Subscription>,
@@ -806,7 +806,7 @@ pub struct GetSubscriptionResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UpdateSubscriptionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -819,14 +819,14 @@ pub struct UpdateSubscriptionRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UpdateSubscriptionResponse {
     #[prost(message, optional, tag = "1")]
     pub subscription: ::core::option::Option<Subscription>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CancelSubscriptionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -840,21 +840,21 @@ pub struct CancelSubscriptionRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CancelSubscriptionResponse {
     #[prost(message, optional, tag = "1")]
     pub subscription: ::core::option::Option<Subscription>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ResumeSubscriptionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ResumeSubscriptionResponse {
     #[prost(message, optional, tag = "1")]
     pub subscription: ::core::option::Option<Subscription>,
@@ -862,7 +862,7 @@ pub struct ResumeSubscriptionResponse {
 /// Checkout
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateCheckoutSessionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -879,14 +879,14 @@ pub struct CreateCheckoutSessionRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateCheckoutSessionResponse {
     #[prost(message, optional, tag = "1")]
     pub session: ::core::option::Option<CheckoutSession>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateBillingPortalSessionRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -895,7 +895,7 @@ pub struct CreateBillingPortalSessionRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateBillingPortalSessionResponse {
     #[prost(message, optional, tag = "1")]
     pub session: ::core::option::Option<BillingPortalSession>,
@@ -903,7 +903,7 @@ pub struct CreateBillingPortalSessionResponse {
 /// Invoices
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListInvoicesRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -921,14 +921,14 @@ pub struct ListInvoicesResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetInvoiceRequest {
     #[prost(string, tag = "1")]
     pub invoice_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetInvoiceResponse {
     #[prost(message, optional, tag = "1")]
     pub invoice: ::core::option::Option<Invoice>,
@@ -936,7 +936,7 @@ pub struct GetInvoiceResponse {
 /// Usage
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUsageSummaryRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -947,7 +947,7 @@ pub struct GetUsageSummaryRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetUsageSummaryResponse {
     #[prost(message, optional, tag = "1")]
     pub summary: ::core::option::Option<UsageSummary>,
@@ -957,7 +957,7 @@ pub struct GetUsageSummaryResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ReportUsageRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -972,7 +972,7 @@ pub struct ReportUsageRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ReportUsageResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -982,7 +982,7 @@ pub struct ReportUsageResponse {
 /// Payment Methods
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListPaymentMethodsRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -1473,7 +1473,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetUser",
             );
@@ -1497,7 +1497,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetUserByEmail",
             );
@@ -1527,7 +1527,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetOrganization",
             );
@@ -1556,7 +1556,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListUserOrganizations",
             );
@@ -1585,7 +1585,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetOrganizationMember",
             );
@@ -1614,7 +1614,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListOrganizationMembers",
             );
@@ -1644,7 +1644,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CheckPermission",
             );
@@ -1673,7 +1673,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ValidateToken",
             );
@@ -1699,7 +1699,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ValidateApiKey",
             );
@@ -1729,7 +1729,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CreateApiKey",
             );
@@ -1755,7 +1755,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListApiKeys",
             );
@@ -1781,7 +1781,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/RevokeApiKey",
             );
@@ -1808,7 +1808,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CreateAuditLog",
             );
@@ -1837,7 +1837,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListAuditLogs",
             );
@@ -1864,7 +1864,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CreateInvitation",
             );
@@ -1893,7 +1893,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListInvitations",
             );
@@ -1922,7 +1922,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/RevokeInvitation",
             );
@@ -1952,7 +1952,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListPlans",
             );
@@ -1978,7 +1978,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetPlan",
             );
@@ -2003,7 +2003,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetSubscription",
             );
@@ -2032,7 +2032,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/UpdateSubscription",
             );
@@ -2061,7 +2061,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CancelSubscription",
             );
@@ -2090,7 +2090,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ResumeSubscription",
             );
@@ -2120,7 +2120,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CreateCheckoutSession",
             );
@@ -2149,7 +2149,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/CreateBillingPortalSession",
             );
@@ -2179,7 +2179,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListInvoices",
             );
@@ -2205,7 +2205,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetInvoice",
             );
@@ -2232,7 +2232,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/GetUsageSummary",
             );
@@ -2261,7 +2261,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ReportUsage",
             );
@@ -2288,7 +2288,7 @@ pub mod auth_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.auth.AuthService/ListPaymentMethods",
             );
@@ -2638,7 +2638,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetUserSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2683,7 +2683,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetUserByEmailSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2728,7 +2728,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetOrganizationSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2774,7 +2774,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListUserOrganizationsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2820,7 +2820,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetOrganizationMemberSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2871,7 +2871,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListOrganizationMembersSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2916,7 +2916,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CheckPermissionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2961,7 +2961,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ValidateTokenSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3006,7 +3006,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ValidateApiKeySvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3051,7 +3051,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateApiKeySvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3096,7 +3096,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListApiKeysSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3141,7 +3141,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RevokeApiKeySvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3186,7 +3186,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateAuditLogSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3231,7 +3231,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListAuditLogsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3276,7 +3276,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateInvitationSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3321,7 +3321,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListInvitationsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3366,7 +3366,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RevokeInvitationSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3411,7 +3411,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListPlansSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3456,7 +3456,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetPlanSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3501,7 +3501,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetSubscriptionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3547,7 +3547,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateSubscriptionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3593,7 +3593,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CancelSubscriptionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3639,7 +3639,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ResumeSubscriptionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3685,7 +3685,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateCheckoutSessionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3737,7 +3737,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateBillingPortalSessionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3782,7 +3782,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListInvoicesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3827,7 +3827,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetInvoiceSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3872,7 +3872,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetUsageSummarySvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3917,7 +3917,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ReportUsageSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -3963,7 +3963,7 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListPaymentMethodsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,

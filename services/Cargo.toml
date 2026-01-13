@@ -26,6 +26,8 @@ tokio-util = { version = "0.7", features = ["codec"] }
 # gRPC and Protobuf
 tonic = { version = "0.14", features = ["transport", "tls-ring", "tls-native-roots", "gzip", "zstd"] }
 tonic-build = "0.14"
+tonic-prost = "0.14"
+tonic-prost-build = "0.14"
 tonic-health = "0.14"
 tonic-reflection = "0.14"
 prost = "0.14"

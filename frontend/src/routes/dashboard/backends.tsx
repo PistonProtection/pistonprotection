@@ -1,7 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import {
   Activity,
   Globe,
@@ -185,7 +184,6 @@ function BackendsPage() {
         organizationId,
       });
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: createBackendSchema,
     },

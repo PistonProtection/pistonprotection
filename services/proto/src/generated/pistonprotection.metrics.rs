@@ -86,7 +86,7 @@ pub struct AttackMetrics {
 /// Attack source information
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AttackSource {
     #[prost(message, optional, tag = "1")]
     pub ip: ::core::option::Option<super::common::IpAddress>,
@@ -217,7 +217,7 @@ pub struct GeoMetrics {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CountryMetrics {
     #[prost(string, tag = "1")]
     pub country_code: ::prost::alloc::string::String,
@@ -235,7 +235,7 @@ pub struct CountryMetrics {
 /// Time series query
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TimeSeriesQuery {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -317,7 +317,7 @@ pub struct AlertCondition {
 /// Alert notification
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AlertNotification {
     #[prost(enumeration = "AlertNotificationType", tag = "1")]
     pub r#type: i32,
@@ -369,7 +369,7 @@ pub struct AttackEvent {
 /// Request/Response messages
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetTrafficMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -383,7 +383,7 @@ pub struct GetTrafficMetricsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StreamTrafficMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -392,7 +392,7 @@ pub struct StreamTrafficMetricsRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetAttackMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -406,7 +406,7 @@ pub struct GetAttackMetricsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StreamAttackMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -422,7 +422,7 @@ pub struct GetTimeSeriesResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetOriginMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -438,7 +438,7 @@ pub struct GetOriginMetricsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetWorkerMetricsRequest {
     #[prost(string, tag = "1")]
     pub worker_id: ::prost::alloc::string::String,
@@ -452,7 +452,7 @@ pub struct GetWorkerMetricsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListWorkerMetricsRequest {
     #[prost(message, optional, tag = "1")]
     pub pagination: ::core::option::Option<super::common::Pagination>,
@@ -468,7 +468,7 @@ pub struct ListWorkerMetricsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetGeoMetricsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -502,7 +502,7 @@ pub struct CreateAlertResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetAlertRequest {
     #[prost(string, tag = "1")]
     pub alert_id: ::prost::alloc::string::String,
@@ -530,21 +530,21 @@ pub struct UpdateAlertResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteAlertRequest {
     #[prost(string, tag = "1")]
     pub alert_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteAlertResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListAlertsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -562,7 +562,7 @@ pub struct ListAlertsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetAttackEventRequest {
     #[prost(string, tag = "1")]
     pub event_id: ::prost::alloc::string::String,
@@ -576,7 +576,7 @@ pub struct GetAttackEventResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListAttackEventsRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -897,7 +897,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetTrafficMetrics",
             );
@@ -926,7 +926,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetTrafficTimeSeries",
             );
@@ -955,7 +955,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/StreamTrafficMetrics",
             );
@@ -985,7 +985,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetAttackMetrics",
             );
@@ -1014,7 +1014,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetAttackTimeSeries",
             );
@@ -1043,7 +1043,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/StreamAttackMetrics",
             );
@@ -1073,7 +1073,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetOriginMetrics",
             );
@@ -1103,7 +1103,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetWorkerMetrics",
             );
@@ -1132,7 +1132,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/ListWorkerMetrics",
             );
@@ -1162,7 +1162,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetGeoMetrics",
             );
@@ -1192,7 +1192,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/CreateAlert",
             );
@@ -1221,7 +1221,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetAlert",
             );
@@ -1250,7 +1250,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/UpdateAlert",
             );
@@ -1279,7 +1279,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/DeleteAlert",
             );
@@ -1308,7 +1308,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/ListAlerts",
             );
@@ -1338,7 +1338,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/GetAttackEvent",
             );
@@ -1367,7 +1367,7 @@ pub mod metrics_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.metrics.MetricsService/ListAttackEvents",
             );
@@ -1643,7 +1643,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetTrafficMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1692,7 +1692,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetTrafficTimeSeriesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1743,7 +1743,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = StreamTrafficMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1789,7 +1789,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAttackMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1838,7 +1838,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAttackTimeSeriesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1889,7 +1889,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = StreamAttackMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1935,7 +1935,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetOriginMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1981,7 +1981,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetWorkerMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2027,7 +2027,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListWorkerMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2073,7 +2073,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetGeoMetricsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2118,7 +2118,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateAlertSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2163,7 +2163,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAlertSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2208,7 +2208,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateAlertSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2253,7 +2253,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = DeleteAlertSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2298,7 +2298,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListAlertsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2344,7 +2344,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAttackEventSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2390,7 +2390,7 @@ pub mod metrics_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListAttackEventsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,

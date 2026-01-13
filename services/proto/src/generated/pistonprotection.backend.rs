@@ -111,7 +111,7 @@ pub struct OriginSettings {
 /// TLS settings for origin connection
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TlsSettings {
     #[prost(bool, tag = "1")]
     pub enabled: bool,
@@ -220,7 +220,7 @@ pub struct GeoLocation {
 /// Mapping from geographic region to preferred origins
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GeoRegionMapping {
     /// Region identifier (country code, continent code, or custom region)
     #[prost(string, tag = "1")]
@@ -271,7 +271,7 @@ pub mod health_check_config {
 /// Just connection check
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TcpHealthCheck {}
 /// HTTP health check
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -295,7 +295,7 @@ pub struct HttpHealthCheck {
 /// Minecraft health check
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MinecraftHealthCheck {
     /// Query server status
     #[prost(bool, tag = "1")]
@@ -332,7 +332,7 @@ pub struct ProtectionSettings {
 /// Challenge settings
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChallengeSettings {
     #[prost(bool, tag = "1")]
     pub enabled: bool,
@@ -347,7 +347,7 @@ pub struct ChallengeSettings {
 /// GeoIP settings
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GeoIpSettings {
     #[prost(enumeration = "GeoIpMode", tag = "1")]
     pub mode: i32,
@@ -399,7 +399,7 @@ pub struct HttpProtectionSettings {
 /// Minecraft protection settings
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MinecraftProtectionSettings {
     /// Handshake validation
     #[prost(bool, tag = "1")]
@@ -424,7 +424,7 @@ pub struct MinecraftProtectionSettings {
 /// Backend status
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BackendStatus {
     #[prost(enumeration = "super::common::HealthStatus", tag = "1")]
     pub health: i32,
@@ -468,7 +468,7 @@ pub struct CreateBackendResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetBackendRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -496,21 +496,21 @@ pub struct UpdateBackendResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteBackendRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteBackendResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListBackendsRequest {
     #[prost(string, tag = "1")]
     pub organization_id: ::prost::alloc::string::String,
@@ -562,7 +562,7 @@ pub struct UpdateOriginResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RemoveOriginRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -571,7 +571,7 @@ pub struct RemoveOriginRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RemoveOriginResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
@@ -594,7 +594,7 @@ pub struct UpdateProtectionResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetProtectionLevelRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -603,35 +603,35 @@ pub struct SetProtectionLevelRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetProtectionLevelResponse {
     #[prost(enumeration = "ProtectionLevel", tag = "1")]
     pub level: i32,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetBackendStatusRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetBackendStatusResponse {
     #[prost(message, optional, tag = "1")]
     pub status: ::core::option::Option<BackendStatus>,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchBackendStatusRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AddDomainRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -640,7 +640,7 @@ pub struct AddDomainRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AddDomainResponse {
     #[prost(string, tag = "1")]
     pub domain: ::prost::alloc::string::String,
@@ -651,7 +651,7 @@ pub struct AddDomainResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RemoveDomainRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -660,14 +660,14 @@ pub struct RemoveDomainRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RemoveDomainResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct VerifyDomainRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -676,7 +676,7 @@ pub struct VerifyDomainRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct VerifyDomainResponse {
     #[prost(bool, tag = "1")]
     pub verified: bool,
@@ -1135,7 +1135,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/CreateBackend",
             );
@@ -1164,7 +1164,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/GetBackend",
             );
@@ -1193,7 +1193,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/UpdateBackend",
             );
@@ -1222,7 +1222,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/DeleteBackend",
             );
@@ -1251,7 +1251,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/ListBackends",
             );
@@ -1281,7 +1281,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/AddOrigin",
             );
@@ -1310,7 +1310,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/UpdateOrigin",
             );
@@ -1339,7 +1339,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/RemoveOrigin",
             );
@@ -1369,7 +1369,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/UpdateProtection",
             );
@@ -1398,7 +1398,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/SetProtectionLevel",
             );
@@ -1428,7 +1428,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/GetBackendStatus",
             );
@@ -1457,7 +1457,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/WatchBackendStatus",
             );
@@ -1487,7 +1487,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/AddDomain",
             );
@@ -1516,7 +1516,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/RemoveDomain",
             );
@@ -1545,7 +1545,7 @@ pub mod backend_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.backend.BackendService/VerifyDomain",
             );
@@ -1798,7 +1798,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateBackendSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1843,7 +1843,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetBackendSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1888,7 +1888,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateBackendSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1933,7 +1933,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = DeleteBackendSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1978,7 +1978,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListBackendsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2023,7 +2023,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = AddOriginSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2068,7 +2068,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateOriginSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2113,7 +2113,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RemoveOriginSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2159,7 +2159,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateProtectionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2205,7 +2205,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = SetProtectionLevelSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2251,7 +2251,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetBackendStatusSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2299,7 +2299,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = WatchBackendStatusSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2344,7 +2344,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = AddDomainSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2389,7 +2389,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RemoveDomainSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -2434,7 +2434,7 @@ pub mod backend_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = VerifyDomainSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,

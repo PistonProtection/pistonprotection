@@ -1,7 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import {
   Ban,
   Download,
@@ -142,7 +141,6 @@ function AdminBlacklists() {
         expiresAt: value.expiresAt ? new Date(value.expiresAt) : undefined,
       });
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: addBlacklistSchema,
     },

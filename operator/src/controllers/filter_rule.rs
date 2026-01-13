@@ -15,7 +15,6 @@ use crate::crd::{
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
-use k8s_openapi::api::core::v1::ObjectReference;
 use kube::{
     api::{Api, ListParams, ObjectMeta, Patch, PatchParams},
     runtime::{
@@ -58,9 +57,9 @@ impl Context {
         }
     }
 
-    /// Create a recorder for a specific object
-    fn recorder(&self, obj_ref: ObjectReference) -> Recorder {
-        Recorder::new(self.client.clone(), self.reporter.clone(), obj_ref)
+    /// Create a recorder for events
+    fn recorder(&self) -> Recorder {
+        Recorder::new(self.client.clone(), self.reporter.clone())
     }
 }
 
@@ -79,16 +78,8 @@ pub async fn reconcile(
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "FilterRule", &namespace);
 
-    // Create object reference for events
-    let obj_ref = ObjectReference {
-        api_version: Some(FilterRule::api_version(&()).to_string()),
-        kind: Some(FilterRule::kind(&()).to_string()),
-        name: Some(name.clone()),
-        namespace: Some(namespace.clone()),
-        uid: rule.metadata.uid.clone(),
-        ..Default::default()
-    };
-    let recorder = ctx.recorder(obj_ref);
+    // Create recorder for events
+    let recorder = ctx.recorder();
 
     // Get API for this namespace
     let rule_api: Api<FilterRule> = Api::namespaced(ctx.client.clone(), &namespace);
@@ -157,15 +148,21 @@ async fn reconcile_apply(
     // Check if rule should be active based on schedule
     let should_be_active = rule.spec.enabled && is_rule_scheduled_active(rule);
 
+    // Create object reference for events
+    let obj_ref = rule.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciling".to_string(),
-            note: Some(format!("Processing filter rule: {}", rule.spec.name)),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciling".to_string(),
+                note: Some(format!("Processing filter rule: {}", rule.spec.name)),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -233,16 +230,19 @@ async fn reconcile_apply(
 
     // Record success event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciled".to_string(),
-            note: Some(format!(
-                "FilterRule {} applied to {} protection resources",
-                rule.spec.name, applied_to_count
-            )),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciled".to_string(),
+                note: Some(format!(
+                    "FilterRule {} applied to {} protection resources",
+                    rule.spec.name, applied_to_count
+                )),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -265,7 +265,7 @@ async fn reconcile_apply(
 
 /// Cleanup reconciliation - handle delete
 async fn reconcile_cleanup(
-    _rule: &FilterRule,
+    rule: &FilterRule,
     ctx: &Context,
     recorder: &Recorder,
     namespace: &str,
@@ -273,15 +273,21 @@ async fn reconcile_cleanup(
 ) -> Result<Action> {
     info!("Cleaning up FilterRule {}/{}", namespace, name);
 
+    // Create object reference for events
+    let obj_ref = rule.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Deleting".to_string(),
-            note: Some("Removing filter rule from gateway".to_string()),
-            action: "Delete".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Deleting".to_string(),
+                note: Some("Removing filter rule from gateway".to_string()),
+                action: "Delete".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 

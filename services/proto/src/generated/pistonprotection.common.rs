@@ -2,7 +2,7 @@
 /// Timestamp in nanoseconds since epoch
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Timestamp {
     #[prost(int64, tag = "1")]
     pub seconds: i64,
@@ -12,7 +12,7 @@ pub struct Timestamp {
 /// IP address (supports both IPv4 and IPv6)
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IpAddress {
     #[prost(oneof = "ip_address::Address", tags = "1, 2")]
     pub address: ::core::option::Option<ip_address::Address>,
@@ -21,7 +21,7 @@ pub struct IpAddress {
 pub mod ip_address {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Address {
         #[prost(fixed32, tag = "1")]
         Ipv4(u32),
@@ -33,7 +33,7 @@ pub mod ip_address {
 /// IP network (CIDR)
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IpNetwork {
     #[prost(message, optional, tag = "1")]
     pub address: ::core::option::Option<IpAddress>,
@@ -43,7 +43,7 @@ pub struct IpNetwork {
 /// Port range
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PortRange {
     #[prost(uint32, tag = "1")]
     pub start: u32,
@@ -69,7 +69,7 @@ pub struct GeoLocation {
 /// Rate limit configuration
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RateLimit {
     #[prost(uint64, tag = "1")]
     pub requests_per_second: u64,
@@ -81,7 +81,7 @@ pub struct RateLimit {
 /// Pagination for list requests
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Pagination {
     #[prost(uint32, tag = "1")]
     pub page: u32,
@@ -93,7 +93,7 @@ pub struct Pagination {
 /// Pagination response
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PaginationInfo {
     #[prost(uint32, tag = "1")]
     pub total_count: u32,
@@ -124,7 +124,7 @@ pub struct Error {
 /// UUID wrapper
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Uuid {
     #[prost(string, tag = "1")]
     pub value: ::prost::alloc::string::String,

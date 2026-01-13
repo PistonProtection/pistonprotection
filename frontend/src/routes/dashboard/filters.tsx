@@ -1,7 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import {
   Copy,
   Filter,
@@ -204,7 +203,6 @@ function FiltersPage() {
           value.action === "rate_limit" ? value.rateLimitWindow : undefined,
       });
     },
-    validatorAdapter: zodValidator(),
     validators: {
       onChange: filterSchema,
     },

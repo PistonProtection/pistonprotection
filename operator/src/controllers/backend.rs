@@ -11,7 +11,6 @@ use crate::crd::{Backend, BackendStatus, Condition, EndpointStatus, HealthState,
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
-use k8s_openapi::api::core::v1::ObjectReference;
 use kube::{
     api::{Api, ObjectMeta, Patch, PatchParams},
     runtime::{
@@ -54,9 +53,9 @@ impl Context {
         }
     }
 
-    /// Create a recorder for a specific object
-    fn recorder(&self, obj_ref: ObjectReference) -> Recorder {
-        Recorder::new(self.client.clone(), self.reporter.clone(), obj_ref)
+    /// Create a recorder for events
+    fn recorder(&self) -> Recorder {
+        Recorder::new(self.client.clone(), self.reporter.clone())
     }
 }
 
@@ -75,16 +74,8 @@ pub async fn reconcile(
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "Backend", &namespace);
 
-    // Create object reference for events
-    let obj_ref = ObjectReference {
-        api_version: Some(Backend::api_version(&()).to_string()),
-        kind: Some(Backend::kind(&()).to_string()),
-        name: Some(name.clone()),
-        namespace: Some(namespace.clone()),
-        uid: backend.metadata.uid.clone(),
-        ..Default::default()
-    };
-    let recorder = ctx.recorder(obj_ref);
+    // Create recorder for events
+    let recorder = ctx.recorder();
 
     // Get API for this namespace
     let backend_api: Api<Backend> = Api::namespaced(ctx.client.clone(), &namespace);
@@ -139,15 +130,21 @@ async fn reconcile_apply(
     // Validate the backend
     validate_backend(backend)?;
 
+    // Create object reference for events
+    let obj_ref = backend.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciling".to_string(),
-            note: Some(format!("Processing backend: {}", backend.spec.display_name)),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciling".to_string(),
+                note: Some(format!("Processing backend: {}", backend.spec.display_name)),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -196,16 +193,19 @@ async fn reconcile_apply(
 
     // Record success event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciled".to_string(),
-            note: Some(format!(
-                "Backend {} healthy: {}/{}",
-                backend.spec.display_name, healthy_endpoints, total_endpoints
-            )),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciled".to_string(),
+                note: Some(format!(
+                    "Backend {} healthy: {}/{}",
+                    backend.spec.display_name, healthy_endpoints, total_endpoints
+                )),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -229,15 +229,21 @@ async fn reconcile_cleanup(
 ) -> Result<Action> {
     info!("Cleaning up Backend {}/{}", namespace, name);
 
+    // Create object reference for events
+    let obj_ref = backend.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Deleting".to_string(),
-            note: Some("Removing backend from gateway".to_string()),
-            action: "Delete".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Deleting".to_string(),
+                note: Some("Removing backend from gateway".to_string()),
+                action: "Delete".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 

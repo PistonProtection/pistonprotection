@@ -135,7 +135,7 @@ pub struct HttpMatch {
 /// Minecraft Java Edition matching
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MinecraftJavaMatch {
     /// Protocol version range
     #[prost(uint32, tag = "1")]
@@ -164,7 +164,7 @@ pub struct MinecraftJavaMatch {
 /// Minecraft Bedrock Edition matching (RakNet)
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MinecraftBedrockMatch {
     /// Protocol version range
     #[prost(uint32, tag = "1")]
@@ -190,7 +190,7 @@ pub struct MinecraftBedrockMatch {
 /// QUIC protocol matching
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QuicMatch {
     /// QUIC versions to allow
     #[prost(uint32, repeated, tag = "1")]
@@ -224,7 +224,7 @@ pub struct TimeMatch {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TimeRange {
     #[prost(uint32, tag = "1")]
     pub start_minutes: u32,
@@ -234,7 +234,7 @@ pub struct TimeRange {
 /// Filter statistics
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct FilterStats {
     #[prost(uint64, tag = "1")]
     pub packets_matched: u64,
@@ -270,7 +270,7 @@ pub struct CreateRuleResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetRuleRequest {
     #[prost(string, tag = "1")]
     pub rule_id: ::prost::alloc::string::String,
@@ -298,21 +298,21 @@ pub struct UpdateRuleResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteRuleRequest {
     #[prost(string, tag = "1")]
     pub rule_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteRuleResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListRulesRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -350,7 +350,7 @@ pub struct BulkCreateRulesResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BulkDeleteRulesRequest {
     #[prost(string, repeated, tag = "1")]
     pub rule_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
@@ -366,7 +366,7 @@ pub struct BulkDeleteRulesResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ReorderRulesRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -376,14 +376,14 @@ pub struct ReorderRulesRequest {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ReorderRulesResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetRuleStatsRequest {
     #[prost(string, tag = "1")]
     pub rule_id: ::prost::alloc::string::String,
@@ -403,7 +403,7 @@ pub struct GetRuleStatsResponse {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TimeSeriesPoint {
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<super::common::Timestamp>,
@@ -414,7 +414,7 @@ pub struct TimeSeriesPoint {
 }
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchRulesRequest {
     #[prost(string, tag = "1")]
     pub backend_id: ::prost::alloc::string::String,
@@ -707,7 +707,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/CreateRule",
             );
@@ -736,7 +736,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/GetRule",
             );
@@ -762,7 +762,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/UpdateRule",
             );
@@ -791,7 +791,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/DeleteRule",
             );
@@ -820,7 +820,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/ListRules",
             );
@@ -847,7 +847,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/BulkCreateRules",
             );
@@ -876,7 +876,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/BulkDeleteRules",
             );
@@ -906,7 +906,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/ReorderRules",
             );
@@ -936,7 +936,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/GetRuleStats",
             );
@@ -966,7 +966,7 @@ pub mod filter_service_client {
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
-            let codec = tonic::codec::ProstCodec::default();
+            let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/pistonprotection.filter.FilterService/WatchRules",
             );
@@ -1178,7 +1178,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = CreateRuleSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1223,7 +1223,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetRuleSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1268,7 +1268,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = UpdateRuleSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1313,7 +1313,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = DeleteRuleSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1358,7 +1358,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListRulesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1404,7 +1404,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = BulkCreateRulesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1450,7 +1450,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = BulkDeleteRulesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1495,7 +1495,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ReorderRulesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1540,7 +1540,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetRuleStatsSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,
@@ -1586,7 +1586,7 @@ pub mod filter_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = WatchRulesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
+                        let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
                                 accept_compression_encodings,

@@ -15,7 +15,6 @@ use crate::crd::{
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};
 
-use k8s_openapi::api::core::v1::ObjectReference;
 use k8s_openapi::api::{
     apps::v1::{Deployment, DeploymentSpec, DeploymentStatus as K8sDeploymentStatus},
     core::v1::{
@@ -66,9 +65,9 @@ impl Context {
         }
     }
 
-    /// Create a recorder for a specific object
-    fn recorder(&self, obj_ref: ObjectReference) -> Recorder {
-        Recorder::new(self.client.clone(), self.reporter.clone(), obj_ref)
+    /// Create a recorder for events
+    fn recorder(&self) -> Recorder {
+        Recorder::new(self.client.clone(), self.reporter.clone())
     }
 }
 
@@ -89,16 +88,8 @@ pub async fn reconcile(
 
     let timer = ReconciliationTimer::new(&ctx.metrics, "DDoSProtection", &namespace);
 
-    // Create object reference for events
-    let obj_ref = ObjectReference {
-        api_version: Some(DDoSProtection::api_version(&()).to_string()),
-        kind: Some(DDoSProtection::kind(&()).to_string()),
-        name: Some(name.clone()),
-        namespace: Some(namespace.clone()),
-        uid: ddos.metadata.uid.clone(),
-        ..Default::default()
-    };
-    let recorder = ctx.recorder(obj_ref);
+    // Create recorder for events
+    let recorder = ctx.recorder();
 
     // Get API for this namespace
     let ddos_api: Api<DDoSProtection> = Api::namespaced(ctx.client.clone(), &namespace);
@@ -153,15 +144,21 @@ async fn reconcile_apply(
     // Validate the resource
     validate_ddos_protection(ddos)?;
 
+    // Create object reference for events
+    let obj_ref = ddos.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciling".to_string(),
-            note: Some("Starting reconciliation".to_string()),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciling".to_string(),
+                note: Some("Starting reconciliation".to_string()),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -242,16 +239,19 @@ async fn reconcile_apply(
 
     // Record success event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Reconciled".to_string(),
-            note: Some(format!(
-                "Successfully reconciled with {} backends",
-                ddos.spec.backends.len()
-            )),
-            action: "Reconcile".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Reconciled".to_string(),
+                note: Some(format!(
+                    "Successfully reconciled with {} backends",
+                    ddos.spec.backends.len()
+                )),
+                action: "Reconcile".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -267,7 +267,7 @@ async fn reconcile_apply(
 
 /// Cleanup reconciliation - handle delete
 async fn reconcile_cleanup(
-    _ddos: &DDoSProtection,
+    ddos: &DDoSProtection,
     ctx: &Context,
     recorder: &Recorder,
     namespace: &str,
@@ -275,15 +275,21 @@ async fn reconcile_cleanup(
 ) -> Result<Action> {
     info!("Cleaning up DDoSProtection {}/{}", namespace, name);
 
+    // Create object reference for events
+    let obj_ref = ddos.object_ref(&());
+
     // Record event
     recorder
-        .publish(Event {
-            type_: EventType::Normal,
-            reason: "Deleting".to_string(),
-            note: Some("Cleaning up resources".to_string()),
-            action: "Delete".to_string(),
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                type_: EventType::Normal,
+                reason: "Deleting".to_string(),
+                note: Some("Cleaning up resources".to_string()),
+                action: "Delete".to_string(),
+                secondary: None,
+            },
+            &obj_ref,
+        )
         .await
         .ok();
 
@@ -500,7 +506,7 @@ async fn reconcile_deployment(
                     volumes: Some(vec![Volume {
                         name: "config".to_string(),
                         config_map: Some(k8s_openapi::api::core::v1::ConfigMapVolumeSource {
-                            name: Some(format!("{}-config", name)),
+                            name: format!("{}-config", name),
                             ..Default::default()
                         }),
                         ..Default::default()
