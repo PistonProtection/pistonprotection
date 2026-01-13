@@ -66,7 +66,7 @@ ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
 
 RUN cargo build --release --package pistonprotection-config-mgr && \
-    strip /app/target/release/pistonprotection-config-mgr
+    strip /app/target/release/config-mgr
 
 # -----------------------------------------------------------------------------
 # Stage 4: Runtime - Minimal production image
@@ -92,7 +92,7 @@ RUN mkdir -p /var/lib/pistonprotection/config && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/pistonprotection-config-mgr /usr/local/bin/
+COPY --from=builder /app/target/release/config-mgr /usr/local/bin/
 
 # Set ownership
 RUN chown -R pistonprotection:pistonprotection /app
@@ -130,4 +130,4 @@ ENV RUST_LOG=info \
     RUST_BACKTRACE=0 \
     CONFIG_DATA_DIR=/var/lib/pistonprotection/config
 
-ENTRYPOINT ["/usr/local/bin/pistonprotection-config-mgr"]
+ENTRYPOINT ["/usr/local/bin/config-mgr"]

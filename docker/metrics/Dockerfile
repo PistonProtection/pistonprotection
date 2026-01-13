@@ -66,7 +66,7 @@ ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
 
 RUN cargo build --release --package pistonprotection-metrics && \
-    strip /app/target/release/pistonprotection-metrics
+    strip /app/target/release/metrics-collector
 
 # -----------------------------------------------------------------------------
 # Stage 4: Runtime - Minimal production image
@@ -92,7 +92,7 @@ RUN mkdir -p /var/lib/pistonprotection/metrics && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/pistonprotection-metrics /usr/local/bin/
+COPY --from=builder /app/target/release/metrics-collector /usr/local/bin/
 
 # Set ownership
 RUN chown -R pistonprotection:pistonprotection /app
@@ -130,4 +130,4 @@ ENV RUST_LOG=info \
     RUST_BACKTRACE=0 \
     METRICS_DATA_DIR=/var/lib/pistonprotection/metrics
 
-ENTRYPOINT ["/usr/local/bin/pistonprotection-metrics"]
+ENTRYPOINT ["/usr/local/bin/metrics-collector"]

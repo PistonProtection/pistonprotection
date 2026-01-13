@@ -66,7 +66,7 @@ ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
 
 RUN cargo build --release --package pistonprotection-auth && \
-    strip /app/target/release/pistonprotection-auth
+    strip /app/target/release/auth
 
 # -----------------------------------------------------------------------------
 # Stage 4: Runtime - Minimal production image
@@ -92,7 +92,7 @@ RUN mkdir -p /var/lib/pistonprotection/auth/keys && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/pistonprotection-auth /usr/local/bin/
+COPY --from=builder /app/target/release/auth /usr/local/bin/
 
 # Set ownership
 RUN chown -R pistonprotection:pistonprotection /app
@@ -131,4 +131,4 @@ ENV RUST_LOG=info \
     AUTH_DATA_DIR=/var/lib/pistonprotection/auth \
     JWT_KEYS_DIR=/var/lib/pistonprotection/auth/keys
 
-ENTRYPOINT ["/usr/local/bin/pistonprotection-auth"]
+ENTRYPOINT ["/usr/local/bin/auth"]

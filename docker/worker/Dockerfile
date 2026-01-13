@@ -71,7 +71,7 @@ ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
 
 RUN cargo build --release --package pistonprotection-worker && \
-    strip /app/target/release/pistonprotection-worker
+    strip /app/target/release/worker
 
 # -----------------------------------------------------------------------------
 # Stage 4: eBPF Builder - Build eBPF programs
@@ -123,7 +123,7 @@ RUN mkdir -p /opt/pistonprotection/ebpf /var/lib/pistonprotection
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/pistonprotection-worker /usr/local/bin/
+COPY --from=builder /app/target/release/worker /usr/local/bin/
 
 # Copy eBPF programs
 COPY --from=ebpf-builder /app/ebpf/target/bpfel-unknown-none/release/xdp_filter /opt/pistonprotection/ebpf/
@@ -161,4 +161,4 @@ ENV RUST_LOG=info \
 # Must run as root for eBPF
 USER root
 
-ENTRYPOINT ["/usr/local/bin/pistonprotection-worker"]
+ENTRYPOINT ["/usr/local/bin/worker"]

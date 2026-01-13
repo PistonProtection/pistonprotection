@@ -68,7 +68,7 @@ ARG GIT_COMMIT=unknown
 ENV CARGO_BUILD_RUSTFLAGS="-C link-arg=-Wl,--compress-debug-sections=zlib"
 
 RUN cargo build --release --package pistonprotection-gateway && \
-    strip /app/target/release/pistonprotection-gateway
+    strip /app/target/release/gateway
 
 # -----------------------------------------------------------------------------
 # Stage 4: Runtime - Minimal production image
@@ -90,7 +90,7 @@ RUN groupadd -r pistonprotection --gid=1000 && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/pistonprotection-gateway /usr/local/bin/
+COPY --from=builder /app/target/release/gateway /usr/local/bin/
 
 # Set ownership
 RUN chown -R pistonprotection:pistonprotection /app
@@ -124,4 +124,4 @@ USER pistonprotection
 ENV RUST_LOG=info \
     RUST_BACKTRACE=0
 
-ENTRYPOINT ["/usr/local/bin/pistonprotection-gateway"]
+ENTRYPOINT ["/usr/local/bin/gateway"]
