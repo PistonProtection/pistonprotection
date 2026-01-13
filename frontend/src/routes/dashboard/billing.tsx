@@ -336,13 +336,15 @@ function BillingPage() {
                 Approaching Usage Limit
               </p>
               <p className="text-sm text-muted-foreground">
-                {usage.bandwidth.percentage >= (usage.warningStatus.threshold ?? 80) && (
+                {usage.bandwidth.percentage >=
+                  (usage.warningStatus.threshold ?? 80) && (
                   <span>
                     Bandwidth at {usage.bandwidth.percentage}% of limit.{" "}
                   </span>
                 )}
                 {usage.requests?.percentage &&
-                  usage.requests.percentage >= (usage.warningStatus.threshold ?? 80) && (
+                  usage.requests.percentage >=
+                    (usage.warningStatus.threshold ?? 80) && (
                     <span>
                       Requests at {usage.requests.percentage}% of limit.{" "}
                     </span>
@@ -363,12 +365,25 @@ function BillingPage() {
               variant="outline"
               onClick={() => {
                 // Find a better plan to upgrade to
-                const currentIndex = ["free", "starter", "professional", "enterprise"].indexOf(currentPlanName);
-                const nextPlan = ["starter", "professional", "enterprise", "enterprise"][currentIndex];
+                const currentIndex = [
+                  "free",
+                  "starter",
+                  "professional",
+                  "enterprise",
+                ].indexOf(currentPlanName);
+                const nextPlan = [
+                  "starter",
+                  "professional",
+                  "enterprise",
+                  "enterprise",
+                ][currentIndex];
                 if (nextPlan && nextPlan !== currentPlanName) {
-                  const plan = plans?.find(p => p.name === nextPlan);
+                  const plan = plans?.find((p) => p.name === nextPlan);
                   if (plan?.lookupKey) {
-                    upgradeMutation.mutate({ priceId: plan.lookupKey, annual: false });
+                    upgradeMutation.mutate({
+                      priceId: plan.lookupKey,
+                      annual: false,
+                    });
                   }
                 }
               }}
@@ -380,24 +395,28 @@ function BillingPage() {
       )}
 
       {/* Overage Cost Warning */}
-      {usage?.warningStatus?.estimatedOverageCost && usage.warningStatus.estimatedOverageCost > 0 && (
-        <Card className="border-red-500">
-          <CardContent className="flex items-center gap-4 py-4">
-            <Zap className="h-5 w-5 text-red-500" />
-            <div className="flex-1">
-              <p className="font-medium text-red-600">
-                Overage Charges Applied
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Estimated overage cost this period:{" "}
-                <span className="font-semibold">
-                  ${(usage.warningStatus.estimatedOverageCost / 100).toFixed(2)}
-                </span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {usage?.warningStatus?.estimatedOverageCost &&
+        usage.warningStatus.estimatedOverageCost > 0 && (
+          <Card className="border-red-500">
+            <CardContent className="flex items-center gap-4 py-4">
+              <Zap className="h-5 w-5 text-red-500" />
+              <div className="flex-1">
+                <p className="font-medium text-red-600">
+                  Overage Charges Applied
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Estimated overage cost this period:{" "}
+                  <span className="font-semibold">
+                    $
+                    {(usage.warningStatus.estimatedOverageCost / 100).toFixed(
+                      2,
+                    )}
+                  </span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">

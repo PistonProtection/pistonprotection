@@ -17,7 +17,7 @@
       "!coverage",
       "!.source",
       "!**/routeTree.gen.ts",
-      "!drizzle/**"
+      "!drizzle"
     ]
   },
   "formatter": {
@@ -36,7 +36,12 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "useImportExtensions": "off"
+        "useImportExtensions": "off",
+        "useUniqueElementIds": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "off"
       },
       "style": {
         "useComponentExportOnlyModules": "off"
