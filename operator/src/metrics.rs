@@ -4,8 +4,8 @@
 //! reconciliation performance, and resource management.
 
 use prometheus::{
-    Gauge, GaugeVec, HistogramOpts, HistogramVec, IntCounter,
-    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry,
+    Gauge, GaugeVec, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec,
+    Opts, Registry,
 };
 use tracing::error;
 

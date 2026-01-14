@@ -8,8 +8,8 @@
 
 use crate::client::GatewayClient;
 use crate::crd::{
-    BlocklistEntry, BlocklistSource, Condition, DDoSProtection, FINALIZER,
-    IPBlocklist, IPBlocklistStatus,
+    BlocklistEntry, BlocklistSource, Condition, DDoSProtection, FINALIZER, IPBlocklist,
+    IPBlocklistStatus,
 };
 use crate::error::{Error, Result};
 use crate::metrics::{Metrics, ReconciliationTimer};

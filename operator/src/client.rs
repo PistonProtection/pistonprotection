@@ -3,9 +3,7 @@
 //! This module provides a client for communicating with the PistonProtection
 //! gateway service to sync protection rules and configurations.
 
-use crate::crd::{
-    BackendSpec, DDoSProtection, FilterRule, FilterRuleType, GeoFilterMode,
-};
+use crate::crd::{BackendSpec, DDoSProtection, FilterRule, FilterRuleType, GeoFilterMode};
 use crate::error::{Error, Result};
 use backoff::{ExponentialBackoff, backoff::Backoff};
 use std::collections::HashMap;

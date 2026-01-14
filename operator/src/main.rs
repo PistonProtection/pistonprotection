@@ -16,11 +16,7 @@ use futures::StreamExt;
 use kube::{
     Client, CustomResourceExt, Resource,
     api::Api,
-    runtime::{
-        controller::Controller,
-        events::Reporter,
-        watcher::Config as WatcherConfig,
-    },
+    runtime::{controller::Controller, events::Reporter, watcher::Config as WatcherConfig},
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
