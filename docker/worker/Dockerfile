@@ -5,13 +5,26 @@
 # Multi-stage build with eBPF support
 # =============================================================================
 
-ARG RUST_VERSION=1.85
 ARG DEBIAN_VERSION=bookworm
 
 # -----------------------------------------------------------------------------
-# Stage 1: Chef - Dependency caching
+# Stage 1: Chef - Dependency caching with nightly Rust
 # -----------------------------------------------------------------------------
-FROM rust:${RUST_VERSION}-${DEBIAN_VERSION} AS chef
+FROM debian:${DEBIAN_VERSION} AS chef
+
+# Install rustup and nightly toolchain
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2026-01-10 \
+    && rustup component add rustfmt clippy
 
 RUN cargo install cargo-chef --locked
 WORKDIR /app
@@ -76,15 +89,23 @@ RUN cargo build --release --package pistonprotection-worker && \
 # -----------------------------------------------------------------------------
 # Stage 4: eBPF Builder - Build eBPF programs
 # -----------------------------------------------------------------------------
-FROM rust:${RUST_VERSION}-${DEBIAN_VERSION} AS ebpf-builder
+FROM debian:${DEBIAN_VERSION} AS ebpf-builder
 
 WORKDIR /app
 
-# Install nightly toolchain with rust-src (required for -Z build-std)
-# Use nightly-2026-01-10 which supports edition2024 (required by aya-ebpf-cty)
-RUN rustup install nightly-2026-01-10 && \
-    rustup default nightly-2026-01-10 && \
-    rustup component add rust-src
+# Install rustup and nightly toolchain with rust-src (required for -Z build-std)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2026-01-10 \
+    && rustup component add rust-src
 
 # Install bpf-linker (latest version compatible with nightly-2026-01-10)
 RUN cargo install bpf-linker --locked
@@ -94,8 +115,8 @@ COPY ebpf ./ebpf
 
 WORKDIR /app/ebpf
 
-# Build eBPF programs
-RUN cargo +nightly-2026-01-10 build \
+# Build eBPF programs (toolchain is already nightly-2026-01-10)
+RUN cargo build \
     --target bpfel-unknown-none \
     -Z build-std=core \
     --release
